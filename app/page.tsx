@@ -107,7 +107,12 @@ export default function Home() {
     const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
     setCargando(false);
     if (error) setMensaje("Error: " + error.message);
-else { setMensaje("✅ ¡Bienvenido! Iniciando sesión..."); setTimeout(() => { window.location.href = "/ph"; }, 1000); }
+else { 
+  const { data: { user } } = await supabase.auth.getUser();
+  const tipo = user?.user_metadata?.tipo_usuario;
+  setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
+  setTimeout(() => { window.location.href = tipo === "empresa" ? "/empresa" : "/ph"; }, 1000);
+}
   };
 
   const accentColor = perfil === "empresa" ? "#4A9EFF" : perfil === "copropietario" ? "#4ADE80" : "#C9A84C";
