@@ -1,11 +1,9 @@
 "use client";
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClient();
 
 const PERFILES = {
   ninguno: {
@@ -75,6 +73,7 @@ const PERFILES = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [perfil, setPerfil] = useState("ninguno");
   const [vista, setVista] = useState("inicio");
   const [tipoUsuario, setTipoUsuario] = useState("empresa");
@@ -106,13 +105,13 @@ export default function Home() {
     setCargando(true); setMensaje("");
     const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
     setCargando(false);
-    if (error) setMensaje("Error: " + error.message);
-else { 
-  const { data: { user } } = await supabase.auth.getUser();
-  const tipo = user?.user_metadata?.tipo_usuario;
-  setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
-  setTimeout(() => { window.location.href = tipo === "empresa" ? "/empresa" : "/ph"; }, 1000);
-}
+    if (error) { setMensaje("Error: " + error.message); }
+    else {
+      const { data: { user } } = await supabase.auth.getUser();
+      const tipo = user?.user_metadata?.tipo_usuario;
+      setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
+      setTimeout(() => { router.replace(tipo === "empresa" ? "/empresa" : "/ph"); }, 800);
+    }
   };
 
   const accentColor = perfil === "empresa" ? "#4A9EFF" : perfil === "copropietario" ? "#4ADE80" : "#C9A84C";
