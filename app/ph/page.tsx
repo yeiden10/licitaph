@@ -62,6 +62,13 @@ export default function PHDashboard() {
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
+  // ── Review state ───────────────────────────────────────────
+  const [showReview, setShowReview] = useState<string | null>(null); // contrato_id
+  const [reviewPuntaje, setReviewPuntaje] = useState(5);
+  const [reviewComentario, setReviewComentario] = useState("");
+  const [enviandoReview, setEnviandoReview] = useState(false);
+  const [reviewsEnviadas, setReviewsEnviadas] = useState<Set<string>>(new Set());
+
   // ── Carga inicial ──────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -839,12 +846,14 @@ export default function PHDashboard() {
                         <th>Vence</th>
                         <th>Firma empresa</th>
                         <th>Estado</th>
+                        <th>Reseña</th>
                       </tr>
                     </thead>
                     <tbody>
                       {contratos.map(c => {
                         const dias = diasRestantes(c.fecha_fin);
                         const estadoFirma = (c as any).estado_firma;
+                        const yaReseno = reviewsEnviadas.has(c.id);
                         return (
                           <tr key={c.id}>
                             <td className="td-main">{(c as any).empresas?.nombre || "—"}</td>
@@ -866,6 +875,21 @@ export default function PHDashboard() {
                                 : c.estado === "completado" ? <span className="badge b-gray">✓ Completado</span>
                                 : dias !== null && dias < 90 ? <span className="badge b-yellow">Vence en {dias}d</span>
                                 : <span className="badge b-green">● Activo</span>}
+                            </td>
+                            <td>
+                              {(c.estado === "completado" || c.estado === "activo") && (
+                                yaReseno ? (
+                                  <span className="badge b-green">⭐ Enviada</span>
+                                ) : (
+                                  <button
+                                    className="btn btn-ghost"
+                                    style={{ padding: "4px 10px", fontSize: 12 }}
+                                    onClick={() => { setShowReview(c.id); setReviewPuntaje(5); setReviewComentario(""); }}
+                                  >
+                                    ⭐ Reseñar
+                                  </button>
+                                )
+                              )}
                             </td>
                           </tr>
                         );
@@ -1149,6 +1173,80 @@ export default function PHDashboard() {
                     Guardando...
                   </span>
                 ) : "💾 Guardar cambios"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL REVIEW ── */}
+      {showReview && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#0D1117", border: "1px solid #1F2937", borderRadius: 16, width: "100%", maxWidth: 460, padding: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <p style={{ color: "#C9A84C", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Reseña de contrato</p>
+                <h3 style={{ color: "#F0F4FF", fontSize: 18, fontWeight: 700, margin: 0 }}>Califica el servicio prestado</h3>
+              </div>
+              <button onClick={() => setShowReview(null)} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", fontSize: 22 }}>×</button>
+            </div>
+
+            {/* Estrellas */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: "#9CA3AF", fontSize: 13, margin: "0 0 10px" }}>Puntaje general</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setReviewPuntaje(n)}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 32, opacity: n <= reviewPuntaje ? 1 : 0.25, transition: "opacity .15s" }}
+                  >
+                    ⭐
+                  </button>
+                ))}
+                <span style={{ color: "#F0F4FF", fontSize: 14, fontWeight: 700, alignSelf: "center", marginLeft: 4 }}>{reviewPuntaje}/5</span>
+              </div>
+            </div>
+
+            {/* Comentario */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: "#9CA3AF", fontSize: 13, margin: "0 0 8px" }}>Comentario (opcional)</p>
+              <textarea
+                rows={4}
+                value={reviewComentario}
+                onChange={e => setReviewComentario(e.target.value)}
+                placeholder="Describe la calidad del servicio, puntualidad, profesionalismo..."
+                style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 8, padding: "10px 14px", color: "#F0F4FF", fontSize: 13, outline: "none", width: "100%", resize: "vertical" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                disabled={enviandoReview}
+                onClick={async () => {
+                  setEnviandoReview(true);
+                  try {
+                    const r = await fetch("/api/reviews", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ contrato_id: showReview, puntaje: reviewPuntaje, comentario: reviewComentario }),
+                    });
+                    if (!r.ok) { const j = await r.json(); throw new Error(j.error); }
+                    setReviewsEnviadas(prev => new Set(prev).add(showReview!));
+                    setNotif({ msg: "⭐ ¡Reseña enviada correctamente!", tipo: "ok" });
+                    setShowReview(null);
+                  } catch (e: any) {
+                    setNotif({ msg: "❌ Error: " + e.message, tipo: "err" });
+                  } finally {
+                    setEnviandoReview(false);
+                  }
+                }}
+                style={{ background: "#C9A84C", border: "none", color: "#07090F", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
+              >
+                {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
+              </button>
+              <button onClick={() => setShowReview(null)} style={{ background: "#111827", border: "1px solid #1F2937", color: "#6B7280", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
+                Cancelar
               </button>
             </div>
           </div>

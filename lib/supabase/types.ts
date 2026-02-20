@@ -243,10 +243,12 @@ export interface Review {
   id: string;
   contrato_id: string;
   autor_id: string;
+  autor_tipo: "ph" | "empresa";
+  destinatario_id: string;
   destinatario_tipo: "ph" | "empresa";
   puntaje: number;
   comentario: string | null;
-  created_at: string;
+  creado_en: string;
 }
 
 // Tipos de documentos de empresa

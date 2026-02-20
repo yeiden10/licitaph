@@ -979,6 +979,13 @@ export default function EmpresaDashboard() {
   const [contratoAceptar, setContratoAceptar] = useState<ContratoConEmpresa | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // ── Review state ─────────────────────────────────────────────────────────────
+  const [showReview, setShowReview] = useState<string | null>(null); // contrato_id
+  const [reviewPuntaje, setReviewPuntaje] = useState(5);
+  const [reviewComentario, setReviewComentario] = useState("");
+  const [enviandoReview, setEnviandoReview] = useState(false);
+  const [reviewsEnviadas, setReviewsEnviadas] = useState<Set<string>>(new Set());
+
   const toast = useCallback((msg: string, tipo: "ok" | "err" | "info" = "ok") => {
     const id = Date.now();
     setToasts(t => [...t, { id, msg, tipo }]);
@@ -1591,19 +1598,36 @@ export default function EmpresaDashboard() {
                           </div>
                         </div>
 
-                        {/* Botón revisar y aceptar */}
-                        {c.estado_firma === "pendiente" && (
-                          <button
-                            onClick={() => setContratoAceptar(c)}
-                            style={{
-                              background: C.blue, border: "none", color: "#fff",
-                              borderRadius: 8, padding: "10px 20px", cursor: "pointer",
-                              fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
-                            }}
-                          >
-                            Revisar y aceptar →
-                          </button>
-                        )}
+                        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                          {/* Botón revisar y aceptar */}
+                          {c.estado_firma === "pendiente" && (
+                            <button
+                              onClick={() => setContratoAceptar(c)}
+                              style={{
+                                background: C.blue, border: "none", color: "#fff",
+                                borderRadius: 8, padding: "10px 20px", cursor: "pointer",
+                                fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
+                              }}
+                            >
+                              Revisar y aceptar →
+                            </button>
+                          )}
+                          {/* Botón reseñar */}
+                          {(c.estado === "completado" || c.estado === "activo") && (
+                            reviewsEnviadas.has(c.id) ? (
+                              <span style={{ background: "#052E16", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 6, padding: "6px 14px", fontSize: 13, fontWeight: 600 }}>
+                                ⭐ Reseña enviada
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => { setShowReview(c.id); setReviewPuntaje(5); setReviewComentario(""); }}
+                                style={{ background: C.goldDim, border: `1px solid ${C.gold}`, color: C.gold, borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}
+                              >
+                                ⭐ Dejar reseña
+                              </button>
+                            )
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1732,6 +1756,80 @@ export default function EmpresaDashboard() {
           )}
         </main>
       </div>
+
+      {/* ── MODAL REVIEW ── */}
+      {showReview && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, width: "100%", maxWidth: 460, padding: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <p style={{ color: C.gold, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Reseña de contrato</p>
+                <h3 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>Califica la Propiedad Horizontal</h3>
+              </div>
+              <button onClick={() => setShowReview(null)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 22 }}>×</button>
+            </div>
+
+            {/* Estrellas */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: C.sub, fontSize: 13, margin: "0 0 10px" }}>Puntaje general</p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setReviewPuntaje(n)}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 32, opacity: n <= reviewPuntaje ? 1 : 0.25, transition: "opacity .15s", padding: 0 }}
+                  >
+                    ⭐
+                  </button>
+                ))}
+                <span style={{ color: C.text, fontSize: 14, fontWeight: 700, marginLeft: 4 }}>{reviewPuntaje}/5</span>
+              </div>
+            </div>
+
+            {/* Comentario */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: C.sub, fontSize: 13, margin: "0 0 8px" }}>Comentario (opcional)</p>
+              <textarea
+                rows={4}
+                value={reviewComentario}
+                onChange={e => setReviewComentario(e.target.value)}
+                placeholder="Describe la transparencia del proceso, comunicación, cumplimiento de pagos..."
+                style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 13, outline: "none", width: "100%", resize: "vertical" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                disabled={enviandoReview}
+                onClick={async () => {
+                  setEnviandoReview(true);
+                  try {
+                    const r = await fetch("/api/reviews", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ contrato_id: showReview, puntaje: reviewPuntaje, comentario: reviewComentario }),
+                    });
+                    if (!r.ok) { const j = await r.json(); throw new Error(j.error); }
+                    setReviewsEnviadas(prev => new Set(prev).add(showReview!));
+                    toast("⭐ ¡Reseña enviada correctamente!", "ok");
+                    setShowReview(null);
+                  } catch (e: any) {
+                    toast("Error: " + e.message, "err");
+                  } finally {
+                    setEnviandoReview(false);
+                  }
+                }}
+                style={{ background: C.gold, border: "none", color: "#07090F", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
+              >
+                {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
+              </button>
+              <button onClick={() => setShowReview(null)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
