@@ -1,55 +1,151 @@
 "use client";
-import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { Licitacion, Propuesta, Contrato, PropiedadHorizontal } from "@/lib/supabase/types";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-const LICITACIONES = [
-  { id: "LIC-001", servicio: "Seguridad 24/7", estado: "activa", publicada: "15 Feb 2026", cierre: "25 Feb 2026", propuestas: 4, presupuesto: "$3,000 - $4,500/mes", urgente: true },
-  { id: "LIC-002", servicio: "Limpieza y mantenimiento", estado: "activa", publicada: "10 Feb 2026", cierre: "28 Feb 2026", propuestas: 2, presupuesto: "$1,800 - $2,500/mes", urgente: false },
-  { id: "LIC-003", servicio: "Mantenimiento HVAC", estado: "borrador", publicada: "—", cierre: "—", propuestas: 0, presupuesto: "$2,200 - $3,000/mes", urgente: false },
-  { id: "LIC-004", servicio: "Jardinería y áreas verdes", estado: "adjudicada", publicada: "1 Feb 2026", cierre: "15 Feb 2026", propuestas: 5, presupuesto: "$800 - $1,200/mes", urgente: false },
-];
-
-const PROPUESTAS = [
-  { id: "P-001", lic: "LIC-001", empresa: "SecuroPanamá S.A.", monto: "$3,200/mes", puntaje: 92, experiencia: "8 años", documentos: true, recomendada: true, detalle: "Guardias certificados MINSEG, supervisión 24/7, cámaras incluidas. Respuesta a incidentes en <5 min." },
-  { id: "P-002", lic: "LIC-001", empresa: "ProGuard Panama", monto: "$3,500/mes", puntaje: 84, experiencia: "5 años", documentos: true, recomendada: false, detalle: "Guardias certificados, rondas cada 2 horas, sistema de reporte digital." },
-  { id: "P-003", lic: "LIC-001", empresa: "Vigilancia Total Corp", monto: "$2,950/mes", puntaje: 71, experiencia: "3 años", documentos: false, recomendada: false, detalle: "Precio competitivo, pero documentación de idoneidad MINSEG pendiente de renovación." },
-  { id: "P-004", lic: "LIC-001", empresa: "SafeZone Internacional", monto: "$4,100/mes", puntaje: 68, experiencia: "12 años", documentos: true, recomendada: false, detalle: "Mucha experiencia pero precio elevado vs. mercado. No justifica premium dado el alcance del contrato." },
-  { id: "P-005", lic: "LIC-002", empresa: "CleanPro Panama", monto: "$2,100/mes", puntaje: 88, experiencia: "6 años", documentos: true, recomendada: true, detalle: "Equipo de 4 personas, productos eco-certificados, servicio diario 6am-2pm." },
-  { id: "P-006", lic: "LIC-002", empresa: "Limpieza Express S.A.", monto: "$1,950/mes", puntaje: 76, experiencia: "4 años", documentos: true, recomendada: false, detalle: "Precio bajo pero solo 3 personas en equipo. Puede afectar calidad en áreas comunes grandes." },
-];
-
-const CONTRATOS = [
-  { id: "C-001", empresa: "CleanPro Panama", servicio: "Limpieza y mantenimiento", monto: "$2,100/mes", inicio: "1 Mar 2026", fin: "28 Feb 2027", estado: "activo", diasRestantes: 375 },
-  { id: "C-002", empresa: "GreenScape Panamá", servicio: "Jardinería y áreas verdes", monto: "$950/mes", inicio: "1 Ene 2026", fin: "31 Dic 2026", estado: "activo", diasRestantes: 316 },
-  { id: "C-003", empresa: "TechElevators S.A.", servicio: "Mantenimiento ascensores", monto: "$1,200/mes", inicio: "1 Feb 2025", fin: "31 Ene 2026", estado: "vencido", diasRestantes: -18 },
-];
-
-const SERVICIOS_IA = ["Seguridad 24/7", "Limpieza y mantenimiento", "Mantenimiento HVAC", "Jardinería y áreas verdes", "Control de plagas", "Mantenimiento ascensores", "Pintura y reparaciones", "Electricidad y plomería"];
-
-type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "nueva";
+type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte";
 
 export default function PHDashboard() {
+  const supabase = createClient();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [user, setUser] = useState<any>(null);
+  const [ph, setPH] = useState<PropiedadHorizontal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [licSeleccionada, setLicSeleccionada] = useState("LIC-001");
+  const [licitaciones, setLicitaciones] = useState<Licitacion[]>([]);
+  const [propuestas, setPropuestas] = useState<Propuesta[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [licSeleccionada, setLicSeleccionada] = useState<string>("");
   const [showAdjudicar, setShowAdjudicar] = useState<string | null>(null);
-  const [adjudicada, setAdjudicada] = useState<string | null>(null);
-  const [nuevaLic, setNuevaLic] = useState({ servicio: "", presupuesto: "", cierre: "", descripcion: "", requisitos: [] as string[] });
+  const [adjudicando, setAdjudicando] = useState(false);
+  const [notif, setNotif] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
 
+  // ── Carga inicial ──────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setUser(data.user); setLoading(false); });
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = "/"; return; }
+      setUser(user);
+
+      // Cargar PH del admin
+      const { data: ph } = await supabase
+        .from("propiedades_horizontales")
+        .select("*")
+        .eq("admin_id", user.id)
+        .single();
+      setPH(ph);
+
+      if (ph) {
+        await Promise.all([
+          cargarLicitaciones(ph.id),
+          cargarContratos(ph.id),
+        ]);
+      }
+      setLoading(false);
+    })();
   }, []);
 
-  const nombrePH = user?.user_metadata?.nombre_completo || "PH Torre Pacífica";
-  const propuestasLic = PROPUESTAS.filter(p => p.lic === licSeleccionada).sort((a, b) => b.puntaje - a.puntaje);
+  const cargarLicitaciones = useCallback(async (ph_id: string) => {
+    const { data } = await supabase
+      .from("licitaciones")
+      .select("*")
+      .eq("ph_id", ph_id)
+      .order("creado_en", { ascending: false });
+    setLicitaciones(data || []);
+    return data;
+  }, []);
 
-  if (loading) return <div style={{ minHeight: "100vh", background: "#07090F", display: "flex", alignItems: "center", justifyContent: "center", color: "#C9A84C", fontFamily: "Inter, sans-serif" }}>Cargando...</div>;
+  const cargarPropuestas = useCallback(async (licitacion_id: string) => {
+    const { data } = await supabase
+      .from("propuestas")
+      .select("*, empresas(id, nombre, anios_experiencia, categorias)")
+      .eq("licitacion_id", licitacion_id)
+      .neq("estado", "borrador")
+      .order("puntaje_ia", { ascending: false });
+    setPropuestas(data || []);
+  }, []);
+
+  const cargarContratos = useCallback(async (ph_id: string) => {
+    const { data } = await supabase
+      .from("contratos")
+      .select("*, empresas(nombre), licitaciones(titulo, categoria)")
+      .eq("ph_id", ph_id)
+      .order("creado_en", { ascending: false });
+    setContratos(data || []);
+  }, []);
+
+  useEffect(() => {
+    if (licSeleccionada) cargarPropuestas(licSeleccionada);
+  }, [licSeleccionada]);
+
+  // ── Adjudicar ─────────────────────────────────────────────
+  const adjudicar = async (propuesta_id: string, licitacion_id: string) => {
+    setAdjudicando(true);
+    try {
+      const res = await fetch(`/api/licitaciones/${licitacion_id}/adjudicar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propuesta_id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+
+      setNotif({ msg: "✅ ¡Adjudicación confirmada! El contrato está activo.", tipo: "ok" });
+      setShowAdjudicar(null);
+
+      // Recargar datos
+      if (ph) {
+        await Promise.all([cargarLicitaciones(ph.id), cargarContratos(ph.id)]);
+        await cargarPropuestas(licitacion_id);
+      }
+    } catch (e: any) {
+      setNotif({ msg: "❌ Error: " + e.message, tipo: "err" });
+    } finally {
+      setAdjudicando(false);
+    }
+  };
+
+  // ── Publicar licitación ───────────────────────────────────
+  const publicarLicitacion = async (id: string) => {
+    const res = await fetch(`/api/licitaciones/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicar: true }),
+    });
+    if (res.ok && ph) {
+      await cargarLicitaciones(ph.id);
+      setNotif({ msg: "✅ ¡Licitación publicada! Las empresas ya pueden aplicar.", tipo: "ok" });
+    }
+  };
+
+  // ── Helpers ───────────────────────────────────────────────
+  const licsActivas = licitaciones.filter(l => l.estado === "activa");
+  const totalPropuestas = licitaciones.reduce((s, l) => s + ((l as any).propuestas?.[0]?.count || 0), 0);
+  const contratosActivos = contratos.filter(c => c.estado === "activo");
+  const licsConPropuestas = licitaciones.filter(l => l.estado === "activa" || l.estado === "en_evaluacion");
+
+  const diasRestantes = (fecha_fin: string | null) => {
+    if (!fecha_fin) return null;
+    const diff = Math.round((new Date(fecha_fin).getTime() - Date.now()) / 86400000);
+    return diff;
+  };
+
+  const formatFecha = (f: string | null) => {
+    if (!f) return "—";
+    return new Date(f).toLocaleDateString("es-PA", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  const formatMonto = (n: number | null) => {
+    if (!n) return "—";
+    return "$" + Number(n).toLocaleString("es-PA", { maximumFractionDigits: 0 }) + "/mes";
+  };
+
+  const nombrePH = ph?.nombre || user?.user_metadata?.nombre_completo || "Mi PH";
+
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#07090F", display: "flex", alignItems: "center", justifyContent: "center", color: "#C9A84C", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+      Cargando...
+    </div>
+  );
 
   if (!user) return (
     <div style={{ minHeight: "100vh", background: "#07090F", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, fontFamily: "Inter, sans-serif" }}>
@@ -62,16 +158,16 @@ export default function PHDashboard() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         :root {
-          --bg: #07090F; --bg2: #0D1117; --bg3: #131920;
-          --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
-          --text: #F0F4FF; --text2: #8896AA; --text3: #3D4A5C;
-          --gold: #C9A84C; --gold2: #E8C96A; --blue: #4A9EFF; --green: #4ADE80; --red: #F87171;
+          --bg:#07090F; --bg2:#0D1117; --bg3:#131920;
+          --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+          --text:#F0F4FF; --text2:#8896AA; --text3:#3D4A5C;
+          --gold:#C9A84C; --gold2:#E8C96A; --blue:#4A9EFF; --green:#4ADE80; --red:#F87171;
         }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
         .layout { display:flex; min-height:100vh; }
 
@@ -87,7 +183,7 @@ export default function PHDashboard() {
         .sb-avatar { width:32px; height:32px; border-radius:50%; background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.3); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--gold); font-family:'Plus Jakarta Sans',sans-serif; flex-shrink:0; }
         .sb-name { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .sb-role { font-size:10px; color:var(--text3); margin-top:1px; }
-        .sb-nav { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:2px; }
+        .sb-nav { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
         .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; color:var(--text2); border:none; background:none; width:100%; text-align:left; font-family:'Inter',sans-serif; }
         .nav-item:hover { color:var(--text); background:rgba(255,255,255,0.04); }
         .nav-item.active { color:var(--gold); background:rgba(201,168,76,0.08); }
@@ -132,7 +228,7 @@ export default function PHDashboard() {
         .b-yellow { background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.2); }
         .b-red { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
         .b-gray { background:rgba(255,255,255,0.05); color:var(--text3); border:1px solid var(--border); }
-        .b-urgent { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); font-size:9px; padding:2px 6px; margin-left:6px; }
+        .b-urgent { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); font-size:9px; padding:2px 6px; margin-left:6px; letter-spacing:0.5px; }
 
         /* BUTTONS */
         .btn { padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; border:none; display:inline-flex; align-items:center; gap:5px; }
@@ -141,7 +237,6 @@ export default function PHDashboard() {
         .btn-blue { background:var(--blue); color:#07090F; }
         .btn-blue:hover { background:#6DB3FF; }
         .btn-green { background:var(--green); color:#07090F; }
-        .btn-green:hover { background:#6FEBB8; }
         .btn-ghost { background:transparent; border:1px solid var(--border2); color:var(--text2); }
         .btn-ghost:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
         .btn-red { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
@@ -152,8 +247,8 @@ export default function PHDashboard() {
         .s-mid { background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.25); }
         .s-low { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.25); }
 
-        /* PROPUESTAS COMPARACION */
-        .prop-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; padding:20px; }
+        /* PROPUESTAS */
+        .prop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; padding:20px; }
         .prop-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:18px; position:relative; transition:all 0.2s; }
         .prop-card:hover { border-color:var(--border2); transform:translateY(-2px); }
         .prop-card.recomendada { border-color:rgba(201,168,76,0.35); background:rgba(201,168,76,0.03); }
@@ -166,37 +261,15 @@ export default function PHDashboard() {
         .prop-detalle { font-size:12px; color:var(--text2); line-height:1.65; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
         .prop-actions { display:flex; gap:6px; margin-top:14px; }
 
-        /* LIC SELECTOR */
+        /* LIC TABS */
         .lic-tabs { display:flex; gap:6px; padding:14px 20px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
         .lic-tab { padding:6px 14px; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; border:1px solid var(--border); background:transparent; color:var(--text2); display:flex; align-items:center; gap:6px; }
         .lic-tab:hover { color:var(--text); border-color:var(--border2); }
         .lic-tab.active { background:rgba(201,168,76,0.1); border-color:rgba(201,168,76,0.3); color:var(--gold); }
-        .lic-tab-count { background:rgba(255,255,255,0.1); color:var(--text2); font-size:10px; padding:1px 5px; border-radius:4px; font-family:'DM Mono',monospace; }
+        .lic-tab-count { background:rgba(255,255,255,0.08); color:var(--text2); font-size:10px; padding:1px 5px; border-radius:4px; font-family:'DM Mono',monospace; }
 
-        /* NUEVA LIC FORM */
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:20px; }
-        .field { margin-bottom:0; }
-        .field label { display:block; font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:7px; }
-        .field input, .field select, .field textarea { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:9px; padding:10px 13px; font-size:13px; color:var(--text); font-family:'Inter',sans-serif; outline:none; transition:all 0.15s; }
-        .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--gold); background:rgba(201,168,76,0.03); }
-        .field textarea { resize:vertical; min-height:80px; }
-        .field select option { background:var(--bg2); }
-        .field-full { grid-column:1/-1; }
-        .req-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-        .req-chip { padding:4px 10px; border-radius:5px; font-size:11px; font-weight:500; cursor:pointer; transition:all 0.15s; border:1px solid var(--border); background:transparent; color:var(--text2); font-family:'Inter',sans-serif; }
-        .req-chip.on { background:rgba(201,168,76,0.1); border-color:rgba(201,168,76,0.3); color:var(--gold); }
-
-        /* REPORTE */
-        .reporte-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:20px; }
-        .rep-stat { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
-        .rep-val { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
-        .rep-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; }
-        .reporte-section { padding:0 20px 20px; }
-        .rep-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); font-size:13px; }
-        .rep-row:last-child { border-bottom:none; }
-
-        /* CONTRATOS ALERTA */
-        .cont-alert { background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.15); border-radius:10px; padding:14px 18px; margin-bottom:16px; display:flex; align-items:center; gap:14px; font-size:13px; }
+        /* ALERTA */
+        .alert-banner { background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.15); border-radius:10px; padding:14px 18px; margin-bottom:16px; display:flex; align-items:center; gap:14px; font-size:13px; }
 
         /* MODAL */
         .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
@@ -206,12 +279,35 @@ export default function PHDashboard() {
         .modal-sub { font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.6; }
         .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
 
-        @media (max-width:1024px) { .cards { grid-template-columns:repeat(2,1fr); } }
-        @media (max-width:768px) { .sidebar { display:none; } .main { margin-left:0; padding:16px; } .form-grid { grid-template-columns:1fr; } }
+        /* NOTIF */
+        .notif { position:fixed; top:20px; right:20px; z-index:500; max-width:380px; padding:14px 18px; border-radius:10px; font-size:13px; font-weight:500; animation:fadeUp 0.3s ease both; }
+        .notif-ok { background:rgba(74,222,128,0.12); border:1px solid rgba(74,222,128,0.3); color:var(--green); }
+        .notif-err { background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.3); color:var(--red); }
+
+        /* EMPTY STATE */
+        .empty { padding:48px 20px; text-align:center; }
+        .empty-icon { font-size:36px; margin-bottom:12px; }
+        .empty-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; color:var(--text); margin-bottom:6px; }
+        .empty-sub { font-size:13px; color:var(--text3); line-height:1.6; }
+
+        /* REPORTE */
+        .rep-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:20px; }
+        .rep-stat { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+        .rep-val { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
+        .rep-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; }
+
+        @media(max-width:1024px){ .cards{grid-template-columns:repeat(2,1fr)} }
+        @media(max-width:768px){ .sidebar{display:none} .main{margin-left:0;padding:16px} }
       `}</style>
 
+      {notif && (
+        <div className={`notif notif-${notif.tipo}`} onClick={() => setNotif(null)}>
+          {notif.msg}
+        </div>
+      )}
+
       <div className="layout">
-        {/* SIDEBAR */}
+        {/* ─── SIDEBAR ─── */}
         <aside className="sidebar">
           <div className="sb-logo">
             <div className="sb-logo-text">
@@ -231,22 +327,28 @@ export default function PHDashboard() {
           <nav className="sb-nav">
             {[
               { key: "dashboard", icon: "⚡", label: "Dashboard" },
-              { key: "nueva", icon: "➕", label: "Nueva licitación" },
-              { key: "licitaciones", icon: "📋", label: "Mis licitaciones", pill: LICITACIONES.filter(l => l.estado === "activa").length },
-              { key: "propuestas", icon: "📥", label: "Propuestas", pill: PROPUESTAS.filter(p => p.lic === "LIC-001" || p.lic === "LIC-002").length },
-              { key: "contratos", icon: "📄", label: "Contratos", pill: CONTRATOS.filter(c => c.estado === "vencido").length > 0 ? "!" : null, pillRed: true },
-              { key: "reporte", icon: "📊", label: "Reporte copropietarios" },
+              { key: "licitaciones", icon: "📋", label: "Mis licitaciones", pill: licsActivas.length || null },
+              { key: "propuestas", icon: "📥", label: "Propuestas" },
+              { key: "contratos", icon: "📄", label: "Contratos", pill: contratos.filter(c => c.estado === "vencido").length || null, pillRed: true },
+              { key: "reporte", icon: "📊", label: "Reporte" },
             ].map(item => (
-              <button key={item.key} className={`nav-item ${tab === item.key ? "active" : ""}`} onClick={() => setTab(item.key as Tab)}>
+              <button
+                key={item.key}
+                className={`nav-item ${tab === item.key ? "active" : ""}`}
+                onClick={() => setTab(item.key as Tab)}
+              >
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}
-                {item.pill !== null && item.pill !== undefined && (
-                  <span className={`nav-pill ${item.pillRed ? "nav-pill-red" : ""}`}>{item.pill}</span>
-                )}
+                {item.pill ? (
+                  <span className={`nav-pill ${(item as any).pillRed ? "nav-pill-red" : ""}`}>{item.pill}</span>
+                ) : null}
               </button>
             ))}
           </nav>
           <div className="sb-bottom">
+            <a href="/ph/nueva-licitacion" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#07090F", background: "var(--gold)", textDecoration: "none", marginBottom: 6 }}>
+              <span>➕</span> Nueva licitación
+            </a>
             <button className="nav-item" onClick={() => { supabase.auth.signOut(); window.location.href = "/"; }}>
               <span className="nav-icon">↩️</span> Cerrar sesión
             </button>
@@ -260,28 +362,28 @@ export default function PHDashboard() {
             <>
               <div className="ph-header">
                 <h1 className="ph-title">Bienvenido, {nombrePH} 👋</h1>
-                <p className="ph-sub">Resumen de la gestión de contrataciones de tu PH</p>
+                <p className="ph-sub">Gestión de contrataciones de tu PH</p>
               </div>
 
-              {CONTRATOS.some(c => c.estado === "vencido") && (
-                <div className="cont-alert">
+              {contratos.some(c => c.estado === "vencido") && (
+                <div className="alert-banner">
                   <span style={{ fontSize: 20 }}>⚠️</span>
                   <div style={{ flex: 1 }}>
-                    <strong style={{ color: "var(--red)" }}>Contrato vencido — acción requerida</strong>
+                    <strong style={{ color: "var(--red)" }}>Contratos vencidos — acción requerida</strong>
                     <div style={{ color: "var(--text2)", fontSize: 12, marginTop: 2 }}>
-                      El contrato de mantenimiento de ascensores con TechElevators S.A. venció hace 18 días.
+                      {contratos.filter(c => c.estado === "vencido").length} contrato(s) han vencido. Renova o publica una nueva licitación.
                     </div>
                   </div>
-                  <button className="btn btn-red" onClick={() => setTab("contratos")}>Ver contrato</button>
+                  <button className="btn btn-red" onClick={() => setTab("contratos")}>Ver contratos</button>
                 </div>
               )}
 
               <div className="cards">
                 {[
-                  { label: "Licitaciones activas", val: LICITACIONES.filter(l => l.estado === "activa").length, sub: "Recibiendo propuestas", color: "var(--gold)" },
-                  { label: "Propuestas recibidas", val: PROPUESTAS.length, sub: "En 2 licitaciones abiertas", color: "var(--blue)" },
-                  { label: "Contratos activos", val: CONTRATOS.filter(c => c.estado === "activo").length, sub: "En ejecución actualmente", color: "var(--green)" },
-                  { label: "Ahorro acumulado", val: "$8,760", sub: "vs. precios de mercado este año", color: "#A78BFA" },
+                  { label: "Licitaciones activas", val: licsActivas.length, sub: "Recibiendo propuestas", color: "var(--gold)" },
+                  { label: "Total propuestas", val: propuestas.length || "—", sub: "En licitaciones abiertas", color: "var(--blue)" },
+                  { label: "Contratos activos", val: contratosActivos.length, sub: "En ejecución", color: "var(--green)" },
+                  { label: "Licitaciones total", val: licitaciones.length, sub: "Historial completo", color: "#A78BFA" },
                 ].map(c => (
                   <div className="card" key={c.label}>
                     <div className="card-label">{c.label}</div>
@@ -295,120 +397,71 @@ export default function PHDashboard() {
                 <div className="sec-head">
                   <div>
                     <div className="sec-title">Licitaciones activas</div>
-                    <div className="sec-sub">Propuestas siendo recibidas ahora mismo</div>
+                    <div className="sec-sub">Abiertas para recibir propuestas</div>
                   </div>
-                  <button className="btn btn-gold" onClick={() => setTab("nueva")}>+ Nueva licitación</button>
+                  <a href="/ph/nueva-licitacion" className="btn btn-gold" style={{ textDecoration: "none" }}>+ Nueva licitación</a>
                 </div>
-                <table className="tbl">
-                  <thead><tr><th>Servicio</th><th>Presupuesto</th><th>Cierre</th><th>Propuestas</th><th>Acción</th></tr></thead>
-                  <tbody>
-                    {LICITACIONES.filter(l => l.estado === "activa").map(l => (
-                      <tr key={l.id}>
-                        <td className="td-main">{l.servicio}{l.urgente && <span className="badge b-urgent">URGENTE</span>}</td>
-                        <td className="td-mono">{l.presupuesto}</td>
-                        <td style={{ color: l.urgente ? "var(--red)" : "var(--text2)" }}>{l.cierre}</td>
-                        <td><span className="badge b-blue">{l.propuestas} recibidas</span></td>
-                        <td>
-                          <button className="btn btn-gold" onClick={() => { setLicSeleccionada(l.id); setTab("propuestas"); }}>
-                            Ver propuestas →
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {licsActivas.length === 0 ? (
+                  <div className="empty">
+                    <div className="empty-icon">📋</div>
+                    <div className="empty-title">No hay licitaciones activas</div>
+                    <div className="empty-sub">Publica tu primera licitación para recibir propuestas de empresas verificadas.</div>
+                  </div>
+                ) : (
+                  <table className="tbl">
+                    <thead><tr><th>Servicio</th><th>Presupuesto</th><th>Cierre</th><th>Acción</th></tr></thead>
+                    <tbody>
+                      {licsActivas.map(l => (
+                        <tr key={l.id}>
+                          <td className="td-main">
+                            {l.titulo}
+                            {l.urgente && <span className="badge b-urgent">URGENTE</span>}
+                          </td>
+                          <td className="td-mono">
+                            {l.presupuesto_minimo ? `$${Number(l.presupuesto_minimo).toLocaleString()} - $${Number(l.presupuesto_maximo || l.presupuesto_minimo).toLocaleString()}/mes` : "—"}
+                          </td>
+                          <td style={{ color: l.urgente ? "var(--red)" : "var(--text2)" }}>{formatFecha(l.fecha_cierre)}</td>
+                          <td>
+                            <button className="btn btn-gold" onClick={() => {
+                              setLicSeleccionada(l.id);
+                              setTab("propuestas");
+                            }}>Ver propuestas →</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
-              <div className="sec">
-                <div className="sec-head">
-                  <div className="sec-title">Contratos próximos a vencer</div>
+              {contratos.length > 0 && (
+                <div className="sec">
+                  <div className="sec-head">
+                    <div className="sec-title">Contratos recientes</div>
+                  </div>
+                  <table className="tbl">
+                    <thead><tr><th>Empresa</th><th>Servicio</th><th>Monto</th><th>Vence</th><th>Estado</th></tr></thead>
+                    <tbody>
+                      {contratos.slice(0, 3).map(c => {
+                        const dias = diasRestantes(c.fecha_fin);
+                        return (
+                          <tr key={c.id}>
+                            <td className="td-main">{(c as any).empresas?.nombre || "—"}</td>
+                            <td>{(c as any).licitaciones?.titulo || (c as any).licitaciones?.categoria || "—"}</td>
+                            <td className="td-mono">{formatMonto(c.monto_mensual)}</td>
+                            <td>{formatFecha(c.fecha_fin)}</td>
+                            <td>
+                              {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span>
+                                : dias !== null && dias < 90 ? <span className="badge b-yellow">Vence en {dias}d</span>
+                                : <span className="badge b-green">● Activo</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <table className="tbl">
-                  <thead><tr><th>Empresa</th><th>Servicio</th><th>Monto</th><th>Vence</th><th>Estado</th></tr></thead>
-                  <tbody>
-                    {CONTRATOS.map(c => (
-                      <tr key={c.id}>
-                        <td className="td-main">{c.empresa}</td>
-                        <td>{c.servicio}</td>
-                        <td className="td-mono">{c.monto}</td>
-                        <td>{c.fin}</td>
-                        <td>
-                          {c.estado === "activo" && c.diasRestantes < 90 ? <span className="badge b-yellow">Vence pronto</span> : null}
-                          {c.estado === "activo" && c.diasRestantes >= 90 ? <span className="badge b-green">● Activo</span> : null}
-                          {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span> : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {/* ── NUEVA LICITACIÓN ── */}
-          {tab === "nueva" && (
-            <>
-              <div className="ph-header">
-                <h1 className="ph-title">Nueva licitación</h1>
-                <p className="ph-sub">La IA sugerirá los requisitos según el tipo de servicio</p>
-              </div>
-              <div className="sec">
-                <div className="sec-head">
-                  <div className="sec-title">Detalles de la licitación</div>
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Tipo de servicio *</label>
-                    <select value={nuevaLic.servicio} onChange={e => setNuevaLic(n => ({ ...n, servicio: e.target.value }))}>
-                      <option value="">Seleccionar servicio...</option>
-                      {SERVICIOS_IA.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Presupuesto estimado (USD/mes)</label>
-                    <input type="text" placeholder="Ej: $2,000 - $3,500" value={nuevaLic.presupuesto} onChange={e => setNuevaLic(n => ({ ...n, presupuesto: e.target.value }))} />
-                  </div>
-                  <div className="field">
-                    <label>Fecha de cierre *</label>
-                    <input type="date" value={nuevaLic.cierre} onChange={e => setNuevaLic(n => ({ ...n, cierre: e.target.value }))} />
-                  </div>
-                  <div className="field field-full">
-                    <label>Descripción del servicio requerido</label>
-                    <textarea placeholder="Describe en detalle qué necesitas — número de personas, horarios, áreas específicas, equipos requeridos..." value={nuevaLic.descripcion} onChange={e => setNuevaLic(n => ({ ...n, descripcion: e.target.value }))} />
-                  </div>
-                  {nuevaLic.servicio && (
-                    <div className="field field-full">
-                      <label>⚡ Requisitos sugeridos por IA para {nuevaLic.servicio}</label>
-                      <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 10 }}>Selecciona los que aplicarán a esta licitación:</div>
-                      <div className="req-chips">
-                        {[
-                          "Paz y Salvo CSS", "Paz y Salvo DGI", "Registro Público",
-                          ...(nuevaLic.servicio.includes("Seguridad") ? ["Licencia MINSEG", "Certificación guardias", "Protocolo de emergencias", "Seguro de responsabilidad civil"] : []),
-                          ...(nuevaLic.servicio.includes("Limpieza") ? ["Certificación MINSA", "Fichas técnicas productos", "Protocolo de bioseguridad"] : []),
-                          ...(nuevaLic.servicio.includes("HVAC") ? ["Certificación técnica HVAC", "Licencia ACODECO", "Garantía de equipos"] : []),
-                          ...(nuevaLic.servicio.includes("Jardinería") ? ["Certificación fitosanitaria", "Lista de productos usados", "Seguro de accidentes"] : []),
-                          "Referencias de otros PHs", "Estados financieros", "KYC completado",
-                        ].map(r => (
-                          <button key={r} className={`req-chip ${nuevaLic.requisitos.includes(r) ? "on" : ""}`}
-                            onClick={() => setNuevaLic(n => ({
-                              ...n,
-                              requisitos: n.requisitos.includes(r) ? n.requisitos.filter(x => x !== r) : [...n.requisitos, r]
-                            }))}>
-                            {nuevaLic.requisitos.includes(r) ? "✓ " : ""}{r}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="field-full" style={{ display: "flex", gap: 10, justifyContent: "flex-end", padding: "4px 0" }}>
-                    <button className="btn btn-ghost" onClick={() => setTab("licitaciones")}>Cancelar</button>
-                    <button className="btn btn-ghost">Guardar borrador</button>
-                    <button className="btn btn-gold" onClick={() => { alert("¡Licitación publicada! Las empresas verificadas ya pueden ver y aplicar."); setTab("licitaciones"); }}>
-                      🚀 Publicar licitación
-                    </button>
-                  </div>
-                </div>
-              </div>
+              )}
             </>
           )}
 
@@ -418,39 +471,67 @@ export default function PHDashboard() {
               <div className="ph-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                 <div>
                   <h1 className="ph-title">Mis licitaciones</h1>
-                  <p className="ph-sub">Historial completo de licitaciones de tu PH</p>
+                  <p className="ph-sub">Historial completo — {licitaciones.length} licitaciones</p>
                 </div>
-                <button className="btn btn-gold" onClick={() => setTab("nueva")}>+ Nueva licitación</button>
+                <a href="/ph/nueva-licitacion" className="btn btn-gold" style={{ textDecoration: "none" }}>+ Nueva licitación</a>
               </div>
               <div className="sec">
-                <table className="tbl">
-                  <thead><tr><th>ID</th><th>Servicio</th><th>Estado</th><th>Publicada</th><th>Cierre</th><th>Propuestas</th><th>Acción</th></tr></thead>
-                  <tbody>
-                    {LICITACIONES.map(l => (
-                      <tr key={l.id}>
-                        <td className="td-mono" style={{ color: "var(--text3)" }}>{l.id}</td>
-                        <td className="td-main">{l.servicio}</td>
-                        <td>
-                          {l.estado === "activa" && <span className="badge b-green">● Activa</span>}
-                          {l.estado === "borrador" && <span className="badge b-gray">Borrador</span>}
-                          {l.estado === "adjudicada" && <span className="badge b-gold">✓ Adjudicada</span>}
-                        </td>
-                        <td>{l.publicada}</td>
-                        <td>{l.cierre}</td>
-                        <td><span className="badge b-blue">{l.propuestas}</span></td>
-                        <td style={{ display: "flex", gap: 6 }}>
-                          {l.estado === "activa" && (
-                            <button className="btn btn-gold" onClick={() => { setLicSeleccionada(l.id); setTab("propuestas"); }}>
-                              Ver propuestas
-                            </button>
-                          )}
-                          {l.estado === "borrador" && <button className="btn btn-ghost">Editar</button>}
-                          {l.estado === "adjudicada" && <span className="badge b-gold">✓ Completada</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {licitaciones.length === 0 ? (
+                  <div className="empty">
+                    <div className="empty-icon">📋</div>
+                    <div className="empty-title">Aún no tienes licitaciones</div>
+                    <div className="empty-sub">Crea tu primera licitación para empezar a recibir propuestas.</div>
+                  </div>
+                ) : (
+                  <table className="tbl">
+                    <thead>
+                      <tr><th>Servicio</th><th>Estado</th><th>Publicada</th><th>Cierre</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody>
+                      {licitaciones.map(l => (
+                        <tr key={l.id}>
+                          <td className="td-main">
+                            {l.titulo}
+                            {l.urgente && <span className="badge b-urgent">URGENTE</span>}
+                          </td>
+                          <td>
+                            {l.estado === "activa" && <span className="badge b-green">● Activa</span>}
+                            {l.estado === "borrador" && <span className="badge b-gray">Borrador</span>}
+                            {l.estado === "adjudicada" && <span className="badge b-gold">✓ Adjudicada</span>}
+                            {l.estado === "en_evaluacion" && <span className="badge b-blue">En evaluación</span>}
+                            {l.estado === "cancelada" && <span className="badge b-red">Cancelada</span>}
+                          </td>
+                          <td>{formatFecha(l.fecha_publicacion)}</td>
+                          <td>{formatFecha(l.fecha_cierre)}</td>
+                          <td style={{ display: "flex", gap: 6 }}>
+                            {(l.estado === "activa" || l.estado === "en_evaluacion") && (
+                              <button className="btn btn-gold" onClick={() => { setLicSeleccionada(l.id); setTab("propuestas"); }}>
+                                Ver propuestas
+                              </button>
+                            )}
+                            {l.estado === "borrador" && (
+                              <button className="btn btn-ghost" onClick={() => publicarLicitacion(l.id)}>
+                                🚀 Publicar
+                              </button>
+                            )}
+                            {l.estado === "adjudicada" && <span className="badge b-gold">✓ Completada</span>}
+                            {l.url_slug && (
+                              <a
+                                href={`/licitacion/${l.url_slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-ghost"
+                                style={{ textDecoration: "none", fontSize: 11 }}
+                              >
+                                🔗 Ver pública
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </>
           )}
@@ -460,60 +541,102 @@ export default function PHDashboard() {
             <>
               <div className="ph-header">
                 <h1 className="ph-title">Ranking de propuestas</h1>
-                <p className="ph-sub">Evaluación objetiva de la IA — ordenadas de mayor a menor puntaje</p>
+                <p className="ph-sub">Evaluación objetiva — ordenadas por puntaje IA</p>
               </div>
 
               <div className="sec">
-                <div className="lic-tabs">
-                  {LICITACIONES.filter(l => l.propuestas > 0).map(l => (
-                    <button key={l.id} className={`lic-tab ${licSeleccionada === l.id ? "active" : ""}`} onClick={() => setLicSeleccionada(l.id)}>
-                      {l.servicio}
-                      <span className="lic-tab-count">{l.propuestas}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.03)" }}>
-                  <div style={{ fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16 }}>🤖</span>
-                    <span>La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (40%)</strong> · <strong style={{ color: "var(--text)" }}>documentación (30%)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (20%)</strong> · <strong style={{ color: "var(--text)" }}>tiempo respuesta (10%)</strong></span>
-                  </div>
-                </div>
-
-                <div className="prop-grid">
-                  {propuestasLic.map((p, i) => (
-                    <div key={p.id} className={`prop-card ${p.recomendada ? "recomendada" : ""}`}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div className={`score ${p.puntaje >= 85 ? "s-high" : p.puntaje >= 70 ? "s-mid" : "s-low"}`}>{p.puntaje}</div>
-                        <div style={{ fontSize: 11, color: "var(--text3)" }}>#{i + 1} en ranking</div>
-                      </div>
-                      <div className="prop-empresa">{p.empresa}</div>
-                      <div className="prop-monto">{p.monto}</div>
-                      <div className="prop-row"><span className="prop-row-label">Experiencia</span><span className="prop-row-val">{p.experiencia}</span></div>
-                      <div className="prop-row">
-                        <span className="prop-row-label">Documentos</span>
-                        <span className={`badge ${p.documentos ? "b-green" : "b-red"}`} style={{ fontSize: 10, padding: "2px 6px" }}>
-                          {p.documentos ? "✓ Completos" : "⚠ Pendientes"}
+                {licsConPropuestas.length > 0 ? (
+                  <div className="lic-tabs">
+                    {licsConPropuestas.map(l => (
+                      <button
+                        key={l.id}
+                        className={`lic-tab ${licSeleccionada === l.id ? "active" : ""}`}
+                        onClick={() => setLicSeleccionada(l.id)}
+                      >
+                        {l.titulo}
+                        <span className="lic-tab-count">
+                          {l.fecha_cierre ? "cierre " + formatFecha(l.fecha_cierre) : ""}
                         </span>
-                      </div>
-                      <div className="prop-detalle">{p.detalle}</div>
-                      <div className="prop-actions">
-                        {!adjudicada ? (
-                          <>
-                            <button className={`btn ${p.recomendada ? "btn-gold" : "btn-ghost"}`} onClick={() => setShowAdjudicar(p.id)}>
-                              {p.recomendada ? "⭐ Adjudicar" : "Adjudicar"}
-                            </button>
-                            <button className="btn btn-ghost">Ver detalles</button>
-                          </>
-                        ) : adjudicada === p.id ? (
-                          <span className="badge b-green">✓ Adjudicada</span>
-                        ) : (
-                          <span className="badge b-gray">No seleccionada</span>
-                        )}
-                      </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {!licSeleccionada ? (
+                  <div className="empty">
+                    <div className="empty-icon">📥</div>
+                    <div className="empty-title">Selecciona una licitación</div>
+                    <div className="empty-sub">Elige una licitación activa para ver las propuestas recibidas.</div>
+                  </div>
+                ) : propuestas.length === 0 ? (
+                  <div className="empty">
+                    <div className="empty-icon">⏳</div>
+                    <div className="empty-title">Sin propuestas aún</div>
+                    <div className="empty-sub">Las empresas verificadas recibirán notificación y podrán aplicar.</div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.02)", fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>🤖</span>
+                      La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (40%)</strong> · <strong style={{ color: "var(--text)" }}>documentación (30%)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (20%)</strong> · <strong style={{ color: "var(--text)" }}>respuesta (10%)</strong>
                     </div>
-                  ))}
-                </div>
+                    <div className="prop-grid">
+                      {propuestas.map((p, i) => {
+                        const esGanada = p.estado === "ganada";
+                        const esNoSel = p.estado === "no_seleccionada";
+                        const esRecomendada = i === 0 && p.puntaje_ia !== null && !esGanada && !esNoSel;
+                        return (
+                          <div key={p.id} className={`prop-card ${esRecomendada ? "recomendada" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div className={`score ${(p.puntaje_ia || 0) >= 75 ? "s-high" : (p.puntaje_ia || 0) >= 55 ? "s-mid" : "s-low"}`}>
+                                {p.puntaje_ia ?? "—"}
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--text3)" }}>#{i + 1} en ranking</div>
+                            </div>
+                            <div className="prop-empresa">{(p as any).empresas?.nombre || "Empresa"}</div>
+                            <div className="prop-monto">{formatMonto(p.monto_mensual || (p.precio_anual ? p.precio_anual / 12 : null))}</div>
+                            <div className="prop-row">
+                              <span className="prop-row-label">Experiencia</span>
+                              <span className="prop-row-val">{(p as any).empresas?.anios_experiencia || "—"} años</span>
+                            </div>
+                            <div className="prop-row">
+                              <span className="prop-row-label">Disponibilidad</span>
+                              <span className="prop-row-val">{formatFecha(p.disponibilidad_inicio)}</span>
+                            </div>
+                            {p.descripcion && (
+                              <div className="prop-detalle">{p.descripcion}</div>
+                            )}
+                            <div className="prop-actions">
+                              {esGanada ? (
+                                <span className="badge b-green">✓ Adjudicada</span>
+                              ) : esNoSel ? (
+                                <span className="badge b-gray">No seleccionada</span>
+                              ) : (
+                                <>
+                                  <button
+                                    className={`btn ${esRecomendada ? "btn-gold" : "btn-ghost"}`}
+                                    onClick={() => setShowAdjudicar(p.id)}
+                                  >
+                                    {esRecomendada ? "⭐ Adjudicar" : "Adjudicar"}
+                                  </button>
+                                  <a
+                                    href={`/licitacion/${licitaciones.find(l => l.id === licSeleccionada)?.url_slug || ""}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-ghost"
+                                    style={{ textDecoration: "none", fontSize: 11 }}
+                                  >
+                                    Ver pliego
+                                  </a>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -522,26 +645,28 @@ export default function PHDashboard() {
           {tab === "contratos" && (
             <>
               <div className="ph-header">
-                <h1 className="ph-title">Contratos activos</h1>
-                <p className="ph-sub">Gestión y seguimiento de todos los contratos de tu PH</p>
+                <h1 className="ph-title">Contratos</h1>
+                <p className="ph-sub">Historial de contratos de tu PH</p>
               </div>
 
-              {CONTRATOS.filter(c => c.estado === "vencido").map(c => (
-                <div key={c.id} className="cont-alert">
+              {contratos.filter(c => c.estado === "vencido").map(c => (
+                <div key={c.id} className="alert-banner">
                   <span style={{ fontSize: 20 }}>🚨</span>
                   <div style={{ flex: 1 }}>
-                    <strong style={{ color: "var(--red)" }}>Contrato vencido hace {Math.abs(c.diasRestantes)} días</strong>
-                    <div style={{ color: "var(--text2)", fontSize: 12, marginTop: 2 }}>{c.empresa} — {c.servicio}. Debes renovar o publicar una nueva licitación inmediatamente.</div>
+                    <strong style={{ color: "var(--red)" }}>Contrato vencido</strong>
+                    <div style={{ color: "var(--text2)", fontSize: 12, marginTop: 2 }}>
+                      {(c as any).empresas?.nombre} — {(c as any).licitaciones?.titulo || (c as any).licitaciones?.categoria}. Vencido el {formatFecha(c.fecha_fin)}.
+                    </div>
                   </div>
-                  <button className="btn btn-gold" onClick={() => setTab("nueva")}>+ Nueva licitación</button>
+                  <a href="/ph/nueva-licitacion" className="btn btn-gold" style={{ textDecoration: "none" }}>+ Nueva licitación</a>
                 </div>
               ))}
 
               <div className="cards" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
                 {[
-                  { label: "Contratos activos", val: CONTRATOS.filter(c => c.estado === "activo").length, color: "var(--green)" },
-                  { label: "Valor mensual total", val: "$3,050", color: "var(--gold)" },
-                  { label: "Vencen en 90 días", val: CONTRATOS.filter(c => c.estado === "activo" && c.diasRestantes < 90).length, color: "#F59E0B" },
+                  { label: "Activos", val: contratosActivos.length, color: "var(--green)" },
+                  { label: "Completados", val: contratos.filter(c => c.estado === "completado").length, color: "var(--blue)" },
+                  { label: "Vencidos sin renovar", val: contratos.filter(c => c.estado === "vencido").length, color: "var(--red)" },
                 ].map(c => (
                   <div className="card" key={c.label}>
                     <div className="card-label">{c.label}</div>
@@ -551,57 +676,62 @@ export default function PHDashboard() {
               </div>
 
               <div className="sec">
-                <table className="tbl">
-                  <thead><tr><th>Empresa</th><th>Servicio</th><th>Monto/mes</th><th>Inicio</th><th>Vence</th><th>Estado</th><th>Acción</th></tr></thead>
-                  <tbody>
-                    {CONTRATOS.map(c => (
-                      <tr key={c.id}>
-                        <td className="td-main">{c.empresa}</td>
-                        <td>{c.servicio}</td>
-                        <td className="td-mono">{c.monto}</td>
-                        <td>{c.inicio}</td>
-                        <td style={{ color: c.estado === "vencido" ? "var(--red)" : "inherit" }}>{c.fin}</td>
-                        <td>
-                          {c.estado === "activo" && c.diasRestantes < 90 ? <span className="badge b-yellow">Vence en {c.diasRestantes}d</span> : null}
-                          {c.estado === "activo" && c.diasRestantes >= 90 ? <span className="badge b-green">● Activo</span> : null}
-                          {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span> : null}
-                        </td>
-                        <td>
-                          {c.estado === "vencido" ? (
-                            <button className="btn btn-gold" onClick={() => setTab("nueva")}>Renovar →</button>
-                          ) : (
-                            <button className="btn btn-ghost">Ver contrato</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {contratos.length === 0 ? (
+                  <div className="empty">
+                    <div className="empty-icon">📄</div>
+                    <div className="empty-title">Sin contratos aún</div>
+                    <div className="empty-sub">Los contratos aparecen aquí cuando adjudicas una licitación.</div>
+                  </div>
+                ) : (
+                  <table className="tbl">
+                    <thead><tr><th>Empresa</th><th>Servicio</th><th>Monto/mes</th><th>Inicio</th><th>Vence</th><th>Estado</th></tr></thead>
+                    <tbody>
+                      {contratos.map(c => {
+                        const dias = diasRestantes(c.fecha_fin);
+                        return (
+                          <tr key={c.id}>
+                            <td className="td-main">{(c as any).empresas?.nombre || "—"}</td>
+                            <td>{(c as any).licitaciones?.titulo || (c as any).licitaciones?.categoria || "—"}</td>
+                            <td className="td-mono">{formatMonto(c.monto_mensual)}</td>
+                            <td>{formatFecha(c.fecha_inicio)}</td>
+                            <td style={{ color: c.estado === "vencido" ? "var(--red)" : "inherit" }}>{formatFecha(c.fecha_fin)}</td>
+                            <td>
+                              {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span>
+                                : c.estado === "completado" ? <span className="badge b-gray">✓ Completado</span>
+                                : dias !== null && dias < 90 ? <span className="badge b-yellow">Vence en {dias}d</span>
+                                : <span className="badge b-green">● Activo</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </>
           )}
 
-          {/* ── REPORTE COPROPIETARIOS ── */}
+          {/* ── REPORTE ── */}
           {tab === "reporte" && (
             <>
               <div className="ph-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                 <div>
                   <h1 className="ph-title">Reporte para copropietarios</h1>
-                  <p className="ph-sub">Resumen de contrataciones y ahorros — listo para asamblea</p>
+                  <p className="ph-sub">Resumen de contrataciones — listo para asamblea</p>
                 </div>
-                <button className="btn btn-gold" onClick={() => alert("Descargando reporte PDF...")}>⬇ Descargar PDF</button>
+                <button className="btn btn-gold" onClick={() => window.print()}>⬇ Imprimir / PDF</button>
               </div>
 
               <div className="sec">
-                <div className="sec-head"><div className="sec-title">Resumen ejecutivo — Febrero 2026</div></div>
-                <div className="reporte-grid">
+                <div className="sec-head"><div className="sec-title">Resumen ejecutivo</div></div>
+                <div className="rep-grid">
                   {[
-                    { val: "3", label: "Licitaciones publicadas", color: "var(--gold)" },
-                    { val: "11", label: "Propuestas recibidas", color: "var(--blue)" },
-                    { val: "$8,760", label: "Ahorro documentado vs. mercado", color: "var(--green)" },
-                    { val: "2", label: "Contratos adjudicados", color: "var(--gold)" },
-                    { val: "100%", label: "Empresas verificadas contratadas", color: "var(--green)" },
-                    { val: "0", label: "Contrataciones sin licitación", color: "#A78BFA" },
+                    { val: licitaciones.length, label: "Licitaciones publicadas", color: "var(--gold)" },
+                    { val: licitaciones.filter(l => l.estado === "adjudicada").length, label: "Contratos adjudicados", color: "var(--blue)" },
+                    { val: contratosActivos.length, label: "Contratos activos", color: "var(--green)" },
+                    { val: licitaciones.filter(l => l.estado !== "borrador").length, label: "Licitaciones transparentes", color: "var(--gold)" },
+                    { val: "100%", label: "Documentado digitalmente", color: "var(--green)" },
+                    { val: "0", label: "Contrataciones informales", color: "#A78BFA" },
                   ].map(s => (
                     <div className="rep-stat" key={s.label}>
                       <div className="rep-val" style={{ color: s.color }}>{s.val}</div>
@@ -611,36 +741,28 @@ export default function PHDashboard() {
                 </div>
               </div>
 
-              <div className="sec">
-                <div className="sec-head"><div className="sec-title">Detalle de contrataciones</div></div>
-                <div className="reporte-section">
-                  {[
-                    { servicio: "Limpieza y mantenimiento", empresa: "CleanPro Panama", monto: "$2,100/mes", cotizaciones: 2, ahorro: "$400/mes vs. oferta más alta", metodo: "Licitación LIC-002" },
-                    { servicio: "Jardinería y áreas verdes", empresa: "GreenScape Panamá", monto: "$950/mes", cotizaciones: 5, ahorro: "$250/mes vs. contrato anterior", metodo: "Licitación LIC-004" },
-                  ].map(r => (
-                    <div key={r.servicio} style={{ padding: "16px 0", borderBottom: "1px solid var(--border)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>{r.servicio}</div>
-                          <div style={{ fontSize: 13, color: "var(--text2)" }}>Adjudicado a: <strong style={{ color: "var(--text)" }}>{r.empresa}</strong></div>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontFamily: "DM Mono, monospace", fontSize: 16, fontWeight: 700, color: "var(--gold)" }}>{r.monto}</div>
-                          <div style={{ fontSize: 11, color: "var(--green)", marginTop: 3 }}>▼ {r.ahorro}</div>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--text3)" }}>
-                        <span>📋 {r.cotizaciones} propuestas recibidas</span>
-                        <span>✓ Proceso: {r.metodo}</span>
-                        <span>✓ Documentos verificados</span>
-                      </div>
-                    </div>
-                  ))}
+              {contratos.length > 0 && (
+                <div className="sec">
+                  <div className="sec-head"><div className="sec-title">Detalle de contratos activos</div></div>
+                  <table className="tbl">
+                    <thead><tr><th>Servicio</th><th>Empresa adjudicada</th><th>Monto mensual</th><th>Inicio</th><th>Vence</th></tr></thead>
+                    <tbody>
+                      {contratosActivos.map(c => (
+                        <tr key={c.id}>
+                          <td className="td-main">{(c as any).licitaciones?.titulo || (c as any).licitaciones?.categoria || "—"}</td>
+                          <td>{(c as any).empresas?.nombre || "—"}</td>
+                          <td className="td-mono">{formatMonto(c.monto_mensual)}</td>
+                          <td>{formatFecha(c.fecha_inicio)}</td>
+                          <td>{formatFecha(c.fecha_fin)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              )}
 
               <div style={{ background: "rgba(74,222,128,0.04)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 12, padding: "16px 20px", fontSize: 13, color: "var(--text2)", lineHeight: 1.7 }}>
-                ✅ <strong style={{ color: "var(--text)" }}>Certificación de transparencia LicitaPH:</strong> Todas las contrataciones de este período fueron realizadas mediante proceso competitivo documentado. Los expedientes completos están disponibles para consulta de cualquier copropietario en la plataforma.
+                ✅ <strong style={{ color: "var(--text)" }}>Certificación de transparencia LicitaPH:</strong> Todas las contrataciones de este período fueron realizadas mediante proceso competitivo y documentado en la plataforma. Los expedientes están disponibles para consulta de cualquier copropietario.
               </div>
             </>
           )}
@@ -648,23 +770,40 @@ export default function PHDashboard() {
         </main>
       </div>
 
-      {/* MODAL ADJUDICAR */}
+      {/* ── MODAL ADJUDICAR ── */}
       {showAdjudicar && (
-        <div className="modal-bg" onClick={() => setShowAdjudicar(null)}>
+        <div className="modal-bg" onClick={() => !adjudicando && setShowAdjudicar(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Confirmar adjudicación</h2>
-            <p className="modal-sub">
-              Vas a adjudicar esta licitación a <strong style={{ color: "var(--text)" }}>{PROPUESTAS.find(p => p.id === showAdjudicar)?.empresa}</strong> por <strong style={{ color: "var(--gold)" }}>{PROPUESTAS.find(p => p.id === showAdjudicar)?.monto}</strong>.
-              <br /><br />
-              Esta acción notificará al ganador y a las demás empresas. El expediente quedará registrado y disponible para los copropietarios.
-            </p>
+            {(() => {
+              const p = propuestas.find(x => x.id === showAdjudicar);
+              return (
+                <p className="modal-sub">
+                  Adjudicarás la licitación a <strong style={{ color: "var(--text)" }}>{(p as any)?.empresas?.nombre}</strong> por <strong style={{ color: "var(--gold)" }}>{formatMonto(p?.monto_mensual || (p?.precio_anual ? p.precio_anual / 12 : null))}</strong>.
+                  <br /><br />
+                  Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
+                </p>
+              );
+            })()}
             <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)" }}>
-              📄 Se generará automáticamente el borrador de contrato para firma.
+              📄 Se generará el contrato automáticamente con los términos de la propuesta.
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={() => setShowAdjudicar(null)}>Cancelar</button>
-              <button className="btn btn-gold" onClick={() => { setAdjudicada(showAdjudicar); setShowAdjudicar(null); alert("✅ ¡Adjudicación confirmada! El contrato está siendo generado."); }}>
-                ✓ Confirmar adjudicación
+              <button className="btn btn-ghost" onClick={() => setShowAdjudicar(null)} disabled={adjudicando}>Cancelar</button>
+              <button
+                className="btn btn-gold"
+                disabled={adjudicando}
+                onClick={() => {
+                  const p = propuestas.find(x => x.id === showAdjudicar);
+                  if (p) adjudicar(p.id, p.licitacion_id);
+                }}
+              >
+                {adjudicando ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 12, height: 12, border: "2px solid #07090F", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                    Procesando...
+                  </span>
+                ) : "✓ Confirmar adjudicación"}
               </button>
             </div>
           </div>
