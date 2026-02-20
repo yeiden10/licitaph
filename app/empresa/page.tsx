@@ -248,11 +248,28 @@ export default function EmpresaDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = "/"; return; }
 
-      const { data: emp } = await supabase
+      let { data: emp } = await supabase
         .from("empresas")
         .select("*")
         .eq("usuario_id", user.id)
         .single();
+
+      // Si no existe registro en empresas, créalo automáticamente
+      if (!emp) {
+        const nombre = user.user_metadata?.nombre_completo || user.email?.split("@")[0] || "Mi Empresa";
+        const { data: nuevo } = await supabase
+          .from("empresas")
+          .insert({
+            usuario_id: user.id,
+            nombre,
+            email: user.email,
+            estado_verificacion: "pendiente",
+            activo: true,
+          })
+          .select()
+          .single();
+        emp = nuevo;
+      }
 
       if (!emp) { window.location.href = "/"; return; }
       setEmpresa(emp);

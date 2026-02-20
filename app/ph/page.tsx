@@ -26,12 +26,28 @@ export default function PHDashboard() {
       if (!user) { window.location.href = "/"; return; }
       setUser(user);
 
-      // Cargar PH del admin
-      const { data: ph } = await supabase
+      // Cargar PH del admin — si no existe, créalo automáticamente
+      let { data: ph } = await supabase
         .from("propiedades_horizontales")
         .select("*")
         .eq("admin_id", user.id)
         .single();
+
+      if (!ph) {
+        const nombre = user.user_metadata?.nombre_completo || user.email?.split("@")[0] || "Mi PH";
+        const { data: nuevo } = await supabase
+          .from("propiedades_horizontales")
+          .insert({
+            admin_id: user.id,
+            nombre,
+            email_contacto: user.email,
+            ciudad: "Ciudad de Panamá",
+            activo: true,
+          })
+          .select()
+          .single();
+        ph = nuevo;
+      }
       setPH(ph);
 
       if (ph) {

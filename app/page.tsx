@@ -3,8 +3,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const supabase = createClient();
-
 const PERFILES = {
   ninguno: {
     eyebrow: "La plataforma de licitaciones para Panamá 🇵🇦",
@@ -73,6 +71,7 @@ const PERFILES = {
 };
 
 export default function Home() {
+  const supabase = createClient();
   const router = useRouter();
   const [perfil, setPerfil] = useState("ninguno");
   const [vista, setVista] = useState("inicio");
