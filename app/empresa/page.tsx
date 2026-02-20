@@ -257,17 +257,22 @@ export default function EmpresaDashboard() {
       // Si no existe registro en empresas, créalo automáticamente
       if (!emp) {
         const nombre = user.user_metadata?.nombre_completo || user.email?.split("@")[0] || "Mi Empresa";
-        const { data: nuevo } = await supabase
+        const { data: nuevo, error: insertErr } = await supabase
           .from("empresas")
           .insert({
             usuario_id: user.id,
             nombre,
+            ruc: "00-000-000",
             email: user.email,
+            representante_legal: nombre,
+            telefono: "",
+            direccion: "",
             estado_verificacion: "pendiente",
             activo: true,
           })
           .select()
           .single();
+        if (insertErr) console.error("Error creando empresa:", insertErr.message);
         emp = nuevo;
       }
 

@@ -35,17 +35,23 @@ export default function PHDashboard() {
 
       if (!ph) {
         const nombre = user.user_metadata?.nombre_completo || user.email?.split("@")[0] || "Mi PH";
-        const { data: nuevo } = await supabase
+        const { data: nuevo, error: insertErr } = await supabase
           .from("propiedades_horizontales")
           .insert({
             admin_id: user.id,
             nombre,
-            email_contacto: user.email,
+            ruc: "00-000-000",
+            direccion: "",
             ciudad: "Ciudad de Panamá",
+            provincia: "Panamá",
+            telefono: "",
+            email_contacto: user.email,
+            total_unidades: 0,
             activo: true,
           })
           .select()
           .single();
+        if (insertErr) console.error("Error creando PH:", insertErr.message);
         ph = nuevo;
       }
       setPH(ph);
