@@ -62,12 +62,37 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { licitacion_id, precio_anual, descripcion, propuesta_tecnica, disponibilidad_inicio } = body;
+  const {
+    licitacion_id,
+    precio_anual,
+    descripcion,
+    propuesta_tecnica,
+    disponibilidad_inicio,
+    modalidad_pago,
+    detalle_pago,
+    acepta_condiciones,
+    acepta_inspeccion,
+    acepta_penalidades,
+  } = body;
+
+  // Validaciones obligatorias
+  if (!licitacion_id) {
+    return NextResponse.json({ error: "licitacion_id es requerido" }, { status: 400 });
+  }
+  if (acepta_condiciones !== true) {
+    return NextResponse.json({ error: "Debe aceptar las condiciones generales" }, { status: 400 });
+  }
+  if (acepta_inspeccion !== true) {
+    return NextResponse.json({ error: "Debe aceptar el compromiso de inspección previa" }, { status: 400 });
+  }
+  if (acepta_penalidades !== true) {
+    return NextResponse.json({ error: "Debe aceptar las penalidades por incumplimiento" }, { status: 400 });
+  }
 
   // Verificar empresa
   const { data: empresa } = await supabase
     .from("empresas")
-    .select("id")
+    .select("id, anios_experiencia")
     .eq("usuario_id", user.id)
     .single();
 
@@ -85,34 +110,43 @@ export async function POST(request: NextRequest) {
   }
 
   // Calcular puntaje IA simple
-  // En producción esto sería un endpoint de IA más sofisticado
   const puntaje_ia = calcularPuntajeIA({
     precio_anual,
     empresa,
     tiene_descripcion: !!descripcion && descripcion.length > 50,
+    tiene_tecnica: !!propuesta_tecnica && propuesta_tecnica.length > 100,
+    modalidad_pago,
   });
 
   // Upsert propuesta (borrador → enviada)
   const { data: propuesta, error } = await supabase
     .from("propuestas")
-    .upsert({
-      licitacion_id,
-      empresa_id: empresa.id,
-      precio_anual: precio_anual || null,
-      descripcion,
-      propuesta_tecnica,
-      disponibilidad_inicio: disponibilidad_inicio || null,
-      estado: "enviada",
-      puntaje_ia,
-      analisis_ia: {
-        precio: Math.min(40, Math.round(40 * (1 - (precio_anual || 0) / 100000))),
-        documentacion: 25,
-        experiencia: 20,
-        respuesta: 10,
-        total: puntaje_ia,
+    .upsert(
+      {
+        licitacion_id,
+        empresa_id: empresa.id,
+        precio_anual: precio_anual || null,
+        descripcion,
+        propuesta_tecnica,
+        disponibilidad_inicio: disponibilidad_inicio || null,
+        modalidad_pago: modalidad_pago || null,
+        detalle_pago: detalle_pago || null,
+        acepta_condiciones: acepta_condiciones === true,
+        acepta_inspeccion: acepta_inspeccion === true,
+        acepta_penalidades: acepta_penalidades === true,
+        estado: "enviada",
+        puntaje_ia,
+        analisis_ia: {
+          precio: Math.min(40, Math.round(40 * (1 - (precio_anual || 0) / 100000))),
+          documentacion: 25,
+          experiencia: Math.min(20, (empresa.anios_experiencia || 0) * 3),
+          respuesta: 10,
+          total: puntaje_ia,
+        },
+        enviada_at: new Date().toISOString(),
       },
-      enviada_at: new Date().toISOString(),
-    }, { onConflict: "licitacion_id,empresa_id" })
+      { onConflict: "licitacion_id,empresa_id" }
+    )
     .select()
     .single();
 
@@ -126,32 +160,46 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (ph?.admin_id) {
-    await supabase.from("notificaciones").insert({
-      usuario_id: ph.admin_id,
-      tipo: "propuesta_recibida",
-      titulo: "📥 Nueva propuesta recibida",
-      mensaje: `Una empresa envió una propuesta para "${licitacion.titulo}"`,
-      enlace: `/ph`,
-    }).then(() => {});
+    await supabase
+      .from("notificaciones")
+      .insert({
+        usuario_id: ph.admin_id,
+        tipo: "propuesta_recibida",
+        titulo: "Nueva propuesta recibida",
+        mensaje: `Una empresa envió una propuesta para "${licitacion.titulo}"`,
+        enlace: "/ph",
+      })
+      .then(() => {});
   }
 
   return NextResponse.json({ success: true, propuesta });
 }
 
-function calcularPuntajeIA({ precio_anual, empresa, tiene_descripcion }: {
+function calcularPuntajeIA({
+  precio_anual,
+  empresa,
+  tiene_descripcion,
+  tiene_tecnica,
+  modalidad_pago,
+}: {
   precio_anual: number;
-  empresa: any;
+  empresa: { anios_experiencia?: number | null };
   tiene_descripcion: boolean;
+  tiene_tecnica?: boolean;
+  modalidad_pago?: string;
 }) {
   let score = 0;
-  // Precio (40 pts) — fórmula simple, en prod comparar contra otras propuestas
+  // Precio (35 pts) — fórmula simple, en prod comparar contra otras propuestas
   if (precio_anual > 0) score += 30;
   // Descripción técnica (20 pts)
-  if (tiene_descripcion) score += 20;
+  if (tiene_descripcion) score += 10;
+  if (tiene_tecnica) score += 10;
   // Experiencia (20 pts)
   const anios = empresa.anios_experiencia || 0;
   score += Math.min(20, anios * 3);
-  // Base de documentación (20 pts) — se recalculará con docs reales
-  score += 20;
+  // Modalidad de pago especificada (5 pts)
+  if (modalidad_pago) score += 5;
+  // Base de documentación (15 pts) — se recalculará con docs reales
+  score += 15;
   return Math.min(100, Math.round(score));
 }

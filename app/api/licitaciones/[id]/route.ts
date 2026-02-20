@@ -23,7 +23,7 @@ export async function GET(
 
   // Ordenar requisitos
   if (licitacion.requisitos_licitacion) {
-    licitacion.requisitos_licitacion.sort((a: any, b: any) =>
+    licitacion.requisitos_licitacion.sort((a: { numero?: number; orden?: number }, b: { numero?: number; orden?: number }) =>
       (a.numero || a.orden || 0) - (b.numero || b.orden || 0)
     );
   }
@@ -31,7 +31,7 @@ export async function GET(
   return NextResponse.json(licitacion);
 }
 
-// PATCH /api/licitaciones/[id] — actualizar estado
+// PATCH /api/licitaciones/[id] — actualizar estado y campos extendidos
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -46,12 +46,21 @@ export async function PATCH(
   const body = await request.json();
   const updates: Record<string, unknown> = {};
 
-  if (body.estado) updates.estado = body.estado;
+  // Campos de estado
+  if (body.estado !== undefined) updates.estado = body.estado;
   if (body.urgente !== undefined) updates.urgente = body.urgente;
   if (body.publicar) {
     updates.estado = "activa";
     updates.fecha_publicacion = new Date().toISOString();
   }
+
+  // Campos extendidos
+  if (body.fechas_inspeccion !== undefined) updates.fechas_inspeccion = body.fechas_inspeccion;
+  if (body.lugar_inspeccion !== undefined) updates.lugar_inspeccion = body.lugar_inspeccion;
+  if (body.fotos !== undefined) updates.fotos = body.fotos;
+  if (body.precio_referencia !== undefined) updates.precio_referencia = body.precio_referencia;
+  if (body.precio_referencia_visible !== undefined) updates.precio_referencia_visible = body.precio_referencia_visible;
+  if (body.condiciones_especiales !== undefined) updates.condiciones_especiales = body.condiciones_especiales;
 
   const { data, error } = await supabase
     .from("licitaciones")

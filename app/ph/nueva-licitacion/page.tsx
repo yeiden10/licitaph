@@ -1,7 +1,7 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { REQUISITOS_POR_SERVICIO, CATEGORIAS_SERVICIO } from "@/lib/supabase/types";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -19,17 +19,85 @@ const C = {
   sub:     "#9CA3AF",
 };
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
-interface Requisito {
+// ── 25 categorías hardcoded ────────────────────────────────────────────────────
+const CATEGORIAS_SERVICIO = [
+  { value: "seguridad",            label: "Seguridad 24/7" },
+  { value: "limpieza",             label: "Limpieza y mantenimiento" },
+  { value: "hvac",                 label: "Mantenimiento HVAC / Aire acondicionado" },
+  { value: "jardineria",           label: "Jardinería y áreas verdes" },
+  { value: "ascensores",           label: "Mantenimiento de ascensores" },
+  { value: "electricidad",         label: "Electricidad y plomería" },
+  { value: "pintura",              label: "Pintura y reparaciones generales" },
+  { value: "plagas",               label: "Control de plagas" },
+  { value: "piscinas",             label: "Mantenimiento de piscinas" },
+  { value: "impermeabilizacion",   label: "Impermeabilización y techos" },
+  { value: "portones",             label: "Portones y automatismos" },
+  { value: "cctv",                 label: "CCTV y sistemas de vigilancia" },
+  { value: "incendio",             label: "Sistemas contra incendios" },
+  { value: "generadores",          label: "Generadores y UPS" },
+  { value: "fumigacion",           label: "Fumigación y desinfección" },
+  { value: "mudanzas",             label: "Mudanzas y logística" },
+  { value: "valet",                label: "Valet parking y estacionamiento" },
+  { value: "conserje",             label: "Conserjería y recepción" },
+  { value: "obras_civiles",        label: "Obras civiles y remodelaciones" },
+  { value: "tecnologia",           label: "Tecnología / IT y redes" },
+  { value: "gestion_residuos",     label: "Gestión de residuos y reciclaje" },
+  { value: "energia_solar",        label: "Energía solar y eficiencia energética" },
+  { value: "administracion",       label: "Administración de propiedades" },
+  { value: "legal_contable",       label: "Servicios legales y contables" },
+  { value: "otros",                label: "Otros servicios" },
+] as const;
+
+const DURACIONES = [
+  { value: "3",  label: "3 meses" },
+  { value: "6",  label: "6 meses" },
+  { value: "12", label: "12 meses (1 año)" },
+  { value: "24", label: "24 meses (2 años)" },
+];
+
+// ── Requisitos estándar recomendados ──────────────────────────────────────────
+const REQUISITOS_ESTANDAR: StandardReq[] = [
+  { titulo: "Registro Público vigente", desc: "Emitido en los últimos 3 meses", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
+  { titulo: "Aviso de operación vigente", desc: "Del municipio correspondiente", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
+  { titulo: "Paz y Salvo CSS", desc: "Caja de Seguro Social al día", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Paz y Salvo DGI", desc: "Dirección General de Ingresos al día", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Cédula o pasaporte del representante legal", desc: "Vigente", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
+  { titulo: "Estados financieros últimos 2 años", desc: "Auditados o certificados por CPA", obligatorio: false, subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Referencias bancarias (mín. 1)", desc: "Carta de banco que certifique relación comercial", obligatorio: false, subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Carta de referencias comerciales (mín. 3)", desc: "Con datos de contacto verificables", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "CV del equipo que participará", desc: "Experiencia y cargos relevantes al servicio", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Certificados de idoneidad del personal", desc: "Según tipo de servicio (si aplica)", obligatorio: false, subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Experiencia comprobable (mín. 3 años)", desc: "En servicios de similar naturaleza y escala", obligatorio: true,  subsanable: false, tipo_respuesta: "texto" },
+  { titulo: "Póliza de seguro de responsabilidad civil", desc: "Vigente, monto mínimo según contrato", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
+  { titulo: "Fianza de cumplimiento (mín. 50% del valor anual)", desc: "Emitida por compañía de seguros autorizada en Panamá", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
+  { titulo: "Compromiso de inspección previa al inicio", desc: "La empresa debe inspeccionar el lugar antes de firmar", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
+  { titulo: "Metodología detallada de trabajo", desc: "Cómo se ejecutará el servicio, frecuencias, equipo", obligatorio: true,  subsanable: false, tipo_respuesta: "texto" },
+];
+
+// ── Interfaces ────────────────────────────────────────────────────────────────
+interface StandardReq {
   titulo: string;
-  descripcion: string;
-  subsanable: boolean;
+  desc: string;
   obligatorio: boolean;
-  _custom?: boolean;
+  subsanable: boolean;
+  tipo_respuesta: "documento" | "texto";
 }
 
-interface FormData {
+interface StandardReqState extends StandardReq {
+  enabled: boolean;
+}
+
+interface CustomReq {
+  titulo: string;
+  descripcion: string;
+  obligatorio: boolean;
+  subsanable: boolean;
+  tipo_respuesta: "documento" | "texto";
+}
+
+interface FormState {
   titulo: string;
   categoria: string;
   descripcion: string;
@@ -38,14 +106,9 @@ interface FormData {
   fecha_cierre: string;
   duracion_contrato_meses: string;
   urgente: boolean;
+  precio_referencia: string;
+  precio_referencia_visible: boolean;
 }
-
-const DURACIONES = [
-  { value: "3",  label: "3 meses" },
-  { value: "6",  label: "6 meses" },
-  { value: "12", label: "12 meses (1 año)" },
-  { value: "24", label: "24 meses (2 años)" },
-];
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function Toast({ msg, tipo, onClose }: { msg: string; tipo: "ok" | "err"; onClose: () => void }) {
@@ -69,14 +132,15 @@ function Toast({ msg, tipo, onClose }: { msg: string; tipo: "ok" | "err"; onClos
 function StepBar({ step }: { step: Step }) {
   const steps = [
     { n: 1, label: "Detalles básicos" },
-    { n: 2, label: "Pliego de requisitos" },
-    { n: 3, label: "Revisar y publicar" },
+    { n: 2, label: "Pliego" },
+    { n: 3, label: "Fotos e inspección" },
+    { n: 4, label: "Revisar y publicar" },
   ];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 40 }}>
       {steps.map((s, i) => {
-        const done    = step > s.n;
-        const active  = step === s.n;
+        const done   = step > s.n;
+        const active = step === s.n;
         const color   = done ? C.green : active ? C.gold : C.muted;
         const bgColor = done ? C.green + "20" : active ? C.goldDim : "transparent";
         const border  = done ? C.green : active ? C.gold : C.border;
@@ -90,7 +154,7 @@ function StepBar({ step }: { step: Step }) {
                   <span style={{ color, fontWeight: 700, fontSize: 15 }}>{s.n}</span>
                 )}
               </div>
-              <span style={{ color, fontSize: 12, fontWeight: active ? 600 : 400, whiteSpace: "nowrap" }}>{s.label}</span>
+              <span style={{ color, fontSize: 11, fontWeight: active ? 600 : 400, whiteSpace: "nowrap" }}>{s.label}</span>
             </div>
             {i < steps.length - 1 && (
               <div style={{ flex: 1, height: 2, background: done ? C.green : C.border, margin: "0 8px", marginTop: -18 }} />
@@ -118,14 +182,35 @@ function Field({ label, required, error, hint, children }: {
   );
 }
 
+// ── Toggle switch ─────────────────────────────────────────────────────────────
+function Toggle({ value, onChange, activeColor = C.gold }: { value: boolean; onChange: (v: boolean) => void; activeColor?: string }) {
+  return (
+    <div
+      onClick={() => onChange(!value)}
+      style={{
+        width: 40, height: 22, borderRadius: 11,
+        background: value ? activeColor : C.border,
+        position: "relative", cursor: "pointer", transition: "background .2s", flexShrink: 0,
+      }}
+    >
+      <div style={{
+        width: 16, height: 16, borderRadius: "50%", background: "#fff",
+        position: "absolute", top: 3,
+        left: value ? 21 : 3, transition: "left .2s",
+      }} />
+    </div>
+  );
+}
+
 const inputStyle: React.CSSProperties = {
   background: "#111827", border: `1px solid ${C.border}`, borderRadius: 8,
   padding: "10px 14px", color: C.text, fontSize: 14, outline: "none",
   width: "100%", transition: "border-color .2s",
 };
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function NuevaLicitacion() {
+  const router = useRouter();
   const supabase = createClient();
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
@@ -134,7 +219,8 @@ export default function NuevaLicitacion() {
   const [copied, setCopied] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [form, setForm] = useState<FormData>({
+  // ── Step 1 state ────────────────────────────────────────────────────────────
+  const [form, setForm] = useState<FormState>({
     titulo: "",
     categoria: "",
     descripcion: "",
@@ -143,16 +229,47 @@ export default function NuevaLicitacion() {
     fecha_cierre: "",
     duracion_contrato_meses: "12",
     urgente: false,
+    precio_referencia: "",
+    precio_referencia_visible: true,
   });
 
-  const [requisitos, setRequisitos] = useState<Requisito[]>([]);
+  // ── Step 2 state ────────────────────────────────────────────────────────────
+  // Standard reqs with enabled toggle
+  const [stdReqs, setStdReqs] = useState<StandardReqState[]>(
+    REQUISITOS_ESTANDAR.map(r => ({ ...r, enabled: r.obligatorio }))
+  );
+  // Custom reqs added by user
+  const [customReqs, setCustomReqs] = useState<CustomReq[]>([]);
 
-  // When category changes, load default requisitos
-  const handleCategoriaChange = useCallback((categoria: string) => {
-    setForm(f => ({ ...f, categoria }));
-    const defaults = (REQUISITOS_POR_SERVICIO[categoria] || REQUISITOS_POR_SERVICIO["default"]).map(r => ({ ...r }));
-    setRequisitos(defaults);
-  }, []);
+  // ── Step 3 state ────────────────────────────────────────────────────────────
+  const [fotosFiles, setFotosFiles] = useState<File[]>([]);
+  const [fotosPreview, setFotosPreview] = useState<string[]>([]);
+  const [fechasInspeccion, setFechasInspeccion] = useState<string[]>([]);
+  const [fechaInspeccionInput, setFechaInspeccionInput] = useState("");
+  const [lugarInspeccion, setLugarInspeccion] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Derived: all active requisitos ─────────────────────────────────────────
+  const allRequisitos = [
+    ...stdReqs
+      .filter(r => r.enabled)
+      .map(r => ({
+        titulo: r.titulo,
+        descripcion: r.desc,
+        obligatorio: r.obligatorio,
+        subsanable: r.subsanable,
+        tipo_respuesta: r.tipo_respuesta,
+      })),
+    ...customReqs.map(r => ({
+      titulo: r.titulo,
+      descripcion: r.descripcion,
+      obligatorio: r.obligatorio,
+      subsanable: r.subsanable,
+      tipo_respuesta: r.tipo_respuesta,
+    })),
+  ];
+
+  const catLabel = CATEGORIAS_SERVICIO.find(c => c.value === form.categoria)?.label ?? form.categoria;
 
   // ── Validation ──────────────────────────────────────────────────────────────
   function validateStep1(): boolean {
@@ -176,49 +293,116 @@ export default function NuevaLicitacion() {
 
   function validateStep2(): boolean {
     const errs: Record<string, string> = {};
-    if (requisitos.length === 0) errs.requisitos = "Agrega al menos un requisito al pliego";
-    requisitos.forEach((r, i) => {
-      if (!r.titulo.trim()) errs[`req_${i}_titulo`] = "El título es requerido";
+    if (allRequisitos.length === 0) errs.requisitos = "Activa al menos un requisito en el pliego";
+    customReqs.forEach((r, i) => {
+      if (!r.titulo.trim()) errs[`custom_${i}_titulo`] = "El título es requerido";
     });
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
-  // ── Requisito handlers ──────────────────────────────────────────────────────
-  function addRequisito() {
-    setRequisitos(prev => [...prev, { titulo: "", descripcion: "", subsanable: true, obligatorio: true, _custom: true }]);
+  // ── Step 2 handlers ─────────────────────────────────────────────────────────
+  function toggleStdReq(i: number) {
+    setStdReqs(prev => prev.map((r, idx) => idx === i ? { ...r, enabled: !r.enabled } : r));
   }
 
-  function removeRequisito(i: number) {
-    setRequisitos(prev => prev.filter((_, idx) => idx !== i));
+  function updateStdReq(i: number, field: "obligatorio" | "subsanable", value: boolean) {
+    setStdReqs(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
   }
 
-  function updateRequisito(i: number, field: keyof Requisito, value: string | boolean) {
-    setRequisitos(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+  function addCustomReq() {
+    setCustomReqs(prev => [...prev, { titulo: "", descripcion: "", obligatorio: true, subsanable: true, tipo_respuesta: "documento" }]);
+  }
+
+  function removeCustomReq(i: number) {
+    setCustomReqs(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  function updateCustomReq(i: number, field: keyof CustomReq, value: string | boolean) {
+    setCustomReqs(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+  }
+
+  // ── Step 3 handlers ─────────────────────────────────────────────────────────
+  function handleFotosChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const remaining = 5 - fotosFiles.length;
+    const toAdd = files.slice(0, remaining);
+    const newFiles = [...fotosFiles, ...toAdd];
+    const newPreviews = [...fotosPreview];
+    toAdd.forEach(f => {
+      newPreviews.push(URL.createObjectURL(f));
+    });
+    setFotosFiles(newFiles);
+    setFotosPreview(newPreviews);
+    // reset input so same file can be re-added if removed
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeFoto(i: number) {
+    URL.revokeObjectURL(fotosPreview[i]);
+    setFotosFiles(prev => prev.filter((_, idx) => idx !== i));
+    setFotosPreview(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  function addFechaInspeccion() {
+    if (!fechaInspeccionInput) return;
+    if (fechasInspeccion.includes(fechaInspeccionInput)) return;
+    setFechasInspeccion(prev => [...prev, fechaInspeccionInput]);
+    setFechaInspeccionInput("");
+  }
+
+  function removeFechaInspeccion(i: number) {
+    setFechasInspeccion(prev => prev.filter((_, idx) => idx !== i));
   }
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   async function handlePublish(publicar: boolean) {
     setSubmitting(true);
     try {
+      const payload = {
+        titulo: form.titulo,
+        categoria: form.categoria,
+        descripcion: form.descripcion,
+        presupuesto_minimo: form.presupuesto_minimo ? Number(form.presupuesto_minimo) : null,
+        presupuesto_maximo: form.presupuesto_maximo ? Number(form.presupuesto_maximo) : null,
+        fecha_cierre: form.fecha_cierre || null,
+        urgente: form.urgente,
+        duracion_contrato_meses: Number(form.duracion_contrato_meses),
+        precio_referencia: form.precio_referencia ? Number(form.precio_referencia) : null,
+        precio_referencia_visible: form.precio_referencia_visible,
+        fechas_inspeccion: fechasInspeccion,
+        lugar_inspeccion: lugarInspeccion || null,
+        requisitos: allRequisitos,
+        publicar,
+      };
+
       const r = await fetch("/api/licitaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          titulo: form.titulo,
-          categoria: form.categoria,
-          descripcion: form.descripcion,
-          presupuesto_minimo: form.presupuesto_minimo ? Number(form.presupuesto_minimo) : null,
-          presupuesto_maximo: form.presupuesto_maximo ? Number(form.presupuesto_maximo) : null,
-          fecha_cierre: form.fecha_cierre || null,
-          urgente: form.urgente,
-          duracion_contrato_meses: Number(form.duracion_contrato_meses),
-          requisitos,
-          publicar,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await r.json();
-      if (!r.ok) { setToast({ msg: data.error || "Error al crear", tipo: "err" }); return; }
+      if (!r.ok) {
+        setToast({ msg: data.error || "Error al crear", tipo: "err" });
+        return;
+      }
+
+      // Upload photos if any
+      if (fotosFiles.length > 0 && data.id) {
+        for (const foto of fotosFiles) {
+          try {
+            const fd = new FormData();
+            fd.append("file", foto);
+            fd.append("tipo", "foto_licitacion");
+            fd.append("contexto", "licitacion");
+            fd.append("entidad_id", data.id);
+            await fetch("/api/documentos/upload", { method: "POST", body: fd });
+          } catch {
+            // non-fatal: photos are best-effort
+          }
+        }
+      }
+
       setResult({ slug: data.slug, titulo: form.titulo });
     } catch {
       setToast({ msg: "Error inesperado. Intenta de nuevo.", tipo: "err" });
@@ -238,7 +422,9 @@ export default function NuevaLicitacion() {
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (result) {
-    const url = typeof window !== "undefined" ? `${window.location.origin}/licitacion/${result.slug}` : `/licitacion/${result.slug}`;
+    const url = typeof window !== "undefined"
+      ? `${window.location.origin}/licitacion/${result.slug}`
+      : `/licitacion/${result.slug}`;
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <style>{`* { box-sizing: border-box; } body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }`}</style>
@@ -251,7 +437,6 @@ export default function NuevaLicitacion() {
             <strong style={{ color: C.text }}>{result.titulo}</strong> ya está en el sistema.
             Comparte el enlace con empresas proveedoras.
           </p>
-
           <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
             <p style={{ color: C.blue, fontSize: 13, margin: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</p>
             <button
@@ -261,7 +446,6 @@ export default function NuevaLicitacion() {
               {copied ? "Copiado ✓" : "Copiar enlace"}
             </button>
           </div>
-
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
             <a href={url} target="_blank" rel="noopener noreferrer" style={{ background: C.blue, border: "none", color: "#fff", borderRadius: 9, padding: "12px 22px", fontSize: 14, fontWeight: 600, textDecoration: "none", display: "inline-block" }}>
               Ver licitación →
@@ -274,8 +458,6 @@ export default function NuevaLicitacion() {
       </div>
     );
   }
-
-  const catLabel = CATEGORIAS_SERVICIO.find(c => c.value === form.categoria)?.label ?? form.categoria;
 
   return (
     <>
@@ -306,13 +488,17 @@ export default function NuevaLicitacion() {
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px 80px" }}>
         <StepBar step={step} />
 
-        {/* ── STEP 1: Detalles básicos ── */}
+        {/* ═══════════════════════════════════════════════════════════
+            PASO 1: Detalles básicos
+        ═══════════════════════════════════════════════════════════ */}
         {step === 1 && (
           <div>
             <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Detalles básicos</h1>
             <p style={{ color: C.sub, fontSize: 14, margin: "0 0 36px" }}>Describe el servicio que necesitas y los parámetros generales de la licitación.</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+
+              {/* Título */}
               <Field label="Título de la licitación" required error={errors.titulo}
                 hint="Ej: Servicio de seguridad 24/7 para PH Costa del Este">
                 <input
@@ -324,10 +510,11 @@ export default function NuevaLicitacion() {
                 />
               </Field>
 
+              {/* Categoría */}
               <Field label="Categoría de servicio" required error={errors.categoria}>
                 <select
                   value={form.categoria}
-                  onChange={e => handleCategoriaChange(e.target.value)}
+                  onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
                   style={{ ...inputStyle, borderColor: errors.categoria ? C.red : C.border, cursor: "pointer" }}
                 >
                   <option value="">Selecciona una categoría...</option>
@@ -337,6 +524,7 @@ export default function NuevaLicitacion() {
                 </select>
               </Field>
 
+              {/* Descripción */}
               <Field label="Descripción" required error={errors.descripcion}
                 hint="Describe las características específicas de tu propiedad, necesidades especiales, horarios, etc.">
                 <textarea
@@ -348,8 +536,9 @@ export default function NuevaLicitacion() {
                 />
               </Field>
 
+              {/* Presupuesto */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <Field label="Presupuesto mínimo anual (USD)" hint="Opcional — referencia para empresas">
+                <Field label="Presupuesto mínimo anual (USD)" hint="Opcional">
                   <div style={{ position: "relative" }}>
                     <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
                     <input
@@ -361,7 +550,7 @@ export default function NuevaLicitacion() {
                     />
                   </div>
                 </Field>
-                <Field label="Presupuesto máximo anual (USD)" error={errors.presupuesto_maximo}>
+                <Field label="Presupuesto máximo anual (USD)" hint="Opcional" error={errors.presupuesto_maximo}>
                   <div style={{ position: "relative" }}>
                     <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
                     <input
@@ -375,6 +564,36 @@ export default function NuevaLicitacion() {
                 </Field>
               </div>
 
+              {/* Precio referencia */}
+              <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18 }}>
+                <p style={{ color: C.sub, fontSize: 13, fontWeight: 600, margin: "0 0 14px" }}>Precio de referencia (opcional)</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                    <input
+                      type="number" min="0" step="100"
+                      value={form.precio_referencia}
+                      onChange={e => setForm(f => ({ ...f, precio_referencia: e.target.value }))}
+                      placeholder="Precio orientativo anual"
+                      style={{ ...inputStyle, paddingLeft: 24 }}
+                    />
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    <Toggle
+                      value={form.precio_referencia_visible}
+                      onChange={v => setForm(f => ({ ...f, precio_referencia_visible: v }))}
+                    />
+                    <span style={{ color: form.precio_referencia_visible ? C.gold : C.muted, fontSize: 13 }}>
+                      {form.precio_referencia_visible ? "Visible para empresas" : "Oculto"}
+                    </span>
+                  </label>
+                </div>
+                <p style={{ color: C.muted, fontSize: 12, margin: "10px 0 0" }}>
+                  Si está visible, las empresas lo verán como referencia al cotizar. Si está oculto, solo lo ves tú.
+                </p>
+              </div>
+
+              {/* Fecha y duración */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <Field label="Fecha de cierre de recepción" required error={errors.fecha_cierre}>
                   <input
@@ -398,6 +617,7 @@ export default function NuevaLicitacion() {
                 </Field>
               </div>
 
+              {/* Urgente */}
               <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "14px 18px", background: form.urgente ? C.red + "10" : C.bgPanel, border: `1px solid ${form.urgente ? C.red + "40" : C.border}`, borderRadius: 10, transition: "all .2s" }}>
                 <input
                   type="checkbox"
@@ -425,106 +645,151 @@ export default function NuevaLicitacion() {
           </div>
         )}
 
-        {/* ── STEP 2: Pliego de requisitos ── */}
+        {/* ═══════════════════════════════════════════════════════════
+            PASO 2: Pliego de requisitos
+        ═══════════════════════════════════════════════════════════ */}
         {step === 2 && (
           <div>
             <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Pliego de requisitos</h1>
-            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 8px" }}>
-              Define los documentos y condiciones que deben cumplir las empresas postulantes.
-              {form.categoria && <> Se cargaron los requisitos sugeridos para <strong style={{ color: C.gold }}>{catLabel}</strong>.</>}
+            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 28px" }}>
+              Activa los requisitos recomendados y agrega los personalizados que necesites.
+              Las empresas deberán cumplir con los marcados como obligatorios.
             </p>
             {errors.requisitos && <p style={{ color: C.red, fontSize: 13, marginBottom: 16 }}>{errors.requisitos}</p>}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
-              {requisitos.map((r, i) => (
-                <div
-                  key={i}
-                  style={{ background: C.bgCard, border: `1px solid ${errors[`req_${i}_titulo`] ? C.red : C.border}`, borderRadius: 12, padding: 20 }}
-                >
-                  {/* Row header */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.gold + "20", border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{i + 1}</span>
-                    </div>
-                    <span style={{ color: C.muted, fontSize: 12, flex: 1 }}>
-                      {r._custom ? "Requisito personalizado" : "Requisito sugerido"}
-                    </span>
-                    <button
-                      onClick={() => removeRequisito(i)}
-                      title="Eliminar requisito"
-                      style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "2px 6px", borderRadius: 4 }}
-                    >
-                      ×
-                    </button>
-                  </div>
+            {/* Requisitos recomendados */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: 0 }}>Requisitos recomendados</h2>
+                <span style={{ background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}40`, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                  {stdReqs.filter(r => r.enabled).length} / {stdReqs.length} activos
+                </span>
+              </div>
 
-                  {/* Fields */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <input
-                      type="text"
-                      value={r.titulo}
-                      onChange={e => updateRequisito(i, "titulo", e.target.value)}
-                      placeholder="Título del requisito"
-                      style={{ background: C.bgPanel, border: `1px solid ${errors[`req_${i}_titulo`] ? C.red : C.border}`, borderRadius: 7, padding: "9px 12px", color: C.text, fontSize: 14, outline: "none", width: "100%" }}
-                    />
-                    <textarea
-                      value={r.descripcion}
-                      onChange={e => updateRequisito(i, "descripcion", e.target.value)}
-                      placeholder="Descripción / instrucciones adicionales"
-                      rows={2}
-                      style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 7, padding: "9px 12px", color: C.text, fontSize: 13, outline: "none", resize: "vertical", width: "100%" }}
-                    />
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {stdReqs.map((r, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: r.enabled ? C.bgCard : C.bgPanel,
+                      border: `1px solid ${r.enabled ? C.border : C.border + "60"}`,
+                      borderRadius: 12, padding: 16,
+                      opacity: r.enabled ? 1 : 0.55,
+                      transition: "all .2s",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      {/* Enable toggle */}
+                      <Toggle value={r.enabled} onChange={() => toggleStdReq(i)} activeColor={C.green} />
 
-                    {/* Toggles */}
-                    <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                        <div
-                          onClick={() => updateRequisito(i, "obligatorio", !r.obligatorio)}
-                          style={{
-                            width: 40, height: 22, borderRadius: 11,
-                            background: r.obligatorio ? C.red : C.border,
-                            position: "relative", cursor: "pointer", transition: "background .2s",
-                          }}
-                        >
-                          <div style={{
-                            width: 16, height: 16, borderRadius: "50%", background: "#fff",
-                            position: "absolute", top: 3,
-                            left: r.obligatorio ? 21 : 3, transition: "left .2s",
-                          }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                          <span style={{ color: r.enabled ? C.text : C.muted, fontSize: 14, fontWeight: 600 }}>{r.titulo}</span>
+                          <span style={{ background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}30`, borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                            RECOMENDADO
+                          </span>
+                          <span style={{ background: r.tipo_respuesta === "documento" ? C.blue + "20" : C.muted + "20", color: r.tipo_respuesta === "documento" ? C.blue : C.muted, borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 600 }}>
+                            {r.tipo_respuesta === "documento" ? "DOC" : "TEXTO"}
+                          </span>
                         </div>
-                        <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 13, fontWeight: r.obligatorio ? 600 : 400 }}>
-                          {r.obligatorio ? "Obligatorio" : "Opcional"}
-                        </span>
-                      </label>
+                        <p style={{ color: C.muted, fontSize: 12, margin: "0 0 10px" }}>{r.desc}</p>
 
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                        <div
-                          onClick={() => updateRequisito(i, "subsanable", !r.subsanable)}
-                          style={{
-                            width: 40, height: 22, borderRadius: 11,
-                            background: r.subsanable ? C.gold : C.border,
-                            position: "relative", cursor: "pointer", transition: "background .2s",
-                          }}
-                        >
-                          <div style={{
-                            width: 16, height: 16, borderRadius: "50%", background: "#fff",
-                            position: "absolute", top: 3,
-                            left: r.subsanable ? 21 : 3, transition: "left .2s",
-                          }} />
-                        </div>
-                        <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 13, fontWeight: r.subsanable ? 600 : 400 }}>
-                          {r.subsanable ? "Subsanable" : "No subsanable"}
-                        </span>
-                      </label>
+                        {r.enabled && (
+                          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                              <Toggle value={r.obligatorio} onChange={v => updateStdReq(i, "obligatorio", v)} activeColor={C.red} />
+                              <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 12, fontWeight: r.obligatorio ? 600 : 400 }}>
+                                {r.obligatorio ? "Obligatorio" : "Opcional"}
+                              </span>
+                            </label>
+                            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                              <Toggle value={r.subsanable} onChange={v => updateStdReq(i, "subsanable", v)} activeColor={C.gold} />
+                              <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 12, fontWeight: r.subsanable ? 600 : 400 }}>
+                                {r.subsanable ? "Subsanable" : "No subsanable"}
+                              </span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
+            {/* Requisitos personalizados */}
+            {customReqs.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>Requisitos personalizados</h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {customReqs.map((r, i) => (
+                    <div
+                      key={i}
+                      style={{ background: C.bgCard, border: `1px solid ${errors[`custom_${i}_titulo`] ? C.red : C.border}`, borderRadius: 12, padding: 20 }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.blue + "20", border: `1.5px solid ${C.blue}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>+</span>
+                        </div>
+                        <span style={{ color: C.muted, fontSize: 12, flex: 1 }}>Requisito personalizado</span>
+                        <button
+                          onClick={() => removeCustomReq(i)}
+                          style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "2px 6px", borderRadius: 4 }}
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <input
+                          type="text"
+                          value={r.titulo}
+                          onChange={e => updateCustomReq(i, "titulo", e.target.value)}
+                          placeholder="Título del requisito"
+                          style={{ background: C.bgPanel, border: `1px solid ${errors[`custom_${i}_titulo`] ? C.red : C.border}`, borderRadius: 7, padding: "9px 12px", color: C.text, fontSize: 14, outline: "none", width: "100%" }}
+                        />
+                        <textarea
+                          value={r.descripcion}
+                          onChange={e => updateCustomReq(i, "descripcion", e.target.value)}
+                          placeholder="Descripción / instrucciones adicionales"
+                          rows={2}
+                          style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 7, padding: "9px 12px", color: C.text, fontSize: 13, outline: "none", resize: "vertical", width: "100%" }}
+                        />
+                        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                            <Toggle value={r.obligatorio} onChange={v => updateCustomReq(i, "obligatorio", v)} activeColor={C.red} />
+                            <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 13, fontWeight: r.obligatorio ? 600 : 400 }}>
+                              {r.obligatorio ? "Obligatorio" : "Opcional"}
+                            </span>
+                          </label>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                            <Toggle value={r.subsanable} onChange={v => updateCustomReq(i, "subsanable", v)} activeColor={C.gold} />
+                            <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 13, fontWeight: r.subsanable ? 600 : 400 }}>
+                              {r.subsanable ? "Subsanable" : "No subsanable"}
+                            </span>
+                          </label>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                            <span style={{ color: C.sub, fontSize: 13 }}>Tipo:</span>
+                            <select
+                              value={r.tipo_respuesta}
+                              onChange={e => updateCustomReq(i, "tipo_respuesta", e.target.value)}
+                              style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 8px", color: C.text, fontSize: 12, cursor: "pointer" }}
+                            >
+                              <option value="documento">Documento</option>
+                              <option value="texto">Texto</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
-              onClick={addRequisito}
-              style={{ width: "100%", background: "none", border: `2px dashed ${C.border}`, color: C.sub, borderRadius: 10, padding: "14px 0", cursor: "pointer", fontSize: 14, transition: "all .2s" }}
+              onClick={addCustomReq}
+              style={{ width: "100%", background: "none", border: `2px dashed ${C.border}`, color: C.sub, borderRadius: 10, padding: "14px 0", cursor: "pointer", fontSize: 14, transition: "all .2s", marginBottom: 20 }}
               onMouseEnter={e => { (e.target as HTMLButtonElement).style.borderColor = C.gold; (e.target as HTMLButtonElement).style.color = C.gold; }}
               onMouseLeave={e => { (e.target as HTMLButtonElement).style.borderColor = C.border; (e.target as HTMLButtonElement).style.color = C.sub; }}
             >
@@ -532,7 +797,7 @@ export default function NuevaLicitacion() {
             </button>
 
             {/* Legend */}
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", marginTop: 20, display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", display: "flex", gap: 24, flexWrap: "wrap" }}>
               <span style={{ color: C.muted, fontSize: 12 }}>Leyenda:</span>
               <span style={{ color: C.red, fontSize: 12 }}>Obligatorio = La empresa debe cumplirlo sí o sí</span>
               <span style={{ color: C.gold, fontSize: 12 }}>Subsanable = Puede presentarlo después con plazo</span>
@@ -546,32 +811,235 @@ export default function NuevaLicitacion() {
                 onClick={() => { if (validateStep2()) setStep(3); }}
                 style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "12px 28px", cursor: "pointer", fontSize: 15, fontWeight: 700 }}
               >
+                Siguiente: Fotos e inspección →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            PASO 3: Fotos e inspecciones
+        ═══════════════════════════════════════════════════════════ */}
+        {step === 3 && (
+          <div>
+            <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Fotos del lugar e inspecciones</h1>
+            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 36px" }}>
+              Sube fotos del área donde se prestará el servicio y define cuándo pueden inspeccionar las empresas.
+            </p>
+
+            {/* Fotos */}
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 6px" }}>Fotos del lugar</h2>
+              <p style={{ color: C.muted, fontSize: 13, margin: "0 0 18px" }}>
+                Máximo 5 fotos. Las empresas las verán al revisar el pliego.
+              </p>
+
+              {/* Preview grid */}
+              {fotosPreview.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 16 }}>
+                  {fotosPreview.map((src, i) => (
+                    <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                      <img src={src} alt={`Foto ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        onClick={() => removeFoto(i)}
+                        style={{
+                          position: "absolute", top: 4, right: 4,
+                          background: "rgba(0,0,0,0.7)", border: "none",
+                          color: "#fff", borderRadius: "50%", width: 22, height: 22,
+                          cursor: "pointer", fontSize: 14, lineHeight: 1,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {/* Empty slots */}
+                  {Array.from({ length: 5 - fotosPreview.length }).map((_, i) => (
+                    <div
+                      key={`empty-${i}`}
+                      style={{ aspectRatio: "1", borderRadius: 8, border: `2px dashed ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <span style={{ color: C.border, fontSize: 20 }}>+</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Drop zone / button */}
+              {fotosFiles.length < 5 && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: `2px dashed ${C.border}`, borderRadius: 10, padding: "28px 20px",
+                    textAlign: "center", cursor: "pointer", transition: "all .2s",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = C.gold)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
+                >
+                  <p style={{ color: C.sub, fontSize: 14, margin: "0 0 6px", fontWeight: 500 }}>
+                    Haz clic para agregar fotos
+                  </p>
+                  <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>
+                    JPG, PNG o WEBP — {5 - fotosFiles.length} foto{5 - fotosFiles.length !== 1 ? "s" : ""} restante{5 - fotosFiles.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={handleFotosChange}
+              />
+            </div>
+
+            {/* Inspecciones */}
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 6px" }}>Inspecciones del lugar</h2>
+              <p style={{ color: C.muted, fontSize: 13, margin: "0 0 20px" }}>
+                Las empresas deben inspeccionar el lugar antes de enviar su propuesta.
+              </p>
+
+              {/* Agregar fecha */}
+              <Field label="Fechas disponibles para inspección del lugar">
+                <div style={{ display: "flex", gap: 10 }}>
+                  <input
+                    type="date"
+                    value={fechaInspeccionInput}
+                    onChange={e => setFechaInspeccionInput(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    style={{ ...inputStyle, flex: 1, colorScheme: "dark" }}
+                  />
+                  <button
+                    onClick={addFechaInspeccion}
+                    disabled={!fechaInspeccionInput}
+                    style={{
+                      background: fechaInspeccionInput ? C.gold : C.bgPanel,
+                      border: `1px solid ${fechaInspeccionInput ? C.gold : C.border}`,
+                      color: fechaInspeccionInput ? "#000" : C.muted,
+                      borderRadius: 8, padding: "10px 18px",
+                      cursor: fechaInspeccionInput ? "pointer" : "not-allowed",
+                      fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
+                    }}
+                  >
+                    Agregar fecha
+                  </button>
+                </div>
+              </Field>
+
+              {/* Fechas agregadas */}
+              {fechasInspeccion.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                  {fechasInspeccion.map((f, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: C.blue + "15", border: `1px solid ${C.blue}40`,
+                        borderRadius: 20, padding: "5px 12px",
+                        display: "flex", alignItems: "center", gap: 8,
+                      }}
+                    >
+                      <span style={{ color: C.blue, fontSize: 13 }}>
+                        {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" })}
+                      </span>
+                      <button
+                        onClick={() => removeFechaInspeccion(i)}
+                        style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Lugar */}
+              <div style={{ marginTop: 20 }}>
+                <Field label="Lugar de inspección" hint="Ej: Torre Pacific, lobby principal">
+                  <input
+                    type="text"
+                    value={lugarInspeccion}
+                    onChange={e => setLugarInspeccion(e.target.value)}
+                    placeholder="Ej: Torre Pacific, lobby principal"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+
+              {/* Info box */}
+              <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}30`, borderRadius: 8, padding: "12px 16px", marginTop: 18 }}>
+                <p style={{ color: C.blue, fontSize: 13, margin: 0 }}>
+                  Las empresas verán estas fechas y el lugar al revisar la licitación. Deben confirmar que asistirán a la inspección antes de enviar su propuesta.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "space-between", marginTop: 32 }}>
+              <button onClick={() => setStep(2)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 9, padding: "12px 22px", cursor: "pointer", fontSize: 14 }}>
+                ← Anterior
+              </button>
+              <button
+                onClick={() => setStep(4)}
+                style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "12px 28px", cursor: "pointer", fontSize: 15, fontWeight: 700 }}
+              >
                 Siguiente: Revisar →
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: Preview & publish ── */}
-        {step === 3 && (
+        {/* ═══════════════════════════════════════════════════════════
+            PASO 4: Revisar y publicar
+        ═══════════════════════════════════════════════════════════ */}
+        {step === 4 && (
           <div>
             <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Revisar y publicar</h1>
             <p style={{ color: C.sub, fontSize: 14, margin: "0 0 32px" }}>Verifica los datos antes de publicar. Puedes guardar como borrador o publicar de inmediato.</p>
 
             {/* Preview card */}
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                {form.urgente && <span style={{ background: C.red + "20", color: C.red, border: `1px solid ${C.red}40`, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>URGENTE</span>}
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+                {form.urgente && (
+                  <span style={{ background: C.red + "20", color: C.red, border: `1px solid ${C.red}40`, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>URGENTE</span>
+                )}
                 <span style={{ background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}30`, borderRadius: 5, padding: "2px 8px", fontSize: 12, fontWeight: 600 }}>{catLabel}</span>
               </div>
               <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: "0 0 10px" }}>{form.titulo}</h2>
               <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, margin: "0 0 20px" }}>{form.descripcion}</p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
                 {[
-                  { label: "Presupuesto anual", val: form.presupuesto_minimo || form.presupuesto_maximo ? `$${Number(form.presupuesto_minimo).toLocaleString()} – $${Number(form.presupuesto_maximo).toLocaleString()}` : "No especificado" },
-                  { label: "Fecha de cierre",   val: form.fecha_cierre ? new Date(form.fecha_cierre).toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" }) : "—" },
-                  { label: "Duración contrato", val: DURACIONES.find(d => d.value === form.duracion_contrato_meses)?.label ?? "—" },
+                  {
+                    label: "Presupuesto anual",
+                    val: form.presupuesto_minimo || form.presupuesto_maximo
+                      ? `$${Number(form.presupuesto_minimo || 0).toLocaleString()} – $${Number(form.presupuesto_maximo || 0).toLocaleString()}`
+                      : "No especificado",
+                  },
+                  {
+                    label: "Fecha de cierre",
+                    val: form.fecha_cierre
+                      ? new Date(form.fecha_cierre).toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" })
+                      : "—",
+                  },
+                  {
+                    label: "Duración contrato",
+                    val: DURACIONES.find(d => d.value === form.duracion_contrato_meses)?.label ?? "—",
+                  },
+                  ...(form.precio_referencia && form.precio_referencia_visible ? [{
+                    label: "Precio referencia",
+                    val: `$${Number(form.precio_referencia).toLocaleString()} / año`,
+                  }] : []),
+                  ...(fotosFiles.length > 0 ? [{
+                    label: "Fotos del lugar",
+                    val: `${fotosFiles.length} foto${fotosFiles.length !== 1 ? "s" : ""}`,
+                  }] : []),
+                  ...(fechasInspeccion.length > 0 ? [{
+                    label: "Fechas inspección",
+                    val: `${fechasInspeccion.length} fecha${fechasInspeccion.length !== 1 ? "s" : ""} definida${fechasInspeccion.length !== 1 ? "s" : ""}`,
+                  }] : []),
                 ].map(item => (
                   <div key={item.label} style={{ background: C.bgPanel, borderRadius: 8, padding: "12px 16px" }}>
                     <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>{item.label}</p>
@@ -579,19 +1047,38 @@ export default function NuevaLicitacion() {
                   </div>
                 ))}
               </div>
+
+              {/* Fechas inspección detalle */}
+              {fechasInspeccion.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <p style={{ color: C.sub, fontSize: 12, margin: "0 0 8px", fontWeight: 600 }}>FECHAS DE INSPECCIÓN</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {fechasInspeccion.map((f, i) => (
+                      <span key={i} style={{ background: C.blue + "15", color: C.blue, border: `1px solid ${C.blue}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12 }}>
+                        {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" })}
+                      </span>
+                    ))}
+                  </div>
+                  {lugarInspeccion && (
+                    <p style={{ color: C.muted, fontSize: 13, margin: "8px 0 0" }}>
+                      Lugar: <span style={{ color: C.text }}>{lugarInspeccion}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Requisitos preview */}
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 28 }}>
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 24 }}>
               <h3 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 18px" }}>
-                Pliego de requisitos ({requisitos.length})
+                Pliego de requisitos ({allRequisitos.length})
               </h3>
-              {requisitos.length === 0 ? (
+              {allRequisitos.length === 0 ? (
                 <p style={{ color: C.muted, fontSize: 14 }}>Sin requisitos configurados. Vuelve al paso anterior.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {requisitos.map((r, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 0", borderBottom: i < requisitos.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                  {allRequisitos.map((r, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 0", borderBottom: i < allRequisitos.length - 1 ? `1px solid ${C.border}` : "none" }}>
                       <span style={{ color: C.gold, fontWeight: 700, fontSize: 13, minWidth: 24 }}>{i + 1}.</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
@@ -611,7 +1098,7 @@ export default function NuevaLicitacion() {
               )}
             </div>
 
-            {/* CTA */}
+            {/* CTA info */}
             <div style={{ background: C.goldDim, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "18px 24px", marginBottom: 24 }}>
               <p style={{ color: C.gold, fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>Listo para publicar</p>
               <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>
@@ -621,8 +1108,8 @@ export default function NuevaLicitacion() {
             </div>
 
             <div style={{ display: "flex", gap: 12, justifyContent: "space-between", flexWrap: "wrap" }}>
-              <button onClick={() => setStep(2)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 9, padding: "12px 22px", cursor: "pointer", fontSize: 14 }}>
-                ← Editar pliego
+              <button onClick={() => setStep(3)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 9, padding: "12px 22px", cursor: "pointer", fontSize: 14 }}>
+                ← Editar fotos
               </button>
               <div style={{ display: "flex", gap: 12 }}>
                 <button

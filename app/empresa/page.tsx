@@ -53,6 +53,45 @@ interface ContratoConEmpresa extends Contrato {
   empresas?: { nombre: string } | null;
 }
 
+interface KycData {
+  // Sección 1
+  ruc?: string;
+  anio_inicio_operaciones?: number;
+  descripcion?: string;
+  sitio_web?: string;
+  actividades_economicas?: string[];
+  categorias?: string[];
+  direccion?: string;
+  ciudad?: string;
+  provincia?: string;
+  emails?: string[];
+  telefonos?: string[];
+  // Sección 2
+  rep_nombre?: string;
+  rep_tipo_id?: string;
+  rep_numero_id?: string;
+  rep_nacionalidad?: string;
+  rep_email?: string;
+  rep_telefono?: string;
+  // Sección 3
+  contacto_op_nombre?: string;
+  contacto_op_cargo?: string;
+  contacto_op_email?: string;
+  contacto_op_telefono?: string;
+  contacto_cont_nombre?: string;
+  contacto_cont_email?: string;
+  contacto_cont_telefono?: string;
+  // Sección 4
+  num_empleados?: number;
+  facturacion_anual?: number;
+  referencias_bancarias?: string;
+  referencias_comerciales?: string;
+  tiene_seguro?: boolean;
+  tiene_fianza?: boolean;
+  porcentaje_fianza?: number;
+  completado?: boolean;
+}
+
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function Toast({ msg, tipo, onClose }: { msg: string; tipo: "ok" | "err" | "info"; onClose: () => void }) {
   useEffect(() => {
@@ -118,6 +157,633 @@ function badgeEstado(estado: string) {
   );
 }
 
+// ── Categorias disponibles ────────────────────────────────────────────────────
+const CATEGORIAS_SERVICIO = [
+  "Seguridad y vigilancia", "Limpieza y aseo", "HVAC y climatización",
+  "Jardinería y paisajismo", "Ascensores y montacargas", "Electricidad e iluminación",
+  "Pintura y acabados", "Control de plagas", "Plomería y fontanería",
+  "Telecomunicaciones", "Impermeabilización", "Mantenimiento general",
+  "Portería y conserje", "Piscinas y amenidades", "Estacionamientos",
+  "Manejo de residuos", "Señalización", "Cerrajería y accesos",
+  "Sistemas contra incendios", "CCTV y automatización", "Generadores eléctricos",
+  "Obras civiles menores", "Desinfección", "Fumigación", "Otros servicios",
+];
+
+// ── TagInput helper ───────────────────────────────────────────────────────────
+function TagInput({ tags, onChange, placeholder }: { tags: string[]; onChange: (tags: string[]) => void; placeholder?: string }) {
+  const [input, setInput] = useState("");
+  function addTag() {
+    const val = input.trim();
+    if (val && !tags.includes(val)) {
+      onChange([...tags, val]);
+    }
+    setInput("");
+  }
+  return (
+    <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 10px", background: C.bgPanel, display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {tags.map(t => (
+        <span key={t} style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 5, padding: "2px 8px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+          {t}
+          <button onClick={() => onChange(tags.filter(x => x !== t))} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+        </span>
+      ))}
+      <input
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+        placeholder={placeholder || "Escribir y Enter para agregar"}
+        style={{ border: "none", outline: "none", background: "transparent", color: C.text, fontSize: 13, minWidth: 160, flex: 1 }}
+      />
+    </div>
+  );
+}
+
+// ── ModalKYC ──────────────────────────────────────────────────────────────────
+function ModalKYC({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [activeTab, setActiveTab] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [kyc, setKyc] = useState<KycData>({
+    actividades_economicas: [],
+    categorias: [],
+    emails: [],
+    telefonos: [],
+    tiene_seguro: false,
+    tiene_fianza: false,
+  });
+
+  // Cargar KYC existente al montar
+  useEffect(() => {
+    fetch("/api/empresa/kyc")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.kyc) {
+          const k = data.kyc;
+          setKyc({
+            ruc: k.ruc,
+            anio_inicio_operaciones: k.ano_inicio_operaciones,
+            descripcion: k.descripcion,
+            sitio_web: k.sitio_web,
+            actividades_economicas: k.actividades_economicas || [],
+            categorias: k.categorias_servicio || [],
+            direccion: k.direccion,
+            ciudad: k.ciudad,
+            provincia: k.provincia,
+            emails: k.emails_empresa || [],
+            telefonos: k.telefonos_empresa || [],
+            rep_nombre: k.representante_nombre,
+            rep_tipo_id: k.representante_tipo_id,
+            rep_numero_id: k.representante_cedula,
+            rep_nacionalidad: k.representante_nacionalidad,
+            rep_email: k.representante_email,
+            rep_telefono: k.representante_telefono,
+            contacto_op_nombre: k.contacto_nombre,
+            contacto_op_cargo: k.contacto_cargo,
+            contacto_op_email: k.contacto_email,
+            contacto_op_telefono: k.contacto_telefono,
+            contacto_cont_nombre: k.contable_nombre,
+            contacto_cont_email: k.contable_email,
+            contacto_cont_telefono: k.contable_telefono,
+            num_empleados: k.num_empleados,
+            facturacion_anual: k.facturacion_anual_promedio,
+            referencias_bancarias: k.referencias_bancarias,
+            referencias_comerciales: k.referencias_comerciales,
+            tiene_seguro: k.tiene_seguro_responsabilidad ?? false,
+            tiene_fianza: k.tiene_fianza_cumplimiento ?? false,
+            porcentaje_fianza: k.porcentaje_fianza_ofrecido,
+            completado: k.completado,
+          });
+        }
+      })
+      .catch(() => null);
+  }, []);
+
+  function set<K extends keyof KycData>(key: K, val: KycData[K]) {
+    setKyc(prev => ({ ...prev, [key]: val }));
+  }
+
+  // Calcular progreso de las 4 secciones
+  const seccionesCompletas = [
+    !!(kyc.ruc && kyc.descripcion && kyc.direccion),
+    !!(kyc.rep_nombre && kyc.rep_numero_id),
+    !!(kyc.contacto_op_nombre),
+    !!(kyc.num_empleados),
+  ];
+  const progreso = Math.round((seccionesCompletas.filter(Boolean).length / 4) * 100);
+
+  async function guardarSeccion() {
+    setSaving(true);
+    try {
+      // Mapear campos frontend → nombres de columnas en la DB / API
+      const payload = {
+        ruc: kyc.ruc,
+        ano_inicio_operaciones: kyc.anio_inicio_operaciones,
+        descripcion: kyc.descripcion,
+        sitio_web: kyc.sitio_web,
+        actividades_economicas: kyc.actividades_economicas,
+        categorias_servicio: kyc.categorias,
+        direccion: kyc.direccion,
+        ciudad: kyc.ciudad,
+        provincia: kyc.provincia,
+        emails_empresa: kyc.emails,
+        telefonos_empresa: kyc.telefonos,
+        representante_nombre: kyc.rep_nombre,
+        representante_tipo_id: kyc.rep_tipo_id,
+        representante_cedula: kyc.rep_numero_id,
+        representante_nacionalidad: kyc.rep_nacionalidad,
+        representante_email: kyc.rep_email,
+        representante_telefono: kyc.rep_telefono,
+        contacto_nombre: kyc.contacto_op_nombre,
+        contacto_cargo: kyc.contacto_op_cargo,
+        contacto_email: kyc.contacto_op_email,
+        contacto_telefono: kyc.contacto_op_telefono,
+        contable_nombre: kyc.contacto_cont_nombre,
+        contable_email: kyc.contacto_cont_email,
+        contable_telefono: kyc.contacto_cont_telefono,
+        num_empleados: kyc.num_empleados,
+        facturacion_anual_promedio: kyc.facturacion_anual,
+        referencias_bancarias: kyc.referencias_bancarias,
+        referencias_comerciales: kyc.referencias_comerciales,
+        tiene_seguro_responsabilidad: kyc.tiene_seguro,
+        tiene_fianza_cumplimiento: kyc.tiene_fianza,
+        porcentaje_fianza_ofrecido: kyc.porcentaje_fianza,
+      };
+      const r = await fetch("/api/empresa/kyc", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (r.ok) {
+        onSaved();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const tabLabels = ["Datos empresa", "Representante legal", "Contactos", "Capacidad financiera"];
+
+  const inputStyle = {
+    background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8,
+    padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", width: "100%",
+  } as React.CSSProperties;
+  const labelStyle = { display: "flex", flexDirection: "column" as const, gap: 5 };
+  const labelTextStyle = { color: C.sub, fontSize: 12, fontWeight: 500 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, width: "100%", maxWidth: 700, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "24px 28px 0", borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <p style={{ color: C.blue, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Perfil KYC</p>
+              <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>Completa la verificación de tu empresa</h2>
+            </div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 24, lineHeight: 1 }}>×</button>
+          </div>
+
+          {/* Barra de progreso */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ color: C.sub, fontSize: 12 }}>Progreso general</span>
+              <span style={{ color: progreso === 100 ? C.green : C.gold, fontSize: 12, fontWeight: 700 }}>{progreso}%</span>
+            </div>
+            <div style={{ background: C.border, borderRadius: 4, height: 5, overflow: "hidden" }}>
+              <div style={{ background: progreso === 100 ? C.green : C.gold, height: "100%", width: `${progreso}%`, transition: "width .4s ease" }} />
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
+            {tabLabels.map((label, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveTab(i)}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  padding: "10px 16px", fontSize: 13, fontWeight: activeTab === i ? 600 : 400,
+                  color: activeTab === i ? C.blue : C.muted,
+                  borderBottom: activeTab === i ? `2px solid ${C.blue}` : "2px solid transparent",
+                  whiteSpace: "nowrap",
+                  display: "flex", alignItems: "center", gap: 6,
+                }}
+              >
+                {label}
+                {seccionesCompletas[i] && <span style={{ color: C.green, fontSize: 12 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+          {/* SECCION 1: Datos de la empresa */}
+          {activeTab === 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>RUC</span>
+                  <input style={inputStyle} value={kyc.ruc || ""} onChange={e => set("ruc", e.target.value)} placeholder="Ej: 155-1234-1234" />
+                </label>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Año de inicio de operaciones</span>
+                  <input type="number" style={inputStyle} min={1900} max={2025} value={kyc.anio_inicio_operaciones || ""} onChange={e => set("anio_inicio_operaciones", Number(e.target.value))} placeholder="Ej: 2010" />
+                </label>
+              </div>
+              <label style={labelStyle}>
+                <span style={labelTextStyle}>Descripción de la empresa</span>
+                <textarea rows={3} style={{ ...inputStyle, resize: "vertical" }} value={kyc.descripcion || ""} onChange={e => set("descripcion", e.target.value)} placeholder="Describe los servicios y experiencia de tu empresa..." />
+              </label>
+              <label style={labelStyle}>
+                <span style={labelTextStyle}>Sitio web</span>
+                <input style={inputStyle} value={kyc.sitio_web || ""} onChange={e => set("sitio_web", e.target.value)} placeholder="https://www.miempresa.com" />
+              </label>
+              <div style={labelStyle}>
+                <span style={labelTextStyle}>Actividades económicas</span>
+                <TagInput tags={kyc.actividades_economicas || []} onChange={v => set("actividades_economicas", v)} placeholder="Escribir actividad y Enter..." />
+              </div>
+              <div style={labelStyle}>
+                <span style={labelTextStyle}>Categorías de servicio</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: 200, overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, background: C.bgPanel }}>
+                  {CATEGORIAS_SERVICIO.map(cat => (
+                    <label key={cat} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={(kyc.categorias || []).includes(cat)}
+                        onChange={e => {
+                          const cats = kyc.categorias || [];
+                          set("categorias", e.target.checked ? [...cats, cat] : cats.filter(c => c !== cat));
+                        }}
+                        style={{ accentColor: C.blue, width: 14, height: 14 }}
+                      />
+                      <span style={{ color: C.sub, fontSize: 12 }}>{cat}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 14 }}>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Dirección</span>
+                  <input style={inputStyle} value={kyc.direccion || ""} onChange={e => set("direccion", e.target.value)} placeholder="Calle, número, edificio..." />
+                </label>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Ciudad</span>
+                  <input style={inputStyle} value={kyc.ciudad || ""} onChange={e => set("ciudad", e.target.value)} placeholder="Ciudad de Panamá" />
+                </label>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Provincia</span>
+                  <input style={inputStyle} value={kyc.provincia || ""} onChange={e => set("provincia", e.target.value)} placeholder="Panamá" />
+                </label>
+              </div>
+              <div style={labelStyle}>
+                <span style={labelTextStyle}>Emails de contacto de la empresa</span>
+                <TagInput tags={kyc.emails || []} onChange={v => set("emails", v)} placeholder="email@empresa.com + Enter" />
+              </div>
+              <div style={labelStyle}>
+                <span style={labelTextStyle}>Teléfonos de la empresa</span>
+                <TagInput tags={kyc.telefonos || []} onChange={v => set("telefonos", v)} placeholder="507-XXXX-XXXX + Enter" />
+              </div>
+            </div>
+          )}
+
+          {/* SECCION 2: Representante legal */}
+          {activeTab === 1 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <label style={labelStyle}>
+                <span style={labelTextStyle}>Nombre completo</span>
+                <input style={inputStyle} value={kyc.rep_nombre || ""} onChange={e => set("rep_nombre", e.target.value)} placeholder="Nombre y apellidos" />
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Tipo de identificación</span>
+                  <select style={inputStyle} value={kyc.rep_tipo_id || ""} onChange={e => set("rep_tipo_id", e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    <option value="cedula_panama">Cédula panameña</option>
+                    <option value="pasaporte">Pasaporte</option>
+                    <option value="cedula_extranjera">Cédula extranjera</option>
+                  </select>
+                </label>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Número de cédula/pasaporte</span>
+                  <input style={inputStyle} value={kyc.rep_numero_id || ""} onChange={e => set("rep_numero_id", e.target.value)} placeholder="Ej: 8-123-4567" />
+                </label>
+              </div>
+              <label style={labelStyle}>
+                <span style={labelTextStyle}>Nacionalidad</span>
+                <input style={inputStyle} value={kyc.rep_nacionalidad || ""} onChange={e => set("rep_nacionalidad", e.target.value)} placeholder="Panameña" />
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Email del representante</span>
+                  <input type="email" style={inputStyle} value={kyc.rep_email || ""} onChange={e => set("rep_email", e.target.value)} placeholder="rep@empresa.com" />
+                </label>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Teléfono del representante</span>
+                  <input style={inputStyle} value={kyc.rep_telefono || ""} onChange={e => set("rep_telefono", e.target.value)} placeholder="507-XXXX-XXXX" />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* SECCION 3: Contactos */}
+          {activeTab === 2 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <div>
+                <h3 style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: "0 0 14px", paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
+                  Contacto operativo
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    <label style={labelStyle}>
+                      <span style={labelTextStyle}>Nombre</span>
+                      <input style={inputStyle} value={kyc.contacto_op_nombre || ""} onChange={e => set("contacto_op_nombre", e.target.value)} placeholder="Nombre completo" />
+                    </label>
+                    <label style={labelStyle}>
+                      <span style={labelTextStyle}>Cargo</span>
+                      <input style={inputStyle} value={kyc.contacto_op_cargo || ""} onChange={e => set("contacto_op_cargo", e.target.value)} placeholder="Gerente de operaciones" />
+                    </label>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    <label style={labelStyle}>
+                      <span style={labelTextStyle}>Email</span>
+                      <input type="email" style={inputStyle} value={kyc.contacto_op_email || ""} onChange={e => set("contacto_op_email", e.target.value)} placeholder="operaciones@empresa.com" />
+                    </label>
+                    <label style={labelStyle}>
+                      <span style={labelTextStyle}>Teléfono</span>
+                      <input style={inputStyle} value={kyc.contacto_op_telefono || ""} onChange={e => set("contacto_op_telefono", e.target.value)} placeholder="507-XXXX-XXXX" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: "0 0 14px", paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
+                  Contacto contable
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <label style={labelStyle}>
+                    <span style={labelTextStyle}>Nombre</span>
+                    <input style={inputStyle} value={kyc.contacto_cont_nombre || ""} onChange={e => set("contacto_cont_nombre", e.target.value)} placeholder="Nombre completo" />
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    <label style={labelStyle}>
+                      <span style={labelTextStyle}>Email</span>
+                      <input type="email" style={inputStyle} value={kyc.contacto_cont_email || ""} onChange={e => set("contacto_cont_email", e.target.value)} placeholder="contabilidad@empresa.com" />
+                    </label>
+                    <label style={labelStyle}>
+                      <span style={labelTextStyle}>Teléfono</span>
+                      <input style={inputStyle} value={kyc.contacto_cont_telefono || ""} onChange={e => set("contacto_cont_telefono", e.target.value)} placeholder="507-XXXX-XXXX" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECCION 4: Capacidad financiera */}
+          {activeTab === 3 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Número de empleados</span>
+                  <input type="number" min={0} style={inputStyle} value={kyc.num_empleados || ""} onChange={e => set("num_empleados", Number(e.target.value))} placeholder="Ej: 25" />
+                </label>
+                <label style={labelStyle}>
+                  <span style={labelTextStyle}>Facturación anual promedio (USD)</span>
+                  <input type="number" min={0} style={inputStyle} value={kyc.facturacion_anual || ""} onChange={e => set("facturacion_anual", Number(e.target.value))} placeholder="Ej: 500000" />
+                </label>
+              </div>
+              <label style={labelStyle}>
+                <span style={labelTextStyle}>Referencias bancarias (banco, tipo de cuenta, años de relación)</span>
+                <textarea rows={3} style={{ ...inputStyle, resize: "vertical" }} value={kyc.referencias_bancarias || ""} onChange={e => set("referencias_bancarias", e.target.value)} placeholder="Banco General, Cuenta corriente, 8 años de relación..." />
+              </label>
+              <label style={labelStyle}>
+                <span style={labelTextStyle}>Referencias comerciales (mínimo 3: nombre, teléfono, empresa)</span>
+                <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }} value={kyc.referencias_comerciales || ""} onChange={e => set("referencias_comerciales", e.target.value)} placeholder="1. Juan Pérez, 507-6000-0000, PH Torre del Mar&#10;2. María López, 507-6111-1111, Residencial Albrook&#10;3. ..." />
+              </label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: C.bgPanel, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                  <div>
+                    <p style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>Seguro de responsabilidad civil</p>
+                    <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>¿Tu empresa cuenta con póliza de seguro?</p>
+                  </div>
+                  <button
+                    onClick={() => set("tiene_seguro", !kyc.tiene_seguro)}
+                    style={{
+                      width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
+                      background: kyc.tiene_seguro ? C.green : C.border,
+                      position: "relative", transition: "background .2s",
+                    }}
+                  >
+                    <span style={{
+                      position: "absolute", top: 3, left: kyc.tiene_seguro ? 24 : 3,
+                      width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                      transition: "left .2s",
+                    }} />
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: C.bgPanel, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                  <div>
+                    <p style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>Fianza de cumplimiento</p>
+                    <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>¿Puedes ofrecer fianza de cumplimiento?</p>
+                  </div>
+                  <button
+                    onClick={() => set("tiene_fianza", !kyc.tiene_fianza)}
+                    style={{
+                      width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
+                      background: kyc.tiene_fianza ? C.green : C.border,
+                      position: "relative", transition: "background .2s",
+                    }}
+                  >
+                    <span style={{
+                      position: "absolute", top: 3, left: kyc.tiene_fianza ? 24 : 3,
+                      width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                      transition: "left .2s",
+                    }} />
+                  </button>
+                </div>
+
+                {kyc.tiene_fianza && (
+                  <label style={labelStyle}>
+                    <span style={labelTextStyle}>Porcentaje de fianza ofrecido (0-100)</span>
+                    <input type="number" min={0} max={100} style={inputStyle} value={kyc.porcentaje_fianza || ""} onChange={e => set("porcentaje_fianza", Number(e.target.value))} placeholder="Ej: 10" />
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "16px 28px", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            {activeTab > 0 && (
+              <button onClick={() => setActiveTab(activeTab - 1)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontSize: 13 }}>
+                ← Anterior
+              </button>
+            )}
+            {activeTab < 3 && (
+              <button onClick={() => setActiveTab(activeTab + 1)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontSize: 13 }}>
+                Siguiente →
+              </button>
+            )}
+          </div>
+          <button
+            onClick={guardarSeccion}
+            disabled={saving}
+            style={{ background: C.blue, border: "none", color: "#fff", borderRadius: 8, padding: "10px 24px", cursor: saving ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 600, opacity: saving ? 0.7 : 1 }}
+          >
+            {saving ? "Guardando..." : "Guardar sección"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── ModalAceptarContrato ──────────────────────────────────────────────────────
+function ModalAceptarContrato({
+  contrato, onClose, onSuccess,
+}: {
+  contrato: ContratoConEmpresa;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [checks, setChecks] = useState({ leido: false, inicio: false, penalidades: false });
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState("");
+
+  const todosChecked = checks.leido && checks.inicio && checks.penalidades;
+
+  async function aceptar() {
+    if (!todosChecked) { setErr("Debes aceptar todos los compromisos para continuar."); return; }
+    setSending(true);
+    setErr("");
+    try {
+      const r = await fetch(`/api/contratos/${contrato.id}/aceptar`, { method: "POST" });
+      if (!r.ok) {
+        const data = await r.json();
+        setErr(data.error || "Error al aceptar contrato");
+        return;
+      }
+      onSuccess();
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const modalidadLabels: Record<string, string> = {
+    mensual: "Mensual (12 cuotas iguales)",
+    bimestral: "Bimestral (6 cuotas)",
+    "50_50": "50% inicio / 50% al finalizar",
+    "70_30": "70% inicio / 30% al finalizar",
+    adelantado: "Pago adelantado completo",
+    personalizado: "Personalizado",
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ padding: "24px 28px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+            <div>
+              <p style={{ color: C.green, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Firma de contrato</p>
+              <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>Revisar y aceptar contrato</h2>
+            </div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 24, lineHeight: 1 }}>×</button>
+          </div>
+
+          {/* Info del contrato */}
+          <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>Valor anual</p>
+                <p style={{ color: C.green, fontSize: 20, fontWeight: 700, margin: 0 }}>{usd(contrato.valor_anual)}</p>
+              </div>
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>Monto mensual</p>
+                <p style={{ color: C.green, fontSize: 20, fontWeight: 700, margin: 0 }}>{usd(contrato.monto_mensual)}/mes</p>
+              </div>
+            </div>
+            {contrato.modalidad_pago && (
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>Modalidad de pago</p>
+                <p style={{ color: C.text, fontSize: 14, margin: 0 }}>{modalidadLabels[contrato.modalidad_pago] || contrato.modalidad_pago}</p>
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>Fecha inicio</p>
+                <p style={{ color: C.sub, fontSize: 14, margin: 0 }}>{contrato.fecha_inicio ? new Date(contrato.fecha_inicio).toLocaleDateString("es-PA") : "—"}</p>
+              </div>
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>Fecha fin</p>
+                <p style={{ color: C.sub, fontSize: 14, margin: 0 }}>{contrato.fecha_fin ? new Date(contrato.fecha_fin).toLocaleDateString("es-PA") : "—"}</p>
+              </div>
+            </div>
+            {contrato.condiciones_especiales && (
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>Condiciones especiales</p>
+                <p style={{ color: C.sub, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{contrato.condiciones_especiales}</p>
+              </div>
+            )}
+            {contrato.penalidad_porcentaje !== undefined && contrato.penalidad_porcentaje !== null && (
+              <div style={{ background: C.redDim, border: `1px solid ${C.red}30`, borderRadius: 8, padding: "10px 14px" }}>
+                <p style={{ color: C.red, fontSize: 12, fontWeight: 600, margin: "0 0 2px" }}>Penalidad por incumplimiento</p>
+                <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>{contrato.penalidad_porcentaje}% del valor anual del contrato</p>
+              </div>
+            )}
+          </div>
+
+          {/* Checkboxes de aceptación */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+            <p style={{ color: C.text, fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>Compromisos de aceptación</p>
+            {([
+              { key: "leido" as const, label: "He leído y acepto todas las condiciones del contrato" },
+              { key: "inicio" as const, label: "Me comprometo a iniciar el servicio en la fecha acordada" },
+              { key: "penalidades" as const, label: "Acepto las penalidades por incumplimiento establecidas" },
+            ]).map(({ key, label }) => (
+              <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={checks[key]}
+                  onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
+                  style={{ marginTop: 2, accentColor: C.green, width: 16, height: 16 }}
+                />
+                <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
+              </label>
+            ))}
+          </div>
+
+          {err && <p style={{ color: C.red, fontSize: 13, margin: "0 0 16px" }}>{err}</p>}
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <button onClick={onClose} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 14 }}>
+              Cancelar
+            </button>
+            <button
+              onClick={aceptar}
+              disabled={sending || !todosChecked}
+              style={{
+                background: todosChecked ? C.green : C.border,
+                border: "none", color: todosChecked ? "#000" : C.muted,
+                borderRadius: 8, padding: "10px 24px",
+                cursor: sending || !todosChecked ? "not-allowed" : "pointer",
+                fontSize: 14, fontWeight: 600, opacity: sending ? 0.7 : 1,
+                transition: "background .2s",
+              }}
+            >
+              {sending ? "Aceptando..." : "Aceptar contrato"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Apply-to-licitacion modal ─────────────────────────────────────────────────
 function ModalPostular({
   lic, empresaId, onClose, onSuccess,
@@ -128,14 +794,25 @@ function ModalPostular({
   onSuccess: () => void;
 }) {
   const [precio, setPrecio] = useState("");
+  const [modalidadPago, setModalidadPago] = useState("mensual");
+  const [detallePago, setDetallePago] = useState("");
   const [desc, setDesc] = useState("");
   const [tecnica, setTecnica] = useState("");
+  const [checks, setChecks] = useState({
+    inspeccion: false,
+    condiciones: false,
+    penalidades: false,
+    veracidad: false,
+  });
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
+
+  const todosChecked = checks.inspeccion && checks.condiciones && checks.penalidades && checks.veracidad;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!precio) { setErr("El precio anual es requerido."); return; }
+    if (!todosChecked) { setErr("Debes aceptar todos los compromisos legales."); return; }
     setSending(true);
     setErr("");
     try {
@@ -147,6 +824,11 @@ function ModalPostular({
           precio_anual: Number(precio),
           descripcion: desc,
           propuesta_tecnica: tecnica,
+          modalidad_pago: modalidadPago,
+          detalle_pago: modalidadPago === "personalizado" ? detallePago : undefined,
+          acepta_condiciones: true,
+          acepta_inspeccion: true,
+          acepta_penalidades: true,
         }),
       });
       const data = await r.json();
@@ -157,7 +839,7 @@ function ModalPostular({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 32, width: "100%", maxWidth: 540, maxHeight: "90vh", overflowY: "auto" }}>
+      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 32, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <p style={{ color: C.blue, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Postular a licitación</p>
@@ -186,6 +868,34 @@ function ModalPostular({
               style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 15, outline: "none" }}
             />
           </label>
+
+          {/* Modalidad de pago */}
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Modalidad de pago</span>
+            <select
+              value={modalidadPago}
+              onChange={e => setModalidadPago(e.target.value)}
+              style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none" }}
+            >
+              <option value="mensual">Mensual (12 cuotas iguales)</option>
+              <option value="bimestral">Bimestral (6 cuotas)</option>
+              <option value="50_50">50% al inicio, 50% al finalizar</option>
+              <option value="70_30">70% al inicio, 30% al finalizar</option>
+              <option value="adelantado">Pago adelantado completo</option>
+              <option value="personalizado">Personalizado (especificar)</option>
+            </select>
+          </label>
+          {modalidadPago === "personalizado" && (
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Detalla la modalidad de pago</span>
+              <textarea
+                value={detallePago} onChange={e => setDetallePago(e.target.value)} rows={2}
+                placeholder="Describe en detalle la modalidad de pago propuesta..."
+                style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
+              />
+            </label>
+          )}
+
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Descripción de la propuesta</span>
             <textarea
@@ -202,15 +912,44 @@ function ModalPostular({
               style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
             />
           </label>
+
+          {/* Compromisos legales */}
+          <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 12px" }}>
+              Compromisos legales — requeridos para enviar
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([
+                { key: "inspeccion" as const, label: "He inspeccionado o me comprometo a inspeccionar físicamente el lugar antes de iniciar el servicio" },
+                { key: "condiciones" as const, label: "Me comprometo a cumplir íntegramente las condiciones y especificaciones de esta propuesta" },
+                { key: "penalidades" as const, label: "Acepto penalidades por incumplimiento de contrato (mínimo 10% del valor anual)" },
+                { key: "veracidad" as const, label: "Confirmo que toda la información proporcionada es verídica y respondo por daños y perjuicios ante falsedad" },
+              ]).map(({ key, label }) => (
+                <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={checks[key]}
+                    onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
+                    style={{ marginTop: 2, accentColor: C.gold, width: 15, height: 15, flexShrink: 0 }}
+                  />
+                  <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           {err && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{err}</p>}
           <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
             <button type="button" onClick={onClose} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 14 }}>
               Cancelar
             </button>
-            <button type="submit" disabled={sending} style={{
-              background: C.blue, border: "none", color: "#fff",
-              borderRadius: 8, padding: "10px 24px", cursor: sending ? "not-allowed" : "pointer",
+            <button type="submit" disabled={sending || !todosChecked} style={{
+              background: todosChecked ? C.blue : C.border,
+              border: "none", color: todosChecked ? "#fff" : C.muted,
+              borderRadius: 8, padding: "10px 24px",
+              cursor: sending || !todosChecked ? "not-allowed" : "pointer",
               fontSize: 14, fontWeight: 600, opacity: sending ? 0.7 : 1,
+              transition: "background .2s",
             }}>
               {sending ? "Enviando..." : "Enviar propuesta →"}
             </button>
@@ -235,6 +974,9 @@ export default function EmpresaDashboard() {
   const [postularLic, setPostularLic] = useState<LicitacionConPH | null>(null);
   const [uploadingTipo, setUploadingTipo] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; msg: string; tipo: "ok" | "err" | "info" }>>([]);
+  const [showKyc, setShowKyc] = useState(false);
+  const [kycCompletado, setKycCompletado] = useState(true);
+  const [contratoAceptar, setContratoAceptar] = useState<ContratoConEmpresa | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const toast = useCallback((msg: string, tipo: "ok" | "err" | "info" = "ok") => {
@@ -285,6 +1027,25 @@ export default function EmpresaDashboard() {
         cargarContratos(emp.id),
         cargarLicitaciones(),
       ]);
+
+      // Cargar KYC y mostrar modal si no está completo
+      try {
+        const r = await fetch("/api/empresa/kyc");
+        if (r.ok) {
+          const kycData = await r.json();
+          const completado = kycData?.completado === true;
+          setKycCompletado(completado);
+          if (!completado) {
+            setTimeout(() => setShowKyc(true), 1000);
+          }
+        } else {
+          setKycCompletado(false);
+          setTimeout(() => setShowKyc(true), 1000);
+        }
+      } catch {
+        setKycCompletado(false);
+        setTimeout(() => setShowKyc(true), 1000);
+      }
 
       setLoading(false);
     })();
@@ -392,6 +1153,34 @@ export default function EmpresaDashboard() {
         <Toast key={t.id} msg={t.msg} tipo={t.tipo} onClose={() => setToasts(ts => ts.filter(x => x.id !== t.id))} />
       ))}
 
+      {/* Modal KYC */}
+      {showKyc && (
+        <ModalKYC
+          onClose={() => setShowKyc(false)}
+          onSaved={() => {
+            toast("KYC guardado correctamente", "ok");
+            // Refrescar estado KYC
+            fetch("/api/empresa/kyc")
+              .then(r => r.ok ? r.json() : null)
+              .then(data => { if (data?.completado) setKycCompletado(true); })
+              .catch(() => null);
+          }}
+        />
+      )}
+
+      {/* Modal aceptar contrato */}
+      {contratoAceptar && (
+        <ModalAceptarContrato
+          contrato={contratoAceptar}
+          onClose={() => setContratoAceptar(null)}
+          onSuccess={() => {
+            setContratoAceptar(null);
+            toast("Contrato aceptado. El PH ha sido notificado.", "ok");
+            if (empresa) cargarContratos(empresa.id);
+          }}
+        />
+      )}
+
       {/* Postular modal */}
       {postularLic && empresa && (
         <ModalPostular
@@ -400,7 +1189,7 @@ export default function EmpresaDashboard() {
           onClose={() => setPostularLic(null)}
           onSuccess={() => {
             setPostularLic(null);
-            toast("¡Propuesta enviada exitosamente!", "ok");
+            toast("Propuesta enviada exitosamente!", "ok");
             cargarPropuestas();
           }}
         />
@@ -490,6 +1279,28 @@ export default function EmpresaDashboard() {
                 )}
               </button>
             ))}
+
+            {/* KYC item en sidebar */}
+            <button
+              onClick={() => setShowKyc(true)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 14px", borderRadius: 8, border: "none",
+                background: "transparent",
+                color: C.sub,
+                cursor: "pointer", fontSize: 14, fontWeight: 400,
+                textAlign: "left", marginBottom: 2,
+                borderLeft: "3px solid transparent",
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🏢</span>
+              Perfil KYC
+              {!kycCompletado && (
+                <span style={{ marginLeft: "auto", background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  !
+                </span>
+              )}
+            </button>
           </nav>
 
           {/* Sign out */}
@@ -731,8 +1542,8 @@ export default function EmpresaDashboard() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {contratos.map(c => (
-                    <div key={c.id} style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: 22 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div key={c.id} style={{ background: C.bgCard, border: `1px solid ${c.estado_firma === "pendiente" ? C.gold : C.border}`, borderRadius: 12, padding: 22 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                         <div>
                           <p style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>
                             Contrato #{c.id.slice(-6).toUpperCase()}
@@ -742,17 +1553,57 @@ export default function EmpresaDashboard() {
                             {c.fecha_fin && new Date(c.fecha_fin).toLocaleDateString("es-PA")}
                           </p>
                         </div>
-                        {badgeEstado(c.estado)}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          {/* Badge estado firma */}
+                          {c.estado_firma === "pendiente" && (
+                            <span style={{
+                              background: C.goldDim, color: C.gold,
+                              border: `1px solid ${C.gold}40`,
+                              borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 600,
+                              display: "flex", alignItems: "center", gap: 5,
+                            }}>
+                              ⏳ Pendiente tu aceptación
+                            </span>
+                          )}
+                          {c.estado_firma === "empresa_acepto" && (
+                            <span style={{
+                              background: C.green + "15", color: C.green,
+                              border: `1px solid ${C.green}40`,
+                              borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 600,
+                              display: "flex", alignItems: "center", gap: 5,
+                            }}>
+                              ✅ Aceptado por ti — en revisión del PH
+                            </span>
+                          )}
+                          {badgeEstado(c.estado)}
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-                        <div>
-                          <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 2px" }}>Valor anual</p>
-                          <p style={{ color: C.green, fontSize: 20, fontWeight: 700, margin: 0 }}>{usd(c.valor_anual)}</p>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
+                        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                          <div>
+                            <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 2px" }}>Valor anual</p>
+                            <p style={{ color: C.green, fontSize: 20, fontWeight: 700, margin: 0 }}>{usd(c.valor_anual)}</p>
+                          </div>
+                          <div>
+                            <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 2px" }}>Mensual</p>
+                            <p style={{ color: C.green, fontSize: 20, fontWeight: 700, margin: 0 }}>{usd(c.monto_mensual)}/mes</p>
+                          </div>
                         </div>
-                        <div>
-                          <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 2px" }}>Mensual</p>
-                          <p style={{ color: C.green, fontSize: 20, fontWeight: 700, margin: 0 }}>{usd(c.monto_mensual)}/mes</p>
-                        </div>
+
+                        {/* Botón revisar y aceptar */}
+                        {c.estado_firma === "pendiente" && (
+                          <button
+                            onClick={() => setContratoAceptar(c)}
+                            style={{
+                              background: C.blue, border: "none", color: "#fff",
+                              borderRadius: 8, padding: "10px 20px", cursor: "pointer",
+                              fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
+                            }}
+                          >
+                            Revisar y aceptar →
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

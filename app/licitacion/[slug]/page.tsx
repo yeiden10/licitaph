@@ -31,6 +31,11 @@ interface LicitacionFull {
   estado: string;
   urgente: boolean;
   url_slug: string | null;
+  precio_referencia: number | null;
+  precio_referencia_visible: boolean | null;
+  fotos: string[] | null;
+  fechas_inspeccion: string[] | null;
+  lugar_inspeccion: string | null;
   propiedades_horizontales: {
     nombre: string;
     ciudad: string | null;
@@ -44,24 +49,11 @@ function usd(n: number | null) {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0 });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CLIENT ISLAND: Countdown timer
-// ─────────────────────────────────────────────────────────────────────────────
-function CountdownTimerServer({ fechaCierre }: { fechaCierre: string }) {
-  // Server render: static date display. Client island will hydrate.
-  const date = new Date(fechaCierre);
-  const label = date.toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" });
-  return (
-    // @ts-ignore — inline RSC client boundary not needed; we use a client script instead
-    <CountdownTimerClient fechaCierre={fechaCierre} label={label} />
-  );
+function formatFechaInspeccion(dateStr: string): string {
+  // dateStr is YYYY-MM-DD — append noon to avoid timezone shifts
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " — 9:00 AM";
 }
-
-// We declare CountdownTimerClient as a string to be inlined via a separate module,
-// but since Next.js handles this at file boundaries, we co-locate using 'use client' in a wrapper.
-// Because the server component file cannot import 'use client' components defined in the same file,
-// we define the client island components BELOW with their directive and export them named,
-// then re-use them. In Next.js 14+, 'use client' files imported into server components work fine.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SERVER COMPONENT — page.tsx
@@ -80,6 +72,8 @@ export default async function LicitacionPublicaPage({
       presupuesto_minimo, presupuesto_maximo,
       fecha_cierre, fecha_publicacion,
       duracion_contrato_meses, estado, urgente, url_slug,
+      precio_referencia, precio_referencia_visible,
+      fotos, fechas_inspeccion, lugar_inspeccion,
       propiedades_horizontales (nombre, ciudad),
       requisitos_licitacion (*)
     `)
@@ -106,6 +100,11 @@ export default async function LicitacionPublicaPage({
   const obligatorios = requisitos.filter(r => r.obligatorio);
   const opcionales   = requisitos.filter(r => !r.obligatorio);
   const estaActiva   = lic.estado === "activa";
+
+  const fotos: string[] = Array.isArray(lic.fotos) ? lic.fotos.filter(Boolean) : [];
+  const fechasInspeccion: string[] = Array.isArray(lic.fechas_inspeccion) ? lic.fechas_inspeccion.filter(Boolean) : [];
+  const hayFotos = fotos.length > 0;
+  const hayFechas = fechasInspeccion.length > 0;
 
   return (
     <>
@@ -190,6 +189,13 @@ export default async function LicitacionPublicaPage({
                 <p style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{lic.duracion_contrato_meses} meses</p>
               </div>
             )}
+            {lic.precio_referencia_visible && lic.precio_referencia && (
+              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Precio de referencia</p>
+                <p style={{ color: C.gold, fontSize: 18, fontWeight: 700, margin: 0 }}>{usd(lic.precio_referencia)}</p>
+                <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>USD</p>
+              </div>
+            )}
             <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
               <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Requisitos del pliego</p>
               <p style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{requisitos.length}</p>
@@ -197,6 +203,82 @@ export default async function LicitacionPublicaPage({
             </div>
           </div>
         </div>
+
+        {/* ── Galería de fotos (si hay) ── */}
+        {hayFotos && (
+          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28 }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+              <span>🖼</span> Fotos del lugar
+            </h2>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: fotos.length === 1 ? "1fr" : fotos.length === 2 ? "1fr 1fr" : "repeat(3, 1fr)",
+              gap: 12,
+              overflowX: fotos.length > 3 ? "auto" : "visible",
+            }}>
+              {fotos.slice(0, 5).map((src, i) => (
+                <div
+                  key={i}
+                  style={{
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    border: `1px solid ${C.border}`,
+                    height: 200,
+                    flexShrink: 0,
+                    minWidth: fotos.length > 3 ? 220 : "auto",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={`Foto ${i + 1} del lugar`}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                </div>
+              ))}
+            </div>
+            {fotos.length > 5 && (
+              <p style={{ color: C.muted, fontSize: 12, marginTop: 10, textAlign: "right" }}>
+                +{fotos.length - 5} fotos adicionales disponibles
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Fechas de inspección (si hay) ── */}
+        {hayFechas && (
+          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28 }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+              <span>📅</span> Días de inspección
+            </h2>
+            <p style={{ color: C.sub, fontSize: 13, margin: "0 0 16px" }}>Días de inspección del lugar</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: lic.lugar_inspeccion ? 14 : 16 }}>
+              {fechasInspeccion.map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                  <span style={{ color: C.blue, fontSize: 16 }}>📆</span>
+                  <span style={{ color: C.text, fontSize: 14, fontWeight: 500, textTransform: "capitalize" }}>
+                    {formatFechaInspeccion(f)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {lic.lugar_inspeccion && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, color: C.sub, fontSize: 14 }}>
+                <span>📍</span>
+                <span>{lic.lugar_inspeccion}</span>
+              </div>
+            )}
+
+            <div style={{ background: C.blue + "12", border: `1px solid ${C.blue}30`, borderRadius: 8, padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ color: C.blue, fontSize: 16, flexShrink: 0, marginTop: 1 }}>ℹ</span>
+              <p style={{ color: C.sub, fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+                Según el pliego, las empresas están obligadas a realizar una inspección física del lugar antes de enviar su propuesta.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
           {/* ── Left: Pliego de condiciones ── */}
@@ -287,6 +369,8 @@ export default async function LicitacionPublicaPage({
 
 // ── Requisito row (server component) ─────────────────────────────────────────
 function RequisitoRow({ r, numero }: { r: RequisitoLicitacion; numero: number }) {
+  const tipoRespuesta = (r as any).tipo_respuesta as string | undefined;
+
   return (
     <div style={{
       padding: "16px 0",
@@ -297,6 +381,19 @@ function RequisitoRow({ r, numero }: { r: RequisitoLicitacion; numero: number })
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, flexWrap: "wrap" }}>
             <span style={{ color: C.text, fontSize: 15, fontWeight: 600 }}>{r.titulo}</span>
+            {/* Tipo respuesta badge */}
+            {tipoRespuesta === "documento" && (
+              <span style={{
+                background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}30`,
+                borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700, letterSpacing: .5
+              }}>📎 Documento</span>
+            )}
+            {tipoRespuesta === "texto" && (
+              <span style={{
+                background: "rgba(255,255,255,0.06)", color: C.sub, border: `1px solid rgba(255,255,255,0.1)`,
+                borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700, letterSpacing: .5
+              }}>✏️ Texto</span>
+            )}
             {/* Subsanable badge */}
             {r.subsanable ? (
               <span style={{
@@ -332,17 +429,7 @@ function RequisitoRow({ r, numero }: { r: RequisitoLicitacion; numero: number })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CLIENT ISLANDS — defined in separate modules but co-located here
-// Next.js requires 'use client' at the top of a module, so we import them.
-// Since we can't import from the same file, we define them as inline server
-// wrappers that render pre-hydrated HTML + a client script tag approach.
-//
-// In practice for Next.js 14 App Router, the cleanest approach for co-located
-// client islands is to define them as separate files and import them.
-// However, we implement them here by using a trick: these "components"
-// are server components that render static HTML, with the client behavior
-// implemented via an embedded <script> tag using dangerouslySetInnerHTML.
-// This avoids needing separate files while still achieving client interactivity.
+// CLIENT ISLANDS — inline script approach (no separate 'use client' files needed)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function CountdownIsland({ fechaCierre }: { fechaCierre: string }) {

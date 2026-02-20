@@ -5,6 +5,29 @@ import type { Licitacion, Propuesta, Contrato, PropiedadHorizontal } from "@/lib
 
 type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte";
 
+// Default fecha_inicio: 7 days from today
+function defaultFechaInicio() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+}
+
+interface CondicionesContrato {
+  fecha_inicio: string;
+  modalidad_pago: string;
+  detalle_pago: string;
+  penalidad_porcentaje: number;
+  condiciones_especiales: string;
+  notas: string;
+}
+
+interface ModalEditarState {
+  fechas: string[];
+  fechaInput: string;
+  lugar: string;
+  condiciones: string;
+}
+
 export default function PHDashboard() {
   const supabase = createClient();
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -18,6 +41,26 @@ export default function PHDashboard() {
   const [showAdjudicar, setShowAdjudicar] = useState<string | null>(null);
   const [adjudicando, setAdjudicando] = useState(false);
   const [notif, setNotif] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
+
+  // Condiciones contrato state
+  const [condicionesContrato, setCondicionesContrato] = useState<CondicionesContrato>({
+    fecha_inicio: defaultFechaInicio(),
+    modalidad_pago: "mensual",
+    detalle_pago: "",
+    penalidad_porcentaje: 10,
+    condiciones_especiales: "",
+    notas: "",
+  });
+
+  // Modal editar licitacion
+  const [editandoLic, setEditandoLic] = useState<string | null>(null);
+  const [modalEditar, setModalEditar] = useState<ModalEditarState>({
+    fechas: [],
+    fechaInput: "",
+    lugar: "",
+    condiciones: "",
+  });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   // ── Carga inicial ──────────────────────────────────────────
   useEffect(() => {
@@ -99,6 +142,19 @@ export default function PHDashboard() {
     if (licSeleccionada) cargarPropuestas(licSeleccionada);
   }, [licSeleccionada]);
 
+  // Reset condiciones when opening modal
+  const abrirModalAdjudicar = (propuestaId: string) => {
+    setCondicionesContrato({
+      fecha_inicio: defaultFechaInicio(),
+      modalidad_pago: "mensual",
+      detalle_pago: "",
+      penalidad_porcentaje: 10,
+      condiciones_especiales: "",
+      notas: "",
+    });
+    setShowAdjudicar(propuestaId);
+  };
+
   // ── Adjudicar ─────────────────────────────────────────────
   const adjudicar = async (propuesta_id: string, licitacion_id: string) => {
     setAdjudicando(true);
@@ -106,7 +162,10 @@ export default function PHDashboard() {
       const res = await fetch(`/api/licitaciones/${licitacion_id}/adjudicar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propuesta_id }),
+        body: JSON.stringify({
+          propuesta_id,
+          condiciones_contrato: condicionesContrato,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -137,6 +196,52 @@ export default function PHDashboard() {
       await cargarLicitaciones(ph.id);
       setNotif({ msg: "✅ ¡Licitación publicada! Las empresas ya pueden aplicar.", tipo: "ok" });
     }
+  };
+
+  // ── Editar licitación activa ───────────────────────────────
+  const abrirModalEditar = (l: Licitacion) => {
+    setModalEditar({
+      fechas: (l as any).fechas_inspeccion || [],
+      fechaInput: "",
+      lugar: (l as any).lugar_inspeccion || "",
+      condiciones: (l as any).condiciones_especiales || "",
+    });
+    setEditandoLic(l.id);
+  };
+
+  const guardarEdicion = async () => {
+    if (!editandoLic) return;
+    setGuardandoEdicion(true);
+    try {
+      const res = await fetch(`/api/licitaciones/${editandoLic}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fechas_inspeccion: modalEditar.fechas,
+          lugar_inspeccion: modalEditar.lugar,
+          condiciones_especiales: modalEditar.condiciones,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Error al guardar");
+      setNotif({ msg: "✅ Licitación actualizada correctamente.", tipo: "ok" });
+      setEditandoLic(null);
+      if (ph) await cargarLicitaciones(ph.id);
+    } catch (e: any) {
+      setNotif({ msg: "❌ Error: " + e.message, tipo: "err" });
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  };
+
+  const agregarFechaInspeccion = () => {
+    const f = modalEditar.fechaInput.trim();
+    if (!f || modalEditar.fechas.includes(f)) return;
+    setModalEditar(prev => ({ ...prev, fechas: [...prev.fechas, f], fechaInput: "" }));
+  };
+
+  const quitarFechaInspeccion = (f: string) => {
+    setModalEditar(prev => ({ ...prev, fechas: prev.fechas.filter(x => x !== f) }));
   };
 
   // ── Helpers ───────────────────────────────────────────────
@@ -251,6 +356,7 @@ export default function PHDashboard() {
         .b-red { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
         .b-gray { background:rgba(255,255,255,0.05); color:var(--text3); border:1px solid var(--border); }
         .b-urgent { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); font-size:9px; padding:2px 6px; margin-left:6px; letter-spacing:0.5px; }
+        .b-orange { background:rgba(249,115,22,0.1); color:#F97316; border:1px solid rgba(249,115,22,0.2); }
 
         /* BUTTONS */
         .btn { padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; border:none; display:inline-flex; align-items:center; gap:5px; }
@@ -294,12 +400,20 @@ export default function PHDashboard() {
         .alert-banner { background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.15); border-radius:10px; padding:14px 18px; margin-bottom:16px; display:flex; align-items:center; gap:14px; font-size:13px; }
 
         /* MODAL */
-        .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-        .modal { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:28px; width:500px; max-width:90vw; position:relative; }
+        .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:20px; }
+        .modal { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:28px; width:560px; max-width:100%; position:relative; max-height:90vh; overflow-y:auto; }
         .modal::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent); border-radius:18px 18px 0 0; }
         .modal-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:700; margin-bottom:6px; }
         .modal-sub { font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.6; }
         .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+
+        /* FORM INPUTS */
+        .form-label { font-size:12px; color:var(--text2); margin-bottom:5px; display:block; font-weight:500; }
+        .form-input { width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; }
+        .form-input:focus { border-color:rgba(201,168,76,0.4); }
+        .form-select { width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; cursor:pointer; appearance:none; }
+        .form-textarea { width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; resize:vertical; }
+        .form-row { margin-bottom:14px; }
 
         /* NOTIF */
         .notif { position:fixed; top:20px; right:20px; z-index:500; max-width:380px; padding:14px 18px; border-radius:10px; font-size:13px; font-weight:500; animation:fadeUp 0.3s ease both; }
@@ -317,6 +431,11 @@ export default function PHDashboard() {
         .rep-stat { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
         .rep-val { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
         .rep-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; }
+
+        /* SECTION DIVIDER */
+        .modal-section { border-top:1px solid rgba(255,255,255,0.07); padding-top:18px; margin-top:18px; }
+        .modal-section-title { font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px; }
+        .modal-section-sub { font-size:11px; color:var(--text3); margin-bottom:14px; }
 
         @media(max-width:1024px){ .cards{grid-template-columns:repeat(2,1fr)} }
         @media(max-width:768px){ .sidebar{display:none} .main{margin-left:0;padding:16px} }
@@ -525,10 +644,15 @@ export default function PHDashboard() {
                           </td>
                           <td>{formatFecha(l.fecha_publicacion)}</td>
                           <td>{formatFecha(l.fecha_cierre)}</td>
-                          <td style={{ display: "flex", gap: 6 }}>
+                          <td style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {(l.estado === "activa" || l.estado === "en_evaluacion") && (
                               <button className="btn btn-gold" onClick={() => { setLicSeleccionada(l.id); setTab("propuestas"); }}>
                                 Ver propuestas
+                              </button>
+                            )}
+                            {l.estado === "activa" && (
+                              <button className="btn btn-ghost" onClick={() => abrirModalEditar(l)}>
+                                ✏️ Editar
                               </button>
                             )}
                             {l.estado === "borrador" && (
@@ -637,7 +761,7 @@ export default function PHDashboard() {
                                 <>
                                   <button
                                     className={`btn ${esRecomendada ? "btn-gold" : "btn-ghost"}`}
-                                    onClick={() => setShowAdjudicar(p.id)}
+                                    onClick={() => abrirModalAdjudicar(p.id)}
                                   >
                                     {esRecomendada ? "⭐ Adjudicar" : "Adjudicar"}
                                   </button>
@@ -706,10 +830,21 @@ export default function PHDashboard() {
                   </div>
                 ) : (
                   <table className="tbl">
-                    <thead><tr><th>Empresa</th><th>Servicio</th><th>Monto/mes</th><th>Inicio</th><th>Vence</th><th>Estado</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Empresa</th>
+                        <th>Servicio</th>
+                        <th>Monto/mes</th>
+                        <th>Inicio</th>
+                        <th>Vence</th>
+                        <th>Firma empresa</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {contratos.map(c => {
                         const dias = diasRestantes(c.fecha_fin);
+                        const estadoFirma = (c as any).estado_firma;
                         return (
                           <tr key={c.id}>
                             <td className="td-main">{(c as any).empresas?.nombre || "—"}</td>
@@ -717,6 +852,15 @@ export default function PHDashboard() {
                             <td className="td-mono">{formatMonto(c.monto_mensual)}</td>
                             <td>{formatFecha(c.fecha_inicio)}</td>
                             <td style={{ color: c.estado === "vencido" ? "var(--red)" : "inherit" }}>{formatFecha(c.fecha_fin)}</td>
+                            <td>
+                              {estadoFirma === "pendiente" ? (
+                                <span className="badge b-orange">⏳ Pendiente empresa</span>
+                              ) : estadoFirma === "empresa_acepto" ? (
+                                <span className="badge b-green">✅ Aceptado</span>
+                              ) : (
+                                <span className="badge b-gray">—</span>
+                              )}
+                            </td>
                             <td>
                               {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span>
                                 : c.estado === "completado" ? <span className="badge b-gray">✓ Completado</span>
@@ -792,24 +936,113 @@ export default function PHDashboard() {
         </main>
       </div>
 
-      {/* ── MODAL ADJUDICAR ── */}
+      {/* ── MODAL ADJUDICAR (ampliado) ── */}
       {showAdjudicar && (
         <div className="modal-bg" onClick={() => !adjudicando && setShowAdjudicar(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Confirmar adjudicación</h2>
+
+            {/* Sección 1: Resumen propuesta */}
             {(() => {
               const p = propuestas.find(x => x.id === showAdjudicar);
               return (
-                <p className="modal-sub">
-                  Adjudicarás la licitación a <strong style={{ color: "var(--text)" }}>{(p as any)?.empresas?.nombre}</strong> por <strong style={{ color: "var(--gold)" }}>{formatMonto(p?.monto_mensual || (p?.precio_anual ? p.precio_anual / 12 : null))}</strong>.
-                  <br /><br />
-                  Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
-                </p>
+                <>
+                  <p className="modal-sub">
+                    Adjudicarás la licitación a <strong style={{ color: "var(--text)" }}>{(p as any)?.empresas?.nombre}</strong> por <strong style={{ color: "var(--gold)" }}>{formatMonto(p?.monto_mensual || (p?.precio_anual ? p.precio_anual / 12 : null))}</strong>.
+                    {p?.puntaje_ia != null && (
+                      <span style={{ marginLeft: 8, color: "var(--text3)", fontSize: 12 }}>Puntaje IA: <strong style={{ color: "var(--green)" }}>{p.puntaje_ia}</strong></span>
+                    )}
+                  </p>
+                  <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)", marginBottom: 4 }}>
+                    📄 Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
+                  </div>
+                </>
               );
             })()}
-            <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)" }}>
-              📄 Se generará el contrato automáticamente con los términos de la propuesta.
+
+            {/* Sección 2: Condiciones del contrato */}
+            <div className="modal-section">
+              <div className="modal-section-title">Pactar condiciones del contrato</div>
+              <div className="modal-section-sub">La empresa deberá revisar y aceptar estas condiciones en su dashboard</div>
+
+              <div className="form-row">
+                <label className="form-label">Fecha de inicio del contrato</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={condicionesContrato.fecha_inicio}
+                  onChange={e => setCondicionesContrato(prev => ({ ...prev, fecha_inicio: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Modalidad de pago</label>
+                <select
+                  className="form-select"
+                  value={condicionesContrato.modalidad_pago}
+                  onChange={e => setCondicionesContrato(prev => ({ ...prev, modalidad_pago: e.target.value, detalle_pago: e.target.value !== "personalizado" ? "" : prev.detalle_pago }))}
+                >
+                  <option value="mensual">Mensual</option>
+                  <option value="bimestral">Bimestral</option>
+                  <option value="50/50">50/50 (inicio y mitad)</option>
+                  <option value="70/30">70/30 (inicio/cierre)</option>
+                  <option value="adelantado">Adelantado (pago completo al inicio)</option>
+                  <option value="personalizado">Personalizado</option>
+                </select>
+              </div>
+
+              {condicionesContrato.modalidad_pago === "personalizado" && (
+                <div className="form-row">
+                  <label className="form-label">Detalle de modalidad de pago</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    placeholder="Describe la modalidad de pago personalizada..."
+                    value={condicionesContrato.detalle_pago}
+                    onChange={e => setCondicionesContrato(prev => ({ ...prev, detalle_pago: e.target.value }))}
+                  />
+                </div>
+              )}
+
+              <div className="form-row">
+                <label className="form-label">
+                  Penalidad por incumplimiento — <strong style={{ color: "var(--gold)" }}>{condicionesContrato.penalidad_porcentaje}%</strong> del valor anual
+                </label>
+                <input
+                  type="number"
+                  className="form-input"
+                  min={5}
+                  max={50}
+                  value={condicionesContrato.penalidad_porcentaje}
+                  onChange={e => setCondicionesContrato(prev => ({ ...prev, penalidad_porcentaje: Math.min(50, Math.max(5, Number(e.target.value))) }))}
+                />
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Condiciones especiales <span style={{ color: "var(--text3)", fontWeight: 400 }}>(opcional)</span></label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Condiciones específicas del contrato, SLA, garantías..."
+                  value={condicionesContrato.condiciones_especiales}
+                  onChange={e => setCondicionesContrato(prev => ({ ...prev, condiciones_especiales: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-row" style={{ marginBottom: 0 }}>
+                <label className="form-label">
+                  Notas internas <span style={{ color: "var(--text3)", fontWeight: 400 }}>(no visible para la empresa, opcional)</span>
+                </label>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  placeholder="Notas privadas del administrador..."
+                  value={condicionesContrato.notas}
+                  onChange={e => setCondicionesContrato(prev => ({ ...prev, notas: e.target.value }))}
+                />
+              </div>
             </div>
+
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setShowAdjudicar(null)} disabled={adjudicando}>Cancelar</button>
               <button
@@ -826,6 +1059,96 @@ export default function PHDashboard() {
                     Procesando...
                   </span>
                 ) : "✓ Confirmar adjudicación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL EDITAR LICITACION ACTIVA ── */}
+      {editandoLic && (
+        <div className="modal-bg" onClick={() => !guardandoEdicion && setEditandoLic(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Editar licitación activa</h2>
+            <p className="modal-sub">Puedes agregar fotos e inspecciones sin afectar el pliego</p>
+
+            {/* Fechas de inspección */}
+            <div className="form-row">
+              <label className="form-label">Fechas de inspección</label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  value={modalEditar.fechaInput}
+                  onChange={e => setModalEditar(prev => ({ ...prev, fechaInput: e.target.value }))}
+                  onKeyDown={e => e.key === "Enter" && agregarFechaInspeccion()}
+                />
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={agregarFechaInspeccion}
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  + Agregar
+                </button>
+              </div>
+              {modalEditar.fechas.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {modalEditar.fechas.map(f => (
+                    <div key={f} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "7px 12px" }}>
+                      <span style={{ fontSize: 13, color: "#F0F4FF" }}>
+                        {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => quitarFechaInspeccion(f)}
+                        style={{ background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px" }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {modalEditar.fechas.length === 0 && (
+                <p style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>No hay fechas de inspección aún.</p>
+              )}
+            </div>
+
+            <div className="form-row">
+              <label className="form-label">Lugar de inspección</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Ej: Lobby del edificio Torre Mar, piso 1"
+                value={modalEditar.lugar}
+                onChange={e => setModalEditar(prev => ({ ...prev, lugar: e.target.value }))}
+              />
+            </div>
+
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label className="form-label">Condiciones especiales</label>
+              <textarea
+                className="form-textarea"
+                rows={4}
+                placeholder="Condiciones especiales del proceso de licitación..."
+                value={modalEditar.condiciones}
+                onChange={e => setModalEditar(prev => ({ ...prev, condiciones: e.target.value }))}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setEditandoLic(null)} disabled={guardandoEdicion}>
+                Cancelar
+              </button>
+              <button className="btn btn-gold" disabled={guardandoEdicion} onClick={guardarEdicion}>
+                {guardandoEdicion ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 12, height: 12, border: "2px solid #07090F", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                    Guardando...
+                  </span>
+                ) : "💾 Guardar cambios"}
               </button>
             </div>
           </div>
