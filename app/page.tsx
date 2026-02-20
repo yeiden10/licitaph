@@ -103,15 +103,21 @@ export default function Home() {
   const login = async () => {
     if (!form.email || !form.password) { setMensaje("Por favor ingresa tu email y contraseña."); return; }
     setCargando(true); setMensaje("");
-    const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
     setCargando(false);
-    if (error) { setMensaje("Error: " + error.message); }
-    else {
-      const { data: { user } } = await supabase.auth.getUser();
-      const tipo = user?.user_metadata?.tipo_usuario;
-      setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
-      setTimeout(() => { router.replace(tipo === "empresa" ? "/empresa" : "/ph"); }, 800);
+    if (error) {
+      if (error.message.toLowerCase().includes("email not confirmed") || error.message.toLowerCase().includes("email_not_confirmed")) {
+        setMensaje("⚠️ Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja de entrada (y spam).");
+      } else if (error.message.toLowerCase().includes("invalid login credentials") || error.message.toLowerCase().includes("invalid_credentials")) {
+        setMensaje("❌ Email o contraseña incorrectos. Verifica tus datos.");
+      } else {
+        setMensaje("❌ " + error.message);
+      }
+      return;
     }
+    const tipo = data.user?.user_metadata?.tipo_usuario;
+    setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
+    setTimeout(() => { router.replace(tipo === "empresa" ? "/empresa" : "/ph"); }, 800);
   };
 
   const accentColor = perfil === "empresa" ? "#4A9EFF" : perfil === "copropietario" ? "#4ADE80" : "#C9A84C";
