@@ -782,7 +782,7 @@ export default function PHDashboard() {
                   <>
                     <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.02)", fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 14 }}>🤖</span>
-                      La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (40%)</strong> · <strong style={{ color: "var(--text)" }}>documentación (30%)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (20%)</strong> · <strong style={{ color: "var(--text)" }}>respuesta (10%)</strong>
+                      La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (35)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (25)</strong> · <strong style={{ color: "var(--text)" }}>propuesta técnica (25)</strong> · <strong style={{ color: "var(--text)" }}>documentación (10)</strong> · <strong style={{ color: "var(--text)" }}>reputación (5)</strong>
                     </div>
                     <div className="prop-grid">
                       {propuestas.map((p, i) => {
@@ -809,6 +809,33 @@ export default function PHDashboard() {
                             </div>
                             {p.descripcion && (
                               <div className="prop-detalle">{p.descripcion}</div>
+                            )}
+                            {/* Análisis Claude */}
+                            {(p as any).analisis_ia?.recomendacion && (
+                              <div style={{ background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.15)", borderRadius: 8, padding: "10px 12px", marginTop: 8 }}>
+                                <div style={{ fontSize: 10, color: "var(--blue)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>🤖 Análisis IA</div>
+                                <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.5 }}>{(p as any).analisis_ia.recomendacion}</div>
+                                {((p as any).analisis_ia?.fortalezas?.length > 0 || (p as any).analisis_ia?.debilidades?.length > 0) && (
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8 }}>
+                                    {(p as any).analisis_ia?.fortalezas?.length > 0 && (
+                                      <div>
+                                        <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 600, marginBottom: 2 }}>✓ Fortalezas</div>
+                                        {((p as any).analisis_ia.fortalezas as string[]).map((f: string, fi: number) => (
+                                          <div key={fi} style={{ fontSize: 11, color: "var(--text2)", lineHeight: 1.4 }}>• {f}</div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {(p as any).analisis_ia?.debilidades?.length > 0 && (
+                                      <div>
+                                        <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 600, marginBottom: 2 }}>✗ Debilidades</div>
+                                        {((p as any).analisis_ia.debilidades as string[]).map((d: string, di: number) => (
+                                          <div key={di} style={{ fontSize: 11, color: "var(--text2)", lineHeight: 1.4 }}>• {d}</div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             )}
                             <div className="prop-actions">
                               {esGanada ? (

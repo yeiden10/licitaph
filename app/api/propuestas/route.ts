@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import Anthropic from "@anthropic-ai/sdk";
 
 // GET /api/propuestas?licitacion_id=xxx — propuestas de una licitación (PH) o las de la empresa
 export async function GET(request: NextRequest) {
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
   // Verificar empresa
   const { data: empresa } = await supabase
     .from("empresas")
-    .select("id, anios_experiencia")
+    .select("id, nombre, anios_experiencia, descripcion, categorias, calificacion_promedio, total_contratos_ganados")
     .eq("usuario_id", user.id)
     .single();
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
   // Verificar que la licitación existe y está activa
   const { data: licitacion } = await supabase
     .from("licitaciones")
-    .select("id, titulo, ph_id, estado")
+    .select("id, titulo, categoria, descripcion, ph_id, estado, presupuesto_minimo, presupuesto_maximo, duracion_contrato_meses")
     .eq("id", licitacion_id)
     .single();
 
@@ -109,13 +110,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Licitación no disponible" }, { status: 400 });
   }
 
-  // Calcular puntaje IA simple
-  const puntaje_ia = calcularPuntajeIA({
-    precio_anual,
+  // Contar documentos subidos por la empresa
+  const { count: totalDocs } = await supabase
+    .from("documentos")
+    .select("id", { count: "exact", head: true })
+    .eq("entidad_tipo", "empresa")
+    .eq("entidad_id", empresa.id);
+
+  // Calcular puntaje con Claude AI (con fallback al scoring simple)
+  const { puntaje_ia, analisis_ia } = await scoringConClaude({
+    licitacion,
     empresa,
-    tiene_descripcion: !!descripcion && descripcion.length > 50,
-    tiene_tecnica: !!propuesta_tecnica && propuesta_tecnica.length > 100,
+    precio_anual,
+    descripcion,
+    propuesta_tecnica,
     modalidad_pago,
+    total_docs: totalDocs ?? 0,
   });
 
   // Upsert propuesta (borrador → enviada)
@@ -136,13 +146,7 @@ export async function POST(request: NextRequest) {
         acepta_penalidades: acepta_penalidades === true,
         estado: "enviada",
         puntaje_ia,
-        analisis_ia: {
-          precio: Math.min(40, Math.round(40 * (1 - (precio_anual || 0) / 100000))),
-          documentacion: 25,
-          experiencia: Math.min(20, (empresa.anios_experiencia || 0) * 3),
-          respuesta: 10,
-          total: puntaje_ia,
-        },
+        analisis_ia,
         enviada_at: new Date().toISOString(),
       },
       { onConflict: "licitacion_id,empresa_id" }
@@ -175,31 +179,175 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, propuesta });
 }
 
-function calcularPuntajeIA({
+// ─── SCORING CON CLAUDE AI ────────────────────────────────────────────────────
+
+async function scoringConClaude({
+  licitacion,
+  empresa,
+  precio_anual,
+  descripcion,
+  propuesta_tecnica,
+  modalidad_pago,
+  total_docs,
+}: {
+  licitacion: {
+    titulo: string;
+    categoria: string;
+    descripcion: string | null;
+    presupuesto_minimo: number | null;
+    presupuesto_maximo: number | null;
+    duracion_contrato_meses: number | null;
+  };
+  empresa: {
+    nombre: string;
+    anios_experiencia: number | null;
+    descripcion: string | null;
+    categorias: string[] | null;
+    calificacion_promedio: number | null;
+    total_contratos_ganados: number | null;
+  };
+  precio_anual: number;
+  descripcion: string;
+  propuesta_tecnica: string;
+  modalidad_pago: string;
+  total_docs: number;
+}): Promise<{ puntaje_ia: number; analisis_ia: Record<string, unknown> }> {
+
+  // Fallback rápido si no hay API key
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return fallbackScoring({ precio_anual, empresa, descripcion, propuesta_tecnica, modalidad_pago, total_docs });
+  }
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const presupuestoRef = licitacion.presupuesto_maximo
+      ? `$${licitacion.presupuesto_maximo.toLocaleString()}`
+      : licitacion.presupuesto_minimo
+        ? `desde $${licitacion.presupuesto_minimo.toLocaleString()}`
+        : "no especificado";
+
+    const prompt = `Eres un evaluador experto de propuestas para licitaciones de propiedades horizontales en Panamá.
+
+LICITACIÓN:
+- Título: ${licitacion.titulo}
+- Categoría: ${licitacion.categoria}
+- Descripción: ${licitacion.descripcion ?? "No especificada"}
+- Presupuesto referencia: ${presupuestoRef}
+- Duración: ${licitacion.duracion_contrato_meses ?? 12} meses
+
+EMPRESA PROPONENTE:
+- Nombre: ${empresa.nombre}
+- Años de experiencia: ${empresa.anios_experiencia ?? 0}
+- Categorías de servicio: ${(empresa.categorias ?? []).join(", ") || "No especificadas"}
+- Calificación promedio (plataforma): ${empresa.calificacion_promedio ?? "Sin calificación"}
+- Contratos ganados previos: ${empresa.total_contratos_ganados ?? 0}
+- Descripción empresa: ${empresa.descripcion ?? "No proporcionada"}
+- Documentos subidos: ${total_docs}
+
+PROPUESTA ENVIADA:
+- Precio anual ofertado: $${precio_anual?.toLocaleString() ?? "No especificado"}
+- Modalidad de pago: ${modalidad_pago ?? "No especificada"}
+- Descripción de la propuesta: ${descripcion ?? "No proporcionada"}
+- Propuesta técnica: ${propuesta_tecnica ?? "No proporcionada"}
+
+INSTRUCCIONES:
+Evalúa esta propuesta y devuelve ÚNICAMENTE un JSON válido con esta estructura exacta (sin texto adicional, sin markdown):
+{
+  "precio": <número 0-35, donde 35 es el mejor precio considerando el presupuesto de referencia>,
+  "experiencia": <número 0-25, donde 25 es máxima experiencia comprobable>,
+  "propuesta_tecnica": <número 0-25, donde 25 es propuesta técnica muy detallada y específica>,
+  "documentacion": <número 0-10, donde 10 es documentación completa (${total_docs} docs subidos)>,
+  "reputacion": <número 0-5, donde 5 es excelente reputación y historial>,
+  "total": <suma de los anteriores, máximo 100>,
+  "fortalezas": ["fortaleza 1", "fortaleza 2"],
+  "debilidades": ["debilidad 1", "debilidad 2"],
+  "recomendacion": "texto corto de 1-2 oraciones sobre esta propuesta"
+}`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 512,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (message.content[0] as { type: string; text: string }).text.trim();
+    // Extraer JSON (puede venir con markdown ```json ... ```)
+    const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    const result = JSON.parse(jsonStr);
+
+    // Validar y sanitizar
+    const precio = Math.min(35, Math.max(0, Number(result.precio) || 0));
+    const experiencia = Math.min(25, Math.max(0, Number(result.experiencia) || 0));
+    const propuesta_pts = Math.min(25, Math.max(0, Number(result.propuesta_tecnica) || 0));
+    const documentacion = Math.min(10, Math.max(0, Number(result.documentacion) || 0));
+    const reputacion = Math.min(5, Math.max(0, Number(result.reputacion) || 0));
+    const total = Math.min(100, Math.round(precio + experiencia + propuesta_pts + documentacion + reputacion));
+
+    return {
+      puntaje_ia: total,
+      analisis_ia: {
+        precio,
+        experiencia,
+        propuesta_tecnica: propuesta_pts,
+        documentacion,
+        reputacion,
+        total,
+        fortalezas: Array.isArray(result.fortalezas) ? result.fortalezas.slice(0, 3) : [],
+        debilidades: Array.isArray(result.debilidades) ? result.debilidades.slice(0, 3) : [],
+        recomendacion: typeof result.recomendacion === "string" ? result.recomendacion : "",
+        modelo: "claude-haiku-4-5",
+        evaluado_en: new Date().toISOString(),
+      },
+    };
+  } catch (err) {
+    console.error("Error en scoring Claude:", err);
+    // Si Claude falla, usar fallback
+    return fallbackScoring({ precio_anual, empresa, descripcion, propuesta_tecnica, modalidad_pago, total_docs });
+  }
+}
+
+function fallbackScoring({
   precio_anual,
   empresa,
-  tiene_descripcion,
-  tiene_tecnica,
+  descripcion,
+  propuesta_tecnica,
   modalidad_pago,
+  total_docs,
 }: {
   precio_anual: number;
   empresa: { anios_experiencia?: number | null };
-  tiene_descripcion: boolean;
-  tiene_tecnica?: boolean;
-  modalidad_pago?: string;
+  descripcion: string;
+  propuesta_tecnica: string;
+  modalidad_pago: string;
+  total_docs: number;
 }) {
-  let score = 0;
-  // Precio (35 pts) — fórmula simple, en prod comparar contra otras propuestas
-  if (precio_anual > 0) score += 30;
-  // Descripción técnica (20 pts)
-  if (tiene_descripcion) score += 10;
-  if (tiene_tecnica) score += 10;
-  // Experiencia (20 pts)
-  const anios = empresa.anios_experiencia || 0;
-  score += Math.min(20, anios * 3);
-  // Modalidad de pago especificada (5 pts)
-  if (modalidad_pago) score += 5;
-  // Base de documentación (15 pts) — se recalculará con docs reales
-  score += 15;
-  return Math.min(100, Math.round(score));
+  let precio = 0;
+  if (precio_anual > 0) precio = 25;
+
+  const propuesta_pts = (!!descripcion && descripcion.length > 50 ? 12 : 0) +
+    (!!propuesta_tecnica && propuesta_tecnica.length > 100 ? 13 : 0);
+
+  const experiencia = Math.min(25, (empresa.anios_experiencia || 0) * 4);
+  const documentacion = Math.min(10, total_docs * 1.5);
+  const reputacion = modalidad_pago ? 3 : 0;
+
+  const total = Math.min(100, Math.round(precio + propuesta_pts + experiencia + documentacion + reputacion));
+
+  return {
+    puntaje_ia: total,
+    analisis_ia: {
+      precio,
+      experiencia,
+      propuesta_tecnica: propuesta_pts,
+      documentacion,
+      reputacion,
+      total,
+      fortalezas: [],
+      debilidades: [],
+      recomendacion: "",
+      modelo: "fallback",
+      evaluado_en: new Date().toISOString(),
+    },
+  };
 }
