@@ -4,6 +4,16 @@ import { createClient } from "@/lib/supabase/client";
 import { TIPOS_DOCUMENTO } from "@/lib/supabase/types";
 import type { Empresa, Documento, Propuesta, Contrato } from "@/lib/supabase/types";
 
+interface Notificacion {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  tipo: string;
+  leida: boolean;
+  enlace: string | null;
+  creado_en: string;
+}
+
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   bg:        "#07090F",
@@ -989,6 +999,46 @@ export default function EmpresaDashboard() {
   const [enviandoReview, setEnviandoReview] = useState(false);
   const [reviewsEnviadas, setReviewsEnviadas] = useState<Set<string>>(new Set());
 
+  // ── Notificaciones Realtime ───────────────────────────────────────────────────
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
+
+  const notifNoLeidas = notificaciones.filter(n => !n.leida).length;
+
+  const cargarNotificaciones = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("notificaciones")
+      .select("*")
+      .eq("usuario_id", userId)
+      .order("creado_en", { ascending: false })
+      .limit(30);
+    setNotificaciones(data || []);
+  }, []);
+
+  const marcarLeida = async (id: string) => {
+    await supabase.from("notificaciones").update({ leida: true }).eq("id", id);
+    setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
+  };
+
+  const marcarTodasLeidas = async () => {
+    const ids = notificaciones.filter(n => !n.leida).map(n => n.id);
+    if (!ids.length) return;
+    await supabase.from("notificaciones").update({ leida: true }).in("id", ids);
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  // Cerrar panel al hacer clic fuera
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node)) {
+        setNotifPanelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const toast = useCallback((msg: string, tipo: "ok" | "err" | "info" = "ok") => {
     const id = Date.now();
     setToasts(t => [...t, { id, msg, tipo }]);
@@ -1057,7 +1107,31 @@ export default function EmpresaDashboard() {
         setTimeout(() => setShowKyc(true), 1000);
       }
 
+      // Cargar notificaciones
+      await cargarNotificaciones(user.id);
+
+      // ── Supabase Realtime ──────────────────────────────────
+      const channel = supabase
+        .channel(`notif-empresa-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notificaciones",
+            filter: `usuario_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const nueva = payload.new as Notificacion;
+            setNotificaciones(prev => [nueva, ...prev]);
+            toast(nueva.titulo, "info");
+          }
+        )
+        .subscribe();
+
       setLoading(false);
+
+      return () => { supabase.removeChannel(channel); };
     })();
   }, []);
 
@@ -1359,6 +1433,86 @@ export default function EmpresaDashboard() {
               )}
             </button>
           </nav>
+
+          {/* ── Campana de notificaciones ── */}
+          <div style={{ padding: "8px 12px", borderTop: `1px solid ${C.border}` }} ref={notifPanelRef}>
+            <button
+              onClick={() => setNotifPanelOpen(o => !o)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 14px", borderRadius: 8, border: "none",
+                background: notifPanelOpen ? C.blue + "15" : "transparent",
+                color: notifPanelOpen ? C.blue : C.sub,
+                cursor: "pointer", fontSize: 14, fontWeight: 400,
+                textAlign: "left", position: "relative",
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🔔</span>
+              Notificaciones
+              {notifNoLeidas > 0 && (
+                <span style={{
+                  marginLeft: "auto", background: C.red, color: "#fff",
+                  borderRadius: 8, minWidth: 18, height: 18, fontSize: 10,
+                  fontWeight: 700, display: "flex", alignItems: "center",
+                  justifyContent: "center", padding: "0 4px",
+                }}>
+                  {notifNoLeidas > 9 ? "9+" : notifNoLeidas}
+                </span>
+              )}
+            </button>
+
+            {notifPanelOpen && (
+              <div style={{
+                position: "fixed", left: 268, bottom: 80, width: 340,
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: 12, boxShadow: "0 20px 60px rgba(0,0,0,.8)",
+                zIndex: 999, overflow: "hidden",
+                animation: "slideIn .2s ease",
+              }}>
+                <div style={{
+                  padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>🔔 Notificaciones</span>
+                  {notifNoLeidas > 0 && (
+                    <button
+                      onClick={marcarTodasLeidas}
+                      style={{ fontSize: 11, color: C.blue, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      Marcar todas como leídas
+                    </button>
+                  )}
+                </div>
+                <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                  {notificaciones.length === 0 ? (
+                    <div style={{ padding: 28, textAlign: "center", color: C.muted, fontSize: 12 }}>
+                      Sin notificaciones por el momento
+                    </div>
+                  ) : (
+                    notificaciones.map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => { marcarLeida(n.id); if (n.enlace) window.location.href = n.enlace; }}
+                        style={{
+                          padding: "12px 16px", borderBottom: `1px solid ${C.border}`,
+                          cursor: "pointer", transition: "background .15s",
+                          borderLeft: n.leida ? `3px solid transparent` : `3px solid ${C.blue}`,
+                          opacity: n.leida ? 0.65 : 1,
+                          background: "transparent",
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 3 }}>{n.titulo}</div>
+                        <div style={{ fontSize: 11, color: C.sub }}>{n.mensaje}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
+                          {new Date(n.creado_en).toLocaleString("es-PA", { dateStyle: "short", timeStyle: "short" })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Sign out */}
           <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.border}` }}>

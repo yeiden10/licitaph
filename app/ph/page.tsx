@@ -1,7 +1,17 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Licitacion, Propuesta, Contrato, PropiedadHorizontal } from "@/lib/supabase/types";
+
+interface Notificacion {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  tipo: string;
+  leida: boolean;
+  enlace: string | null;
+  creado_en: string;
+}
 
 type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "copropietarios";
 
@@ -75,6 +85,7 @@ export default function PHDashboard() {
   const [showAddCoprop, setShowAddCoprop] = useState(false);
   const [newCoprop, setNewCoprop] = useState({ email: "", nombre: "", unidad: "" });
   const [savingCoprop, setSavingCoprop] = useState(false);
+  const [copropEmailAviso, setCopropEmailAviso] = useState<"ok" | "warn" | "checking" | null>(null);
 
   const cargarCopropietarios = useCallback(async () => {
     setLoadingCoprop(true);
@@ -82,6 +93,17 @@ export default function PHDashboard() {
       const res = await fetch("/api/copropietarios");
       if (res.ok) setCopropietarios(await res.json());
     } finally { setLoadingCoprop(false); }
+  }, []);
+
+  const verificarEmailCoprop = useCallback(async (email: string) => {
+    if (!email || !email.includes("@")) { setCopropEmailAviso(null); return; }
+    setCopropEmailAviso("checking");
+    const { data } = await supabase
+      .from("perfiles")
+      .select("id")
+      .eq("email", email.trim().toLowerCase())
+      .maybeSingle();
+    setCopropEmailAviso(data ? "ok" : "warn");
   }, []);
 
   const agregarCopropietario = async () => {
@@ -96,6 +118,7 @@ export default function PHDashboard() {
       if (res.ok) {
         setShowAddCoprop(false);
         setNewCoprop({ email: "", nombre: "", unidad: "" });
+        setCopropEmailAviso(null);
         cargarCopropietarios();
         setNotif({ msg: "Copropietario agregado correctamente", tipo: "ok" });
       } else {
@@ -128,6 +151,46 @@ export default function PHDashboard() {
   const [reviewComentario, setReviewComentario] = useState("");
   const [enviandoReview, setEnviandoReview] = useState(false);
   const [reviewsEnviadas, setReviewsEnviadas] = useState<Set<string>>(new Set());
+
+  // ── Notificaciones Realtime ────────────────────────────────
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
+
+  const notifNoLeidas = notificaciones.filter(n => !n.leida).length;
+
+  const cargarNotificaciones = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("notificaciones")
+      .select("*")
+      .eq("usuario_id", userId)
+      .order("creado_en", { ascending: false })
+      .limit(30);
+    setNotificaciones(data || []);
+  }, []);
+
+  const marcarLeida = async (id: string) => {
+    await supabase.from("notificaciones").update({ leida: true }).eq("id", id);
+    setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
+  };
+
+  const marcarTodasLeidas = async () => {
+    const ids = notificaciones.filter(n => !n.leida).map(n => n.id);
+    if (!ids.length) return;
+    await supabase.from("notificaciones").update({ leida: true }).in("id", ids);
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  // Cerrar panel al hacer clic fuera
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node)) {
+        setNotifPanelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // ── Carga inicial ──────────────────────────────────────────
   useEffect(() => {
@@ -172,7 +235,32 @@ export default function PHDashboard() {
           cargarContratos(ph.id),
         ]);
       }
+
+      // Cargar notificaciones
+      await cargarNotificaciones(user.id);
+
+      // ── Supabase Realtime ──────────────────────────────────
+      const channel = supabase
+        .channel(`notif-ph-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notificaciones",
+            filter: `usuario_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const nueva = payload.new as Notificacion;
+            setNotificaciones(prev => [nueva, ...prev]);
+            setNotif({ msg: nueva.titulo, tipo: "ok" });
+          }
+        )
+        .subscribe();
+
       setLoading(false);
+
+      return () => { supabase.removeChannel(channel); };
     })();
   }, []);
 
@@ -385,6 +473,23 @@ export default function PHDashboard() {
         .nav-pill { margin-left:auto; background:var(--gold); color:var(--bg); font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; font-family:'DM Mono',monospace; }
         .nav-pill-red { background:var(--red); }
         .sb-bottom { padding:12px 10px; border-top:1px solid var(--border); }
+
+        /* NOTIFICACIONES */
+        .notif-bell-wrap { position:relative; padding:8px 10px; }
+        .notif-bell-btn { width:100%; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; color:var(--text2); border:none; background:none; text-align:left; font-family:'Inter',sans-serif; }
+        .notif-bell-btn:hover { color:var(--text); background:rgba(255,255,255,0.04); }
+        .notif-badge { background:var(--red); color:#fff; font-size:9px; font-weight:700; min-width:16px; height:16px; border-radius:8px; padding:0 4px; display:flex; align-items:center; justify-content:center; margin-left:auto; }
+        .notif-panel { position:fixed; left:248px; top:60px; width:340px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.8); z-index:999; overflow:hidden; animation:fadeUp .2s ease; }
+        .notif-panel-head { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+        .notif-panel-title { font-size:13px; font-weight:700; color:var(--text); }
+        .notif-item { padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+        .notif-item:hover { background:rgba(255,255,255,0.03); }
+        .notif-item.unread { border-left:3px solid var(--gold); }
+        .notif-item.read { border-left:3px solid transparent; opacity:.65; }
+        .notif-item-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:3px; }
+        .notif-item-msg { font-size:11px; color:var(--text2); }
+        .notif-item-time { font-size:10px; color:var(--text3); margin-top:4px; }
+        .notif-empty { padding:28px 16px; text-align:center; color:var(--text3); font-size:12px; }
 
         /* MAIN */
         .main { margin-left:240px; flex:1; padding:32px; min-height:100vh; }
@@ -602,6 +707,59 @@ export default function PHDashboard() {
               </button>
             ))}
           </nav>
+
+          {/* ── Campana de notificaciones ── */}
+          <div className="notif-bell-wrap" ref={notifPanelRef}>
+            <button
+              className="notif-bell-btn"
+              onClick={() => setNotifPanelOpen(o => !o)}
+            >
+              <span className="nav-icon">🔔</span>
+              Notificaciones
+              {notifNoLeidas > 0 && (
+                <span className="notif-badge">{notifNoLeidas > 9 ? "9+" : notifNoLeidas}</span>
+              )}
+            </button>
+
+            {notifPanelOpen && (
+              <div className="notif-panel">
+                <div className="notif-panel-head">
+                  <span className="notif-panel-title">🔔 Notificaciones</span>
+                  {notifNoLeidas > 0 && (
+                    <button
+                      onClick={marcarTodasLeidas}
+                      style={{ fontSize: 11, color: "var(--gold)", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      Marcar todas como leídas
+                    </button>
+                  )}
+                </div>
+                <div style={{ maxHeight: 380, overflowY: "auto" }}>
+                  {notificaciones.length === 0 ? (
+                    <div className="notif-empty">Sin notificaciones por el momento</div>
+                  ) : (
+                    notificaciones.map(n => (
+                      <div
+                        key={n.id}
+                        className={`notif-item ${n.leida ? "read" : "unread"}`}
+                        onClick={() => {
+                          marcarLeida(n.id);
+                          if (n.enlace) window.location.href = n.enlace;
+                        }}
+                      >
+                        <div className="notif-item-title">{n.titulo}</div>
+                        <div className="notif-item-msg">{n.mensaje}</div>
+                        <div className="notif-item-time">
+                          {new Date(n.creado_en).toLocaleString("es-PA", { dateStyle: "short", timeStyle: "short" })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="sb-bottom">
             <a href="/ph/nueva-licitacion" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#07090F", background: "var(--gold)", textDecoration: "none", marginBottom: 6 }}>
               <span>➕</span> Nueva licitación
@@ -1488,7 +1646,7 @@ export default function PHDashboard() {
 
       {/* ── MODAL AGREGAR COPROPIETARIO ── */}
       {showAddCoprop && (
-        <div className="modal-bg" onClick={() => !savingCoprop && setShowAddCoprop(false)}>
+        <div className="modal-bg" onClick={() => { if (!savingCoprop) { setShowAddCoprop(false); setCopropEmailAviso(null); } }}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <h2 className="modal-title">Agregar copropietario</h2>
             <p className="modal-sub">El copropietario debe registrarse en LicitaPH con este mismo email, eligiendo el tipo <strong style={{ color: "var(--text)" }}>"Copropietario"</strong>.</p>
@@ -1500,9 +1658,26 @@ export default function PHDashboard() {
                   type="email"
                   placeholder="copropietario@email.com"
                   value={newCoprop.email}
-                  onChange={e => setNewCoprop(p => ({ ...p, email: e.target.value }))}
-                  style={{ width: "100%", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", color: "var(--text)", fontSize: 14, outline: "none" }}
+                  onChange={e => {
+                    setNewCoprop(p => ({ ...p, email: e.target.value }));
+                    setCopropEmailAviso(null);
+                  }}
+                  onBlur={e => verificarEmailCoprop(e.target.value)}
+                  style={{
+                    width: "100%", background: "var(--bg-panel)",
+                    border: `1px solid ${copropEmailAviso === "ok" ? "var(--green)" : copropEmailAviso === "warn" ? "var(--gold)" : "var(--border)"}`,
+                    borderRadius: 8, padding: "10px 14px", color: "var(--text)", fontSize: 14, outline: "none",
+                  }}
                 />
+                {copropEmailAviso === "checking" && (
+                  <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 5 }}>Verificando email...</p>
+                )}
+                {copropEmailAviso === "ok" && (
+                  <p style={{ fontSize: 11, color: "var(--green)", marginTop: 5 }}>✓ Email registrado en LicitaPH — el acceso se vinculará automáticamente</p>
+                )}
+                {copropEmailAviso === "warn" && (
+                  <p style={{ fontSize: 11, color: "var(--gold)", marginTop: 5 }}>⚠️ Este email no está registrado aún. El copropietario deberá registrarse en LicitaPH con este email para acceder a su portal.</p>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>Nombre completo</label>
@@ -1535,7 +1710,7 @@ export default function PHDashboard() {
                 {savingCoprop ? "Guardando..." : "Agregar copropietario"}
               </button>
               <button
-                onClick={() => setShowAddCoprop(false)}
+                onClick={() => { setShowAddCoprop(false); setCopropEmailAviso(null); }}
                 style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text3)", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}
               >
                 Cancelar
