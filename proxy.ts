@@ -53,6 +53,20 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Rutas de copropietario
+  if (pathname.startsWith("/copropietario")) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    const tipo = user.user_metadata?.tipo_usuario;
+    if (tipo !== "copropietario" && tipo !== "superadmin") {
+      // Redirigir al dashboard correspondiente
+      if (tipo === "ph_admin") return NextResponse.redirect(new URL("/ph", request.url));
+      if (tipo === "empresa") return NextResponse.redirect(new URL("/empresa", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   // Portal público de licitación: siempre accesible
   // /licitacion/[slug] — no requiere auth
 
@@ -60,5 +74,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/ph/:path*", "/empresa/:path*", "/superadmin/:path*"],
+  matcher: ["/ph/:path*", "/empresa/:path*", "/superadmin/:path*", "/copropietario", "/copropietario/:path*"],
 };

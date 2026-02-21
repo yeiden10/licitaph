@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Licitacion, Propuesta, Contrato, PropiedadHorizontal } from "@/lib/supabase/types";
 
-type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte";
+type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "copropietarios";
 
 // Default fecha_inicio: 7 days from today
 function defaultFechaInicio() {
@@ -67,6 +67,63 @@ export default function PHDashboard() {
 
   // ── Review state ───────────────────────────────────────────
   const [showReview, setShowReview] = useState<string | null>(null); // contrato_id
+
+  // ── Copropietarios ─────────────────────────────────────────
+  interface Copropietario { id: string; email: string; nombre: string | null; unidad: string | null; activo: boolean; creado_en: string; }
+  const [copropietarios, setCopropietarios] = useState<Copropietario[]>([]);
+  const [loadingCoprop, setLoadingCoprop] = useState(false);
+  const [showAddCoprop, setShowAddCoprop] = useState(false);
+  const [newCoprop, setNewCoprop] = useState({ email: "", nombre: "", unidad: "" });
+  const [savingCoprop, setSavingCoprop] = useState(false);
+
+  const cargarCopropietarios = useCallback(async () => {
+    setLoadingCoprop(true);
+    try {
+      const res = await fetch("/api/copropietarios");
+      if (res.ok) setCopropietarios(await res.json());
+    } finally { setLoadingCoprop(false); }
+  }, []);
+
+  const agregarCopropietario = async () => {
+    if (!newCoprop.email.trim()) return;
+    setSavingCoprop(true);
+    try {
+      const res = await fetch("/api/copropietarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCoprop),
+      });
+      if (res.ok) {
+        setShowAddCoprop(false);
+        setNewCoprop({ email: "", nombre: "", unidad: "" });
+        cargarCopropietarios();
+        setNotif({ msg: "Copropietario agregado correctamente", tipo: "ok" });
+      } else {
+        const d = await res.json();
+        setNotif({ msg: d.error ?? "Error al agregar", tipo: "err" });
+      }
+    } finally { setSavingCoprop(false); }
+  };
+
+  const eliminarCopropietario = async (id: string) => {
+    if (!confirm("¿Eliminar este copropietario?")) return;
+    const res = await fetch(`/api/copropietarios/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setCopropietarios(prev => prev.filter(c => c.id !== id));
+      setNotif({ msg: "Copropietario eliminado", tipo: "ok" });
+    }
+  };
+
+  const toggleActivoCoprop = async (id: string, activo: boolean) => {
+    const res = await fetch(`/api/copropietarios/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activo: !activo }),
+    });
+    if (res.ok) {
+      setCopropietarios(prev => prev.map(c => c.id === id ? { ...c, activo: !activo } : c));
+    }
+  };
   const [reviewPuntaje, setReviewPuntaje] = useState(5);
   const [reviewComentario, setReviewComentario] = useState("");
   const [enviandoReview, setEnviandoReview] = useState(false);
@@ -530,11 +587,12 @@ export default function PHDashboard() {
               { key: "propuestas", icon: "📥", label: "Propuestas" },
               { key: "contratos", icon: "📄", label: "Contratos", pill: contratos.filter(c => c.estado === "vencido").length || null, pillRed: true },
               { key: "reporte", icon: "📊", label: "Reporte" },
+              { key: "copropietarios", icon: "👥", label: "Copropietarios", pill: copropietarios.filter(c => c.activo).length || null },
             ].map(item => (
               <button
                 key={item.key}
                 className={`nav-item ${tab === item.key ? "active" : ""}`}
-                onClick={() => { setTab(item.key as Tab); setSidebarOpen(false); }}
+                onClick={() => { const k = item.key as Tab; setTab(k); setSidebarOpen(false); if (k === "copropietarios") cargarCopropietarios(); }}
               >
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}
@@ -1047,6 +1105,91 @@ export default function PHDashboard() {
             </>
           )}
 
+          {/* ── COPROPIETARIOS ─────────────────────────────────────── */}
+          {tab === "copropietarios" && (
+            <>
+              <div className="ph-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                <div>
+                  <h1 className="ph-title">Copropietarios</h1>
+                  <p className="ph-sub">Gestiona quiénes pueden ver la información de tu PH</p>
+                </div>
+                <button className="btn btn-gold" onClick={() => setShowAddCoprop(true)}>+ Agregar</button>
+              </div>
+
+              {/* Info banner */}
+              <div style={{ background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.15)", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "var(--blue)", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>👁</span>
+                <div>
+                  Los copropietarios tienen acceso <strong>solo lectura</strong> a las licitaciones y contratos de tu PH. Cada copropietario debe registrarse en LicitaPH con el mismo email que ingreses aquí, seleccionando el tipo <strong>"Copropietario"</strong>.
+                </div>
+              </div>
+
+              {loadingCoprop ? (
+                <div className="sec"><div style={{ color: "var(--text3)", fontSize: 13, padding: 20, textAlign: "center" }}>Cargando...</div></div>
+              ) : copropietarios.length === 0 ? (
+                <div className="sec">
+                  <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Sin copropietarios registrados</div>
+                    <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 20 }}>Agrega a los copropietarios de tu PH para que puedan ver las licitaciones y contratos.</div>
+                    <button className="btn btn-gold" onClick={() => setShowAddCoprop(true)}>+ Agregar primer copropietario</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="sec">
+                  <div className="sec-head">
+                    <div className="sec-title">Lista de copropietarios ({copropietarios.length})</div>
+                  </div>
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>Email</th>
+                        <th>Nombre</th>
+                        <th>Unidad</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {copropietarios.map(c => (
+                        <tr key={c.id}>
+                          <td className="td-main">{c.email}</td>
+                          <td>{c.nombre ?? <span style={{ color: "var(--text3)" }}>—</span>}</td>
+                          <td>{c.unidad ?? <span style={{ color: "var(--text3)" }}>—</span>}</td>
+                          <td>
+                            {c.activo
+                              ? <span className="badge b-green">✓ Activo</span>
+                              : <span className="badge b-gray">Inactivo</span>}
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button
+                                className="btn btn-ghost"
+                                style={{ padding: "4px 10px", fontSize: 12 }}
+                                onClick={() => toggleActivoCoprop(c.id, c.activo)}
+                                title={c.activo ? "Desactivar acceso" : "Activar acceso"}
+                              >
+                                {c.activo ? "⏸ Pausar" : "▶ Activar"}
+                              </button>
+                              <button
+                                className="btn btn-ghost"
+                                style={{ padding: "4px 10px", fontSize: 12, color: "var(--red)", borderColor: "rgba(248,113,113,0.3)" }}
+                                onClick={() => eliminarCopropietario(c.id)}
+                                title="Eliminar copropietario"
+                              >
+                                🗑
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
         </main>
       </div>
 
@@ -1336,6 +1479,65 @@ export default function PHDashboard() {
                 {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
               </button>
               <button onClick={() => setShowReview(null)} style={{ background: "#111827", border: "1px solid #1F2937", color: "#6B7280", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL AGREGAR COPROPIETARIO ── */}
+      {showAddCoprop && (
+        <div className="modal-bg" onClick={() => !savingCoprop && setShowAddCoprop(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+            <h2 className="modal-title">Agregar copropietario</h2>
+            <p className="modal-sub">El copropietario debe registrarse en LicitaPH con este mismo email, eligiendo el tipo <strong style={{ color: "var(--text)" }}>"Copropietario"</strong>.</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
+              <div>
+                <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>Email *</label>
+                <input
+                  type="email"
+                  placeholder="copropietario@email.com"
+                  value={newCoprop.email}
+                  onChange={e => setNewCoprop(p => ({ ...p, email: e.target.value }))}
+                  style={{ width: "100%", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", color: "var(--text)", fontSize: 14, outline: "none" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>Nombre completo</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Juan García"
+                  value={newCoprop.nombre}
+                  onChange={e => setNewCoprop(p => ({ ...p, nombre: e.target.value }))}
+                  style={{ width: "100%", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", color: "var(--text)", fontSize: 14, outline: "none" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>Unidad / Apartamento</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Apto 4B, Torre 2 Piso 8"
+                  value={newCoprop.unidad}
+                  onChange={e => setNewCoprop(p => ({ ...p, unidad: e.target.value }))}
+                  style={{ width: "100%", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", color: "var(--text)", fontSize: 14, outline: "none" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                onClick={agregarCopropietario}
+                disabled={savingCoprop || !newCoprop.email.trim()}
+                style={{ background: "var(--gold)", border: "none", color: "#07090F", borderRadius: 8, padding: "10px 24px", cursor: savingCoprop ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: savingCoprop || !newCoprop.email.trim() ? 0.6 : 1 }}
+              >
+                {savingCoprop ? "Guardando..." : "Agregar copropietario"}
+              </button>
+              <button
+                onClick={() => setShowAddCoprop(false)}
+                style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text3)", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}
+              >
                 Cancelar
               </button>
             </div>

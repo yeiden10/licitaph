@@ -116,7 +116,12 @@ export default function Home() {
     }
     const tipo = data.user?.user_metadata?.tipo_usuario;
     setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
-    setTimeout(() => { router.replace(tipo === "empresa" ? "/empresa" : "/ph"); }, 800);
+    setTimeout(() => {
+      if (tipo === "empresa") router.replace("/empresa");
+      else if (tipo === "copropietario") router.replace("/copropietario");
+      else if (tipo === "superadmin") router.replace("/superadmin");
+      else router.replace("/ph");
+    }, 800);
   };
 
   const accentColor = perfil === "empresa" ? "#4A9EFF" : perfil === "copropietario" ? "#4ADE80" : "#C9A84C";
@@ -523,12 +528,17 @@ export default function Home() {
               <h2 className="form-h">Crear cuenta</h2>
               <p className="form-p">Gratis los primeros 3 meses. Sin tarjeta de crédito.</p>
               <div className="toggle">
-                {[{ val: "ph_admin", label: "🏗️ Soy PH" }, { val: "empresa", label: "🏢 Soy Empresa" }].map(t => (
+                {[{ val: "ph_admin", label: "🏗️ Soy PH" }, { val: "empresa", label: "🏢 Soy Empresa" }, { val: "copropietario", label: "🏠 Soy Copropietario" }].map(t => (
                   <button key={t.val} className={`toggle-btn ${tipoUsuario === t.val ? "on" : "off"}`} onClick={() => setTipoUsuario(t.val)}>{t.label}</button>
                 ))}
               </div>
+              {tipoUsuario === "copropietario" && (
+                <div style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#4ADE80", marginBottom: 4, lineHeight: 1.5 }}>
+                  🏠 Como copropietario tendrás acceso de <strong>solo lectura</strong> a las licitaciones y contratos de tu PH. El administrador del PH debe registrarte con este email.
+                </div>
+              )}
               {[
-                { name: "nombre", label: tipoUsuario === "ph_admin" ? "Nombre del PH *" : "Nombre de la empresa *", type: "text", placeholder: tipoUsuario === "ph_admin" ? "PH Torre Pacífica" : "Tu empresa S.A." },
+                { name: "nombre", label: tipoUsuario === "ph_admin" ? "Nombre del PH *" : tipoUsuario === "copropietario" ? "Tu nombre completo *" : "Nombre de la empresa *", type: "text", placeholder: tipoUsuario === "ph_admin" ? "PH Torre Pacífica" : tipoUsuario === "copropietario" ? "Juan García" : "Tu empresa S.A." },
                 { name: "email", label: "Email *", type: "email", placeholder: "correo@empresa.com" },
                 { name: "password", label: "Contraseña * (mínimo 6 caracteres)", type: "password", placeholder: "••••••••" },
                 { name: "telefono", label: "Teléfono (opcional)", type: "tel", placeholder: "+507 6000-0000" },
