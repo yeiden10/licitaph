@@ -809,15 +809,19 @@ function ModalPostular({
   const [desc, setDesc] = useState("");
   const [tecnica, setTecnica] = useState("");
   const [checks, setChecks] = useState({
-    inspeccion: false,
+    leyo_pliego: false,
+    inspeccion_fisica: false,
+    cubre_alcance: false,
+    no_adicionales: false,
     condiciones: false,
     penalidades: false,
     veracidad: false,
   });
+  const [observacionesInspeccion, setObservacionesInspeccion] = useState("");
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
 
-  const todosChecked = checks.inspeccion && checks.condiciones && checks.penalidades && checks.veracidad;
+  const todosChecked = checks.leyo_pliego && checks.inspeccion_fisica && checks.cubre_alcance && checks.no_adicionales && checks.condiciones && checks.penalidades && checks.veracidad;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -839,6 +843,9 @@ function ModalPostular({
           acepta_condiciones: true,
           acepta_inspeccion: true,
           acepta_penalidades: true,
+          verifico_pliego: checks.leyo_pliego,
+          inspecciono_lugar: checks.inspeccion_fisica,
+          observaciones_inspeccion: observacionesInspeccion || undefined,
         }),
       });
       const data = await r.json();
@@ -923,6 +930,47 @@ function ModalPostular({
             />
           </label>
 
+          {/* Verificación del pliego — NUEVO */}
+          <div style={{ background: "rgba(201,168,76,0.04)", border: `1px solid rgba(201,168,76,0.2)`, borderRadius: 10, padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 16 }}>📋</span>
+              <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: 0 }}>
+                Declaración de verificación del pliego
+              </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([
+                { key: "leyo_pliego" as const, label: "He leído el pliego de cargos completo y comprendo todos los requisitos, especificaciones y alcance del servicio solicitado" },
+                { key: "inspeccion_fisica" as const, label: "He realizado una inspección física del lugar o me comprometo formalmente a realizarla antes de firmar el contrato, y la propuesta refleja lo observado" },
+                { key: "cubre_alcance" as const, label: "Mi propuesta cubre el 100% del alcance descrito en el pliego sin omisiones ni exclusiones" },
+                { key: "no_adicionales" as const, label: "No solicitaré costos adicionales por elementos ya especificados en el pliego de cargos" },
+              ]).map(({ key, label }) => (
+                <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={checks[key]}
+                    onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
+                    style={{ marginTop: 2, accentColor: C.gold, width: 15, height: 15, flexShrink: 0 }}
+                  />
+                  <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
+                </label>
+              ))}
+            </div>
+            {/* Observaciones de inspección */}
+            <div style={{ marginTop: 14 }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ color: C.sub, fontSize: 12, fontWeight: 500 }}>Observaciones de la inspección <span style={{ color: C.muted, fontWeight: 400 }}>(opcional)</span></span>
+                <textarea
+                  value={observacionesInspeccion}
+                  onChange={e => setObservacionesInspeccion(e.target.value)}
+                  rows={3}
+                  placeholder="Describe lo observado en la inspección del lugar, condiciones actuales, materiales encontrados, aspectos relevantes para tu propuesta..."
+                  style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit" }}
+                />
+              </label>
+            </div>
+          </div>
+
           {/* Compromisos legales */}
           <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
             <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 12px" }}>
@@ -930,7 +978,6 @@ function ModalPostular({
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {([
-                { key: "inspeccion" as const, label: "He inspeccionado o me comprometo a inspeccionar físicamente el lugar antes de iniciar el servicio" },
                 { key: "condiciones" as const, label: "Me comprometo a cumplir íntegramente las condiciones y especificaciones de esta propuesta" },
                 { key: "penalidades" as const, label: "Acepto penalidades por incumplimiento de contrato (mínimo 10% del valor anual)" },
                 { key: "veracidad" as const, label: "Confirmo que toda la información proporcionada es verídica y respondo por daños y perjuicios ante falsedad" },

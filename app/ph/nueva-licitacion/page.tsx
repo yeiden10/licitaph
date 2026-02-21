@@ -240,6 +240,10 @@ export default function NuevaLicitacion() {
   );
   // Custom reqs added by user
   const [customReqs, setCustomReqs] = useState<CustomReq[]>([]);
+  // AI pliego generation
+  const [generandoPliego, setGenerandoPliego] = useState(false);
+  const [sugerenciasIA, setSugerenciasIA] = useState<Record<string, unknown> | null>(null);
+  const [showSugerencias, setShowSugerencias] = useState(false);
 
   // ── Step 3 state ────────────────────────────────────────────────────────────
   const [fotosFiles, setFotosFiles] = useState<File[]>([]);
@@ -354,6 +358,34 @@ export default function NuevaLicitacion() {
   function removeFechaInspeccion(i: number) {
     setFechasInspeccion(prev => prev.filter((_, idx) => idx !== i));
   }
+
+  // ── AI pliego generation ─────────────────────────────────────────────────────
+  const generarPliegoConIA = async () => {
+    if (!form.categoria) return;
+    setGenerandoPliego(true);
+    setSugerenciasIA(null);
+    setShowSugerencias(false);
+    try {
+      const res = await fetch("/api/ai/pliego-sugerido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categoria: form.categoria,
+          titulo: form.titulo,
+          descripcion: form.descripcion,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.sugerencias) {
+        setSugerenciasIA(data.sugerencias);
+        setShowSugerencias(true);
+      }
+    } catch (e) {
+      console.error("Error generando pliego:", e);
+    } finally {
+      setGenerandoPliego(false);
+    }
+  };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   async function handlePublish(publicar: boolean) {
@@ -666,10 +698,121 @@ export default function NuevaLicitacion() {
         {step === 2 && (
           <div>
             <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Pliego de requisitos</h1>
-            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 28px" }}>
+            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 20px" }}>
               Activa los requisitos recomendados y agrega los personalizados que necesites.
               Las empresas deberán cumplir con los marcados como obligatorios.
             </p>
+
+            {/* Botón generar pliego con IA */}
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={generarPliegoConIA}
+                disabled={generandoPliego || !form.categoria}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: generandoPliego ? "rgba(74,158,255,0.08)" : "rgba(74,158,255,0.12)",
+                  border: "1px solid rgba(74,158,255,0.3)",
+                  borderRadius: 8, padding: "9px 18px",
+                  color: generandoPliego ? C.muted : C.blue,
+                  fontSize: 13, fontWeight: 600, cursor: generandoPliego ? "not-allowed" : "pointer",
+                  transition: "all 0.2s", fontFamily: "inherit",
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{generandoPliego ? "⏳" : "🤖"}</span>
+                {generandoPliego ? "Generando especificaciones..." : "Generar especificaciones con IA"}
+              </button>
+              {sugerenciasIA && (
+                <span style={{ fontSize: 12, color: C.green }}>✓ Sugerencias listas</span>
+              )}
+            </div>
+
+            {/* Panel de sugerencias IA */}
+            {sugerenciasIA && showSugerencias && (
+              <div style={{ background: "rgba(74,158,255,0.04)", border: "1px solid rgba(74,158,255,0.2)", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: C.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>🤖 Sugerencias IA — Pliego de Cargos</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>Revisa y ajusta según tu criterio. Puedes copiar estos textos a los campos de la licitación.</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowSugerencias(false)}
+                    style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}
+                  >×</button>
+                </div>
+
+                {/* Descripción técnica */}
+                {typeof sugerenciasIA.descripcion_tecnica === "string" && sugerenciasIA.descripcion_tecnica && (() => {
+                  const descTecnica = sugerenciasIA.descripcion_tecnica as string;
+                  return (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Descripción técnica sugerida</div>
+                      <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.sub, lineHeight: 1.6 }}>
+                        {descTecnica}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm(prev => ({ ...prev, descripcion: prev.descripcion ? prev.descripcion + "\n\n" + descTecnica : descTecnica }));
+                        }}
+                        style={{ marginTop: 6, fontSize: 11, color: C.blue, background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
+                      >
+                        ← Copiar a descripción
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                {/* Especificaciones técnicas */}
+                {Array.isArray(sugerenciasIA.especificaciones_tecnicas) && (sugerenciasIA.especificaciones_tecnicas as string[]).length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Especificaciones técnicas sugeridas</div>
+                    <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 14px" }}>
+                      {(sugerenciasIA.especificaciones_tecnicas as string[]).map((esp, i) => (
+                        <div key={i} style={{ fontSize: 13, color: C.sub, lineHeight: 1.6, paddingLeft: 12, borderLeft: "2px solid rgba(74,158,255,0.2)", marginBottom: 6 }}>
+                          {esp}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Garantías, Personal, Frecuencia, Penalidades */}
+                {[
+                  { key: "frecuencia_servicio", label: "Frecuencia del servicio" },
+                  { key: "garantias_requeridas", label: "Garantías requeridas" },
+                  { key: "personal_requerido", label: "Personal requerido" },
+                  { key: "penalidades_especificas", label: "Penalidades específicas sugeridas" },
+                ].map(({ key, label }) => {
+                  const val = sugerenciasIA[key];
+                  if (!val || typeof val !== "string") return null;
+                  return (
+                    <div key={key} style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
+                      <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
+                        {val}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Requisitos adicionales */}
+                {Array.isArray(sugerenciasIA.requisitos_adicionales) && (sugerenciasIA.requisitos_adicionales as string[]).length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Requisitos adicionales sugeridos</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {(sugerenciasIA.requisitos_adicionales as string[]).map((req, i) => (
+                        <span key={i} style={{ background: "rgba(74,158,255,0.08)", border: "1px solid rgba(74,158,255,0.2)", borderRadius: 20, padding: "4px 12px", fontSize: 12, color: C.blue }}>
+                          {req}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {errors.requisitos && <p style={{ color: C.red, fontSize: 13, marginBottom: 16 }}>{errors.requisitos}</p>}
 
             {/* Requisitos recomendados */}

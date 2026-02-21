@@ -13,6 +13,30 @@ export async function GET(request: NextRequest) {
   const tipo = user.user_metadata?.tipo_usuario;
 
   if (tipo === "ph_admin" && licitacion_id) {
+    // SECURITY: verify fecha_cierre has passed before showing proposals
+    const { data: lic, error: licErr } = await supabase
+      .from("licitaciones")
+      .select("id, fecha_cierre, estado, ph_id, propiedades_horizontales(admin_id)")
+      .eq("id", licitacion_id)
+      .single();
+
+    if (licErr || !lic) return NextResponse.json({ error: "Licitación no encontrada" }, { status: 404 });
+
+    // Verify ownership
+    const adminId = (lic as any).propiedades_horizontales?.admin_id;
+    if (adminId !== user.id) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
+    // Block if licitación is still open (fecha_cierre in the future) and not in evaluation/adjudicada
+    const estadosAbiertos = ["activa"];
+    if (estadosAbiertos.includes(lic.estado) && lic.fecha_cierre && new Date(lic.fecha_cierre) > new Date()) {
+      const fechaCierreISO = lic.fecha_cierre;
+      return NextResponse.json({
+        bloqueado: true,
+        fecha_cierre: fechaCierreISO,
+        mensaje: "Las propuestas no son visibles hasta que cierre el período de recepción",
+      }, { status: 200 });
+    }
+
     const { data, error } = await supabase
       .from("propuestas")
       .select(`

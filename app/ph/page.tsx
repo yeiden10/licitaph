@@ -46,6 +46,7 @@ export default function PHDashboard() {
   const [loading, setLoading] = useState(true);
   const [licitaciones, setLicitaciones] = useState<Licitacion[]>([]);
   const [propuestas, setPropuestas] = useState<Propuesta[]>([]);
+  const [propuestasBloqueadas, setPropuestasBloqueadas] = useState<{fecha_cierre: string} | null>(null);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [licSeleccionada, setLicSeleccionada] = useState<string>("");
   const [showAdjudicar, setShowAdjudicar] = useState<string | null>(null);
@@ -275,13 +276,15 @@ export default function PHDashboard() {
   }, []);
 
   const cargarPropuestas = useCallback(async (licitacion_id: string) => {
-    const { data } = await supabase
-      .from("propuestas")
-      .select("*, empresas(id, nombre, anios_experiencia, categorias)")
-      .eq("licitacion_id", licitacion_id)
-      .neq("estado", "borrador")
-      .order("puntaje_ia", { ascending: false });
-    setPropuestas(data || []);
+    setPropuestasBloqueadas(null);
+    const res = await fetch(`/api/propuestas?licitacion_id=${licitacion_id}`);
+    const data = await res.json();
+    if (data?.bloqueado) {
+      setPropuestasBloqueadas({ fecha_cierre: data.fecha_cierre });
+      setPropuestas([]);
+    } else {
+      setPropuestas(Array.isArray(data) ? data : []);
+    }
   }, []);
 
   const cargarContratos = useCallback(async (ph_id: string) => {
@@ -840,7 +843,9 @@ export default function PHDashboard() {
                             <button className="btn btn-gold" onClick={() => {
                               setLicSeleccionada(l.id);
                               setTab("propuestas");
-                            }}>Ver propuestas →</button>
+                            }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {l.fecha_cierre && new Date(l.fecha_cierre) > new Date() ? "🔒 Ver propuestas" : "Ver propuestas →"}
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -987,6 +992,27 @@ export default function PHDashboard() {
                     <div className="empty-icon">📥</div>
                     <div className="empty-title">Selecciona una licitación</div>
                     <div className="empty-sub">Elige una licitación activa para ver las propuestas recibidas.</div>
+                  </div>
+                ) : propuestasBloqueadas ? (
+                  <div className="empty">
+                    <div className="empty-icon">🔒</div>
+                    <div className="empty-title">Propuestas bloqueadas hasta el cierre</div>
+                    <div className="empty-sub" style={{ maxWidth: 420, margin: "0 auto" }}>
+                      Las propuestas solo son visibles luego de que cierre el período de recepción.
+                      Esto garantiza un proceso justo y transparente.
+                    </div>
+                    <div style={{ marginTop: 20, display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 10, padding: "12px 20px" }}>
+                      <span style={{ fontSize: 18 }}>📅</span>
+                      <div>
+                        <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 2 }}>FECHA DE CIERRE</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--gold)", fontFamily: "'DM Mono',monospace" }}>
+                          {new Date(propuestasBloqueadas.fecha_cierre).toLocaleString("es-PA", { dateStyle: "full", timeStyle: "short" })}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 14, fontSize: 12, color: "var(--text3)" }}>
+                      Recibirás una notificación automática cuando el período cierre.
+                    </div>
                   </div>
                 ) : propuestas.length === 0 ? (
                   <div className="empty">
