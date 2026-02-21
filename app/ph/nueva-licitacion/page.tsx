@@ -467,12 +467,27 @@ export default function NuevaLicitacion() {
         @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         input:focus, textarea:focus, select:focus { border-color: ${C.gold} !important; }
         input[type="checkbox"] { accent-color: ${C.gold}; }
+
+        .wiz-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .wiz-cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+        .wiz-main { padding: 48px 24px 80px; }
+        .wiz-header { padding: 16px 32px; }
+
+        @media (max-width: 768px) {
+          .wiz-grid-2 { grid-template-columns: 1fr; }
+          .wiz-cat-grid { grid-template-columns: repeat(3, 1fr); }
+          .wiz-main { padding: 28px 16px 60px; }
+          .wiz-header { padding: 12px 18px; }
+        }
+        @media (max-width: 480px) {
+          .wiz-cat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
       `}</style>
 
       {toast && <Toast msg={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} />}
 
       {/* Header */}
-      <header style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, padding: "16px 32px", display: "flex", alignItems: "center", gap: 16 }}>
+      <header className="wiz-header" style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 16 }}>
         <a href="/ph" style={{ color: C.muted, textDecoration: "none", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
           ← Volver al panel
         </a>
@@ -485,7 +500,7 @@ export default function NuevaLicitacion() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px 80px" }}>
+      <main className="wiz-main" style={{ maxWidth: 760, margin: "0 auto" }}>
         <StepBar step={step} />
 
         {/* ═══════════════════════════════════════════════════════════
@@ -537,7 +552,7 @@ export default function NuevaLicitacion() {
               </Field>
 
               {/* Presupuesto */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div className="wiz-grid-2">
                 <Field label="Presupuesto mínimo anual (USD)" hint="Opcional">
                   <div style={{ position: "relative" }}>
                     <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
@@ -594,7 +609,7 @@ export default function NuevaLicitacion() {
               </div>
 
               {/* Fecha y duración */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div className="wiz-grid-2">
                 <Field label="Fecha de cierre de recepción" required error={errors.fecha_cierre}>
                   <input
                     type="date"
@@ -836,7 +851,7 @@ export default function NuevaLicitacion() {
 
               {/* Preview grid */}
               {fotosPreview.length > 0 && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 16 }}>
+                <div className="wiz-cat-grid">
                   {fotosPreview.map((src, i) => (
                     <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}` }}>
                       <img src={src} alt={`Foto ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />

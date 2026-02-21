@@ -264,14 +264,27 @@ export default function Home() {
 
         @media (max-width: 768px) {
           .nav { padding: 0 18px; }
-          .profile-selector { flex-wrap: wrap; }
-          .stats-row { flex-wrap: wrap; }
+          .nav-right { gap: 8px; }
+          .nav-btn-ghost { display: none; }
+          .profile-selector { flex-wrap: wrap; justify-content: center; gap: 8px; }
+          .profile-btn { padding: 8px 14px; font-size: 13px; }
+          .stats-row { flex-wrap: wrap; justify-content: center; gap: 16px; }
           .stat:not(:last-child)::after { display: none; }
           .benefits-grid { grid-template-columns: 1fr; }
-          .steps { grid-template-columns: 1fr 1fr; }
+          .steps { grid-template-columns: 1fr; }
           .proof-grid { grid-template-columns: 1fr; }
-          .footer { flex-direction: column; gap: 8px; }
+          .footer { flex-direction: column; gap: 8px; text-align: center; }
           .cta-box { padding: 40px 24px; }
+          .hero { padding: 80px 18px 40px; }
+          .hero-h1 { font-size: clamp(28px, 8vw, 48px); }
+          .hero-sub { font-size: 15px; }
+          .hero-cta-wrap { flex-direction: column; align-items: center; gap: 10px; }
+          .form-card { padding: 24px 18px; margin: 0 12px; }
+        }
+        @media (max-width: 480px) {
+          .profile-selector { flex-direction: column; }
+          .profile-btn { width: 100%; justify-content: center; }
+          .stat-val { font-size: 24px; }
         }
       `}</style>
 

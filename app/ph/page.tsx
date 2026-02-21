@@ -62,6 +62,9 @@ export default function PHDashboard() {
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
+  // ── Mobile sidebar ─────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // ── Review state ───────────────────────────────────────────
   const [showReview, setShowReview] = useState<string | null>(null); // contrato_id
   const [reviewPuntaje, setReviewPuntaje] = useState(5);
@@ -444,8 +447,48 @@ export default function PHDashboard() {
         .modal-section-title { font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px; }
         .modal-section-sub { font-size:11px; color:var(--text3); margin-bottom:14px; }
 
-        @media(max-width:1024px){ .cards{grid-template-columns:repeat(2,1fr)} }
-        @media(max-width:768px){ .sidebar{display:none} .main{margin-left:0;padding:16px} }
+        /* HAMBURGER */
+        .hamburger { display:none; position:fixed; top:12px; left:12px; z-index:200; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:8px 10px; cursor:pointer; font-size:18px; line-height:1; color:var(--text); }
+        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:150; }
+
+        /* TABLET */
+        @media(max-width:1024px){
+          .cards{grid-template-columns:repeat(2,1fr)}
+          .rep-grid{grid-template-columns:repeat(2,1fr)}
+          .prop-grid{grid-template-columns:1fr}
+          .tbl th:nth-child(4),.tbl td:nth-child(4),
+          .tbl th:nth-child(5),.tbl td:nth-child(5){ display:none }
+        }
+
+        /* MOBILE */
+        @media(max-width:768px){
+          .hamburger{ display:flex; align-items:center; justify-content:center; }
+          .sidebar{ transform:translateX(-100%); transition:transform 0.25s ease; z-index:160; }
+          .sidebar.open{ transform:translateX(0); }
+          .sidebar-overlay{ display:block; }
+          .main{ margin-left:0; padding:16px; padding-top:56px; }
+          .cards{ grid-template-columns:1fr 1fr; gap:10px; }
+          .rep-grid{ grid-template-columns:1fr 1fr; }
+          .prop-grid{ grid-template-columns:1fr; padding:12px; }
+          .ph-title{ font-size:18px; }
+          .sec-head{ flex-direction:column; align-items:flex-start; gap:8px; }
+          .tbl th:nth-child(3),.tbl td:nth-child(3),
+          .tbl th:nth-child(4),.tbl td:nth-child(4),
+          .tbl th:nth-child(5),.tbl td:nth-child(5),
+          .tbl th:nth-child(8),.tbl td:nth-child(8){ display:none }
+          .modal{ padding:20px; }
+          .modal-actions{ flex-direction:column; }
+          .form-row{ margin-bottom:10px; }
+          .notif{ left:12px; right:12px; max-width:100%; }
+          .alert-banner{ flex-direction:column; align-items:flex-start; gap:8px; }
+          .btn{ font-size:11px; padding:6px 10px; }
+        }
+
+        @media(max-width:480px){
+          .cards{ grid-template-columns:1fr; }
+          .rep-grid{ grid-template-columns:1fr; }
+          .main{ padding:12px; padding-top:56px; }
+        }
       `}</style>
 
       {notif && (
@@ -454,9 +497,17 @@ export default function PHDashboard() {
         </div>
       )}
 
+      {/* Hamburger button — mobile only */}
+      <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Menú">
+        {sidebarOpen ? "✕" : "☰"}
+      </button>
+
       <div className="layout">
+        {/* Sidebar overlay — mobile */}
+        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
         {/* ─── SIDEBAR ─── */}
-        <aside className="sidebar">
+        <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
           <div className="sb-logo">
             <div className="sb-logo-text">
               <span className="sb-logo-gold">Licita</span>
@@ -483,7 +534,7 @@ export default function PHDashboard() {
               <button
                 key={item.key}
                 className={`nav-item ${tab === item.key ? "active" : ""}`}
-                onClick={() => setTab(item.key as Tab)}
+                onClick={() => { setTab(item.key as Tab); setSidebarOpen(false); }}
               >
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}

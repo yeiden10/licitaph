@@ -979,6 +979,9 @@ export default function EmpresaDashboard() {
   const [contratoAceptar, setContratoAceptar] = useState<ContratoConEmpresa | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // ── Mobile sidebar ───────────────────────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // ── Review state ─────────────────────────────────────────────────────────────
   const [showReview, setShowReview] = useState<string | null>(null); // contrato_id
   const [reviewPuntaje, setReviewPuntaje] = useState(5);
@@ -1153,6 +1156,25 @@ export default function EmpresaDashboard() {
         @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         input:focus, textarea:focus, select:focus { border-color: ${C.blue} !important; }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: ${C.bg}; } ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
+
+        /* ── RESPONSIVE ── */
+        .emp-hamburger { display: none !important; }
+        .emp-sidebar { transform: translateX(0); transition: transform 0.25s ease; }
+
+        @media (max-width: 768px) {
+          .emp-hamburger { display: flex !important; align-items: center; justify-content: center; }
+          .emp-sidebar { transform: translateX(-100%); }
+          .emp-sidebar.open { transform: translateX(0); }
+          .emp-main { margin-left: 0 !important; padding: 16px !important; padding-top: 56px !important; }
+          .emp-grid-4 { grid-template-columns: 1fr 1fr !important; }
+          .emp-grid-3 { grid-template-columns: 1fr 1fr !important; }
+          .emp-lic-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .emp-grid-4 { grid-template-columns: 1fr !important; }
+          .emp-grid-3 { grid-template-columns: 1fr !important; }
+          .emp-main { padding: 12px !important; padding-top: 56px !important; }
+        }
       `}</style>
 
       {/* Toasts */}
@@ -1202,13 +1224,41 @@ export default function EmpresaDashboard() {
         />
       )}
 
+      {/* Botón hamburguesa — solo mobile */}
+      <button
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Menú"
+        style={{
+          display: "none",
+          position: "fixed", top: 12, left: 12, zIndex: 200,
+          background: C.bgCard, border: `1px solid ${C.border}`,
+          borderRadius: 8, padding: "8px 10px", cursor: "pointer",
+          fontSize: 18, lineHeight: 1, color: C.text,
+          // visible solo en mobile via media query en <style>
+        }}
+        className="emp-hamburger"
+      >
+        {sidebarOpen ? "✕" : "☰"}
+      </button>
+
+      {/* Overlay mobile */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 150 }}
+        />
+      )}
+
       <div style={{ display: "flex", minHeight: "100vh" }}>
         {/* ── Sidebar ── */}
-        <aside style={{
-          width: 260, background: C.bgCard, borderRight: `1px solid ${C.border}`,
-          display: "flex", flexDirection: "column", padding: "24px 0", position: "fixed",
-          top: 0, left: 0, height: "100vh", overflowY: "auto",
-        }}>
+        <aside
+          className={`emp-sidebar${sidebarOpen ? " open" : ""}`}
+          style={{
+            width: 260, background: C.bgCard, borderRight: `1px solid ${C.border}`,
+            display: "flex", flexDirection: "column", padding: "24px 0", position: "fixed",
+            top: 0, left: 0, height: "100vh", overflowY: "auto", zIndex: 160,
+          }}
+        >
           {/* Logo */}
           <div style={{ padding: "0 24px 24px", borderBottom: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1266,7 +1316,7 @@ export default function EmpresaDashboard() {
             {TABS.map(t => (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => { setTab(t.id); setSidebarOpen(false); }}
                 style={{
                   width: "100%", display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 14px", borderRadius: 8, border: "none",
@@ -1322,7 +1372,7 @@ export default function EmpresaDashboard() {
         </aside>
 
         {/* ── Main content ── */}
-        <main style={{ marginLeft: 260, flex: 1, padding: 32, minHeight: "100vh", background: C.bg }}>
+        <main className="emp-main" style={{ marginLeft: 260, flex: 1, padding: 32, minHeight: "100vh", background: C.bg }}>
           {/* DASHBOARD */}
           {tab === "dashboard" && (
             <div>
@@ -1334,7 +1384,7 @@ export default function EmpresaDashboard() {
               </p>
 
               {/* Stats cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+              <div className="emp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
                 {[
                   { label: "Propuestas enviadas", val: propuestas.filter(p => p.estado !== "borrador").length, color: C.blue },
                   { label: "Propuestas ganadas",  val: propuestas.filter(p => p.estado === "ganada").length,  color: C.green },

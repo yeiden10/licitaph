@@ -114,10 +114,26 @@ export default async function LicitacionPublicaPage({
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: ${C.bg}; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
+
+        .portal-grid { display: grid; grid-template-columns: 1fr 300px; gap: 28px; align-items: start; }
+        .portal-header { padding: 16px 32px; }
+        .portal-main { padding: 48px 24px 80px; }
+
+        @media (max-width: 768px) {
+          .portal-grid { grid-template-columns: 1fr; }
+          .portal-header { padding: 12px 18px; }
+          .portal-main { padding: 28px 16px 60px; }
+          .portal-h1 { font-size: 22px !important; }
+          .portal-stats { grid-template-columns: 1fr 1fr !important; }
+          .portal-sidebar { order: -1; }
+        }
+        @media (max-width: 480px) {
+          .portal-stats { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       {/* ── Header ── */}
-      <header style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <header className="portal-header" style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, background: `linear-gradient(135deg, ${C.gold}, #8B6914)`, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ color: "#000", fontSize: 16, fontWeight: 900 }}>L</span>
@@ -139,7 +155,7 @@ export default async function LicitacionPublicaPage({
         </div>
       )}
 
-      <main style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px 80px" }}>
+      <main className="portal-main" style={{ maxWidth: 900, margin: "0 auto" }}>
         {/* ── Hero section ── */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -156,7 +172,7 @@ export default async function LicitacionPublicaPage({
             )}
           </div>
 
-          <h1 style={{ color: C.text, fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.25 }}>
+          <h1 className="portal-h1" style={{ color: C.text, fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.25 }}>
             {lic.titulo}
           </h1>
 
@@ -280,7 +296,7 @@ export default async function LicitacionPublicaPage({
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
+        <div className="portal-grid">
           {/* ── Left: Pliego de condiciones ── */}
           <div>
             <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 24 }}>
