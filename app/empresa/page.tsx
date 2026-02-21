@@ -1722,12 +1722,15 @@ export default function EmpresaDashboard() {
                 {TIPOS_DOCUMENTO.map(td => {
                   const doc = documentos.find(d => d.tipo === td.id);
                   const isUploading = uploadingTipo === td.id;
+                  const estadoDoc = (doc as any)?.estado || "pendiente";
+                  const iconColor = !doc ? C.muted : estadoDoc === "aprobado" ? C.green : estadoDoc === "rechazado" ? C.red : C.gold;
+                  const borderColor = !doc ? C.border : estadoDoc === "aprobado" ? C.green + "50" : estadoDoc === "rechazado" ? C.red + "50" : C.gold + "50";
                   return (
                     <div
                       key={td.id}
                       style={{
                         background: C.bgCard,
-                        border: `1px solid ${doc ? C.green + "50" : C.border}`,
+                        border: `1px solid ${borderColor}`,
                         borderRadius: 12, padding: "18px 22px",
                         display: "flex", alignItems: "center", gap: 16,
                         transition: "border-color .2s",
@@ -1737,33 +1740,51 @@ export default function EmpresaDashboard() {
                       <div style={{
                         width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        background: doc ? C.green + "20" : C.bgPanel,
-                        border: `2px solid ${doc ? C.green : C.border}`,
+                        background: iconColor + "20",
+                        border: `2px solid ${iconColor}`,
                       }}>
-                        {doc ? (
-                          <span style={{ color: C.green, fontSize: 20, fontWeight: 700 }}>✓</span>
-                        ) : (
+                        {!doc ? (
                           <span style={{ color: C.muted, fontSize: 18 }}>○</span>
+                        ) : estadoDoc === "aprobado" ? (
+                          <span style={{ color: C.green, fontSize: 20, fontWeight: 700 }}>✓</span>
+                        ) : estadoDoc === "rechazado" ? (
+                          <span style={{ color: C.red, fontSize: 20, fontWeight: 700 }}>✗</span>
+                        ) : (
+                          <span style={{ color: C.gold, fontSize: 16 }}>⏳</span>
                         )}
                       </div>
 
                       {/* Info */}
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2, flexWrap: "wrap" }}>
                           <p style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: 0 }}>{td.label}</p>
                           {td.requerido ? (
                             <span style={{ background: C.red + "20", color: C.red, border: `1px solid ${C.red}30`, borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>REQUERIDO</span>
                           ) : (
                             <span style={{ background: C.muted + "20", color: C.muted, border: `1px solid ${C.muted}30`, borderRadius: 4, padding: "1px 6px", fontSize: 10 }}>OPCIONAL</span>
                           )}
+                          {doc && (
+                            <span style={{
+                              background: estadoDoc === "aprobado" ? "#052E16" : estadoDoc === "rechazado" ? "#2D0A0A" : "#2D2310",
+                              color: estadoDoc === "aprobado" ? C.green : estadoDoc === "rechazado" ? C.red : C.gold,
+                              borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700,
+                            }}>
+                              {estadoDoc === "aprobado" ? "✓ Aprobado" : estadoDoc === "rechazado" ? "✗ Rechazado" : "⏳ En revisión"}
+                            </span>
+                          )}
                         </div>
                         <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>{td.desc}</p>
                         {doc && (
-                          <p style={{ color: C.green, fontSize: 12, margin: "4px 0 0" }}>
+                          <p style={{ color: C.sub, fontSize: 12, margin: "4px 0 0" }}>
                             Subido el {new Date(doc.creado_en).toLocaleDateString("es-PA")}
                             {doc.url && (
                               <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, marginLeft: 10, textDecoration: "underline" }}>Ver archivo</a>
                             )}
+                          </p>
+                        )}
+                        {estadoDoc === "rechazado" && (doc as any)?.motivo_rechazo && (
+                          <p style={{ color: C.red, fontSize: 12, margin: "4px 0 0", fontStyle: "italic" }}>
+                            Motivo: {(doc as any).motivo_rechazo}
                           </p>
                         )}
                       </div>

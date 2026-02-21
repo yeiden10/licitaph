@@ -132,6 +132,52 @@ export default function SuperadminDashboard() {
   const [showRechazo, setShowRechazo] = useState<string | null>(null);
   const [notif, setNotif] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
 
+  // ── Documentos ───────────────────────────────────────────────
+  interface DocRow { id: string; nombre: string; tipo: string; url: string; estado: string | null; motivo_rechazo: string | null; creado_en: string; revisado_en: string | null; }
+  const [docsEmpresa, setDocsEmpresa] = useState<DocRow[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [revisandoDoc, setRevisandoDoc] = useState<string | null>(null);
+  const [showMotivoDoc, setShowMotivoDoc] = useState<string | null>(null);
+  const [motivoDoc, setMotivoDoc] = useState("");
+
+  const TIPOS_LABEL: Record<string, string> = {
+    cedula: "Cédula del representante", registro_publico: "Registro Público",
+    paz_salvo_dgi: "Paz y Salvo DGI", paz_salvo_css: "Paz y Salvo CSS",
+    idoneidad: "Idoneidad profesional", kyc: "Formulario KYC",
+    aviso_operacion: "Aviso de operación", estados_financieros: "Estados financieros",
+    poliza_seguro: "Póliza de seguro RC", fianza_cumplimiento: "Fianza de cumplimiento",
+    cv_equipo: "CV del equipo", referencias_comerciales: "Referencias comerciales",
+    referencias_bancarias: "Referencias bancarias",
+  };
+  const TIPOS_REQUERIDOS = ["cedula","registro_publico","paz_salvo_dgi","paz_salvo_css","idoneidad","aviso_operacion","poliza_seguro","fianza_cumplimiento","cv_equipo","referencias_comerciales"];
+
+  const cargarDocs = async (empresa_id: string) => {
+    setLoadingDocs(true);
+    const r = await fetch(`/api/superadmin/empresas/${empresa_id}/documentos`);
+    if (r.ok) setDocsEmpresa(await r.json());
+    setLoadingDocs(false);
+  };
+
+  const revisarDoc = async (empresa_id: string, documento_id: string, estado: "aprobado" | "rechazado", motivo?: string) => {
+    setRevisandoDoc(documento_id);
+    try {
+      const r = await fetch(`/api/superadmin/empresas/${empresa_id}/documentos`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documento_id, estado, motivo_rechazo: motivo }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error);
+      notify(estado === "aprobado" ? "✅ Documento aprobado" : "❌ Documento rechazado", "ok");
+      setShowMotivoDoc(null); setMotivoDoc("");
+      await cargarDocs(empresa_id);
+    } catch (e: any) {
+      notify("Error: " + e.message, "err");
+    } finally {
+      setRevisandoDoc(null);
+    }
+  };
+
   const notify = (msg: string, tipo: "ok" | "err" = "ok") => {
     setNotif({ msg, tipo });
     setTimeout(() => setNotif(null), 4000);
@@ -401,7 +447,7 @@ export default function SuperadminDashboard() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
                       <button
-                        onClick={() => setEmpresaDetalle(emp)}
+                        onClick={() => { setEmpresaDetalle(emp); setDocsEmpresa([]); cargarDocs(emp.id); }}
                         style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.text, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12 }}
                       >
                         Ver detalle
@@ -612,6 +658,100 @@ export default function SuperadminDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Documentos */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <p style={{ color: C.purple, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: 0 }}>Documentos KYC</p>
+                  {loadingDocs && <span style={{ color: C.muted, fontSize: 12 }}>Cargando...</span>}
+                </div>
+
+                {!loadingDocs && docsEmpresa.length === 0 && (
+                  <div style={{ background: C.bgPanel, borderRadius: 8, padding: "16px", textAlign: "center" }}>
+                    <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>No hay documentos subidos aún</p>
+                  </div>
+                )}
+
+                {/* Documentos subidos */}
+                {docsEmpresa.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {docsEmpresa.map(doc => {
+                      const estadoDoc = doc.estado || "pendiente";
+                      const estadoColor = estadoDoc === "aprobado" ? C.green : estadoDoc === "rechazado" ? C.red : C.gold;
+                      const estadoBg = estadoDoc === "aprobado" ? "#052E16" : estadoDoc === "rechazado" ? "#2D0A0A" : "#2D2310";
+                      return (
+                        <div key={doc.id} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ color: C.text, fontSize: 13, fontWeight: 600, margin: "0 0 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {TIPOS_LABEL[doc.tipo] || doc.tipo}
+                            </p>
+                            <p style={{ color: C.muted, fontSize: 11, margin: 0 }}>{new Date(doc.creado_en).toLocaleDateString("es-PA")}</p>
+                            {doc.motivo_rechazo && <p style={{ color: C.red, fontSize: 11, margin: "4px 0 0", fontStyle: "italic" }}>Motivo: {doc.motivo_rechazo}</p>}
+                          </div>
+                          <span style={{ background: estadoBg, color: estadoColor, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>
+                            {estadoDoc === "aprobado" ? "✓ Aprobado" : estadoDoc === "rechazado" ? "✗ Rechazado" : "⏳ Pendiente"}
+                          </span>
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, fontSize: 12, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>Ver →</a>
+                          {estadoDoc !== "aprobado" && (
+                            <button
+                              onClick={() => revisarDoc(empresaDetalle.id, doc.id, "aprobado")}
+                              disabled={revisandoDoc === doc.id}
+                              style={{ background: "#052E16", border: `1px solid ${C.green}`, color: C.green, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
+                            >✓</button>
+                          )}
+                          {estadoDoc !== "rechazado" && (
+                            <button
+                              onClick={() => { setShowMotivoDoc(doc.id); setMotivoDoc(""); }}
+                              style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
+                            >✗</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Documentos faltantes */}
+                {!loadingDocs && (() => {
+                  const tiposSubidos = new Set(docsEmpresa.map(d => d.tipo));
+                  const faltantes = TIPOS_REQUERIDOS.filter(t => !tiposSubidos.has(t));
+                  if (faltantes.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: 10 }}>
+                      <p style={{ color: C.red, fontSize: 11, fontWeight: 600, margin: "0 0 6px" }}>Documentos faltantes ({faltantes.length}):</p>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {faltantes.map(t => (
+                          <span key={t} style={{ background: "#2D0A0A", color: C.red, border: `1px solid ${C.red}30`, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600 }}>
+                            {TIPOS_LABEL[t] || t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Modal motivo rechazo doc */}
+                {showMotivoDoc && (
+                  <div style={{ marginTop: 12, background: "#2D0A0A", border: `1px solid ${C.red}30`, borderRadius: 8, padding: 14 }}>
+                    <p style={{ color: C.red, fontSize: 12, fontWeight: 600, margin: "0 0 8px" }}>Motivo del rechazo (opcional)</p>
+                    <textarea
+                      rows={2}
+                      value={motivoDoc}
+                      onChange={e => setMotivoDoc(e.target.value)}
+                      placeholder="Ej: El documento está vencido, firma faltante..."
+                      style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 6, padding: "8px 10px", color: C.text, fontSize: 12, width: "100%", resize: "vertical", outline: "none" }}
+                    />
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button
+                        onClick={() => revisarDoc(empresaDetalle.id, showMotivoDoc, "rechazado", motivoDoc)}
+                        disabled={revisandoDoc !== null}
+                        style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700 }}
+                      >Confirmar rechazo</button>
+                      <button onClick={() => setShowMotivoDoc(null)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.muted, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Acciones */}
               <div style={{ display: "flex", gap: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
