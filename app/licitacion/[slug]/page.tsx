@@ -61,8 +61,9 @@ function formatFechaInspeccion(dateStr: string): string {
 export default async function LicitacionPublicaPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const supabase = await createClient();
 
   const { data: licitacion, error } = await supabase
@@ -77,7 +78,7 @@ export default async function LicitacionPublicaPage({
       propiedades_horizontales (nombre, ciudad),
       requisitos_licitacion (*)
     `)
-    .eq("url_slug", params.slug)
+    .eq("url_slug", slug)
     .single();
 
   if (error || !licitacion) {
@@ -614,6 +615,21 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                     <textarea id="modalTecnica" rows="4" placeholder="Detalla tu metodología, equipo, experiencia..."
                       style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:14px;outline:none;resize:vertical;width:100%;"></textarea>
                   </label>
+                  <div style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:10px;padding:14px;">
+                    <p style="color:${C.gold};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;">Compromisos requeridos</p>
+                    <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
+                      <input type="checkbox" id="chkInspeccion" style="margin-top:2px;accent-color:${C.gold};" />
+                      <span style="color:${C.sub};font-size:12px;line-height:1.5;">Me comprometo a inspeccionar físicamente el lugar antes de iniciar el servicio</span>
+                    </label>
+                    <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
+                      <input type="checkbox" id="chkCondiciones" style="margin-top:2px;accent-color:${C.gold};" />
+                      <span style="color:${C.sub};font-size:12px;line-height:1.5;">Acepto íntegramente las condiciones y especificaciones del pliego</span>
+                    </label>
+                    <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                      <input type="checkbox" id="chkPenalidades" style="margin-top:2px;accent-color:${C.gold};" />
+                      <span style="color:${C.sub};font-size:12px;line-height:1.5;">Acepto penalidades por incumplimiento (mínimo 10% del valor anual)</span>
+                    </label>
+                  </div>
                   <p id="modalErr" style="color:${C.red};font-size:13px;margin:0;display:none;"></p>
                   <div style="display:flex;gap:10px;justify-content:flex-end;">
                     <button id="modalCancelBtn" style="background:${C.bgPanel};border:1px solid ${C.border};color:${C.sub};border-radius:8px;padding:10px 20px;cursor:pointer;font-size:14px;">Cancelar</button>
@@ -633,7 +649,11 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
               var btn2 = document.getElementById("modalSubmitBtn");
               var err  = document.getElementById("modalErr");
               var precio = document.getElementById("modalPrecio").value;
+              var chkInsp = document.getElementById("chkInspeccion").checked;
+              var chkCond = document.getElementById("chkCondiciones").checked;
+              var chkPen  = document.getElementById("chkPenalidades").checked;
               if (!precio) { err.textContent = "El precio anual es requerido."; err.style.display="block"; return; }
+              if (!chkInsp || !chkCond || !chkPen) { err.textContent = "Debes aceptar todos los compromisos para enviar la propuesta."; err.style.display="block"; return; }
               btn2.textContent = "Enviando..."; btn2.disabled = true;
               err.style.display = "none";
               try {
@@ -645,6 +665,9 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                     precio_anual: Number(precio),
                     descripcion: document.getElementById("modalDesc").value,
                     propuesta_tecnica: document.getElementById("modalTecnica").value,
+                    acepta_condiciones: true,
+                    acepta_inspeccion: true,
+                    acepta_penalidades: true,
                   })
                 });
                 var data = await r.json();
