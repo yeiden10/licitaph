@@ -1677,6 +1677,19 @@ export default function EmpresaDashboard() {
                               </button>
                             )
                           )}
+                          {/* Botón descargar Word */}
+                          <a
+                            href={`/api/contratos/${c.id}/word`}
+                            download
+                            style={{
+                              background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub,
+                              borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600,
+                              textDecoration: "none", display: "inline-block", whiteSpace: "nowrap",
+                            }}
+                            title="Descargar contrato en Word"
+                          >
+                            📄 Descargar contrato
+                          </a>
                         </div>
                       </div>
                     </div>

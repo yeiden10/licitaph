@@ -898,6 +898,7 @@ export default function PHDashboard() {
                         <th>Firma empresa</th>
                         <th>Estado</th>
                         <th>Reseña</th>
+                        <th>Contrato</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -941,6 +942,17 @@ export default function PHDashboard() {
                                   </button>
                                 )
                               )}
+                            </td>
+                            <td>
+                              <a
+                                href={`/api/contratos/${c.id}/word`}
+                                download
+                                className="btn btn-ghost"
+                                style={{ padding: "4px 10px", fontSize: 12, textDecoration: "none", display: "inline-block" }}
+                                title="Descargar contrato Word"
+                              >
+                                📄 Word
+                              </a>
                             </td>
                           </tr>
                         );
