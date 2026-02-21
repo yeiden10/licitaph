@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { RequisitoLicitacion } from "@/lib/supabase/types";
+import QASection from "./QASection";
 
 // ── Design tokens (server-safe, no useState) ──────────────────────────────────
 const C = {
@@ -372,6 +373,7 @@ export default async function LicitacionPublicaPage({
             </div>
           </div>
         </div>
+        <QASection licitacionId={lic.id} />
       </main>
 
       {/* ── Footer ── */}

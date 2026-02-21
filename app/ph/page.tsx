@@ -73,6 +73,10 @@ export default function PHDashboard() {
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
+  // ── Comparador ─────────────────────────────────────────────
+  const [comparando, setComparando] = useState<string[]>([]); // array of propuesta IDs
+  const [showComparador, setShowComparador] = useState(false);
+
   // ── Mobile sidebar ─────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -1026,6 +1030,28 @@ export default function PHDashboard() {
                       <span style={{ fontSize: 14 }}>🤖</span>
                       La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (35)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (25)</strong> · <strong style={{ color: "var(--text)" }}>propuesta técnica (25)</strong> · <strong style={{ color: "var(--text)" }}>documentación (10)</strong> · <strong style={{ color: "var(--text)" }}>reputación (5)</strong>
                     </div>
+                    {comparando.length > 0 && (
+                      <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "rgba(74,158,255,0.04)", display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 13, color: "var(--blue)", fontWeight: 600 }}>
+                          {comparando.length} propuesta{comparando.length > 1 ? "s" : ""} seleccionada{comparando.length > 1 ? "s" : ""}
+                        </span>
+                        {comparando.length >= 2 && (
+                          <button
+                            className="btn btn-blue"
+                            onClick={() => setShowComparador(true)}
+                          >
+                            Comparar lado a lado
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-ghost"
+                          style={{ marginLeft: "auto", fontSize: 11 }}
+                          onClick={() => setComparando([])}
+                        >
+                          Limpiar selección
+                        </button>
+                      </div>
+                    )}
                     <div className="prop-grid">
                       {propuestas.map((p, i) => {
                         const esGanada = p.estado === "ganada";
@@ -1033,6 +1059,24 @@ export default function PHDashboard() {
                         const esRecomendada = i === 0 && p.puntaje_ia !== null && !esGanada && !esNoSel;
                         return (
                           <div key={p.id} className={`prop-card ${esRecomendada ? "recomendada" : ""}`}>
+                            {/* Checkbox para comparar */}
+                            <div style={{ position: "absolute", top: 10, right: 10 }}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={comparando.includes(p.id)}
+                                  onChange={e => {
+                                    if (e.target.checked) {
+                                      if (comparando.length < 3) setComparando(prev => [...prev, p.id]);
+                                    } else {
+                                      setComparando(prev => prev.filter(id => id !== p.id));
+                                    }
+                                  }}
+                                  style={{ accentColor: "var(--blue)", width: 14, height: 14 }}
+                                />
+                                <span style={{ fontSize: 10, color: "var(--text3)" }}>Comparar</span>
+                              </label>
+                            </div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                               <div className={`score ${(p.puntaje_ia || 0) >= 75 ? "s-high" : (p.puntaje_ia || 0) >= 55 ? "s-mid" : "s-low"}`}>
                                 {p.puntaje_ia ?? "—"}
@@ -1745,6 +1789,124 @@ export default function PHDashboard() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL COMPARADOR ── */}
+      {showComparador && comparando.length >= 2 && (() => {
+        const propsComparar = propuestas.filter(p => comparando.includes(p.id));
+        return (
+          <div className="modal-bg" onClick={() => setShowComparador(false)}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ background: "var(--bg2)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, padding: 28, width: "95vw", maxWidth: 900, maxHeight: "90vh", overflowY: "auto", position: "relative" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <div>
+                  <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 20, fontWeight: 700, color: "var(--text)", margin: 0 }}>Comparador de propuestas</h2>
+                  <p style={{ fontSize: 13, color: "var(--text2)", margin: "4px 0 0" }}>Comparación objetiva — {propsComparar.length} propuestas</p>
+                </div>
+                <button onClick={() => setShowComparador(false)} style={{ background: "none", border: "none", color: "var(--text2)", cursor: "pointer", fontSize: 24, lineHeight: 1 }}>×</button>
+              </div>
+
+              {/* Grid comparación */}
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${propsComparar.length}, 1fr)`, gap: 16 }}>
+                {propsComparar.map((p, i) => {
+                  const analisis = (p as any).analisis_ia || {};
+                  const isRecomendada = i === 0;
+                  return (
+                    <div
+                      key={p.id}
+                      style={{
+                        background: isRecomendada ? "rgba(201,168,76,0.05)" : "var(--bg3)",
+                        border: isRecomendada ? "1px solid rgba(201,168,76,0.3)" : "1px solid var(--border)",
+                        borderRadius: 12, padding: 18,
+                      }}
+                    >
+                      {isRecomendada && (
+                        <div style={{ fontSize: 9, color: "var(--bg)", background: "var(--gold)", padding: "2px 8px", borderRadius: 4, fontWeight: 700, letterSpacing: 1, display: "inline-block", marginBottom: 10, fontFamily: "'DM Mono',monospace" }}>
+                          MAYOR PUNTAJE
+                        </div>
+                      )}
+
+                      {/* Empresa + puntaje */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                        <div className={`score ${(p.puntaje_ia || 0) >= 75 ? "s-high" : (p.puntaje_ia || 0) >= 55 ? "s-mid" : "s-low"}`}>
+                          {p.puntaje_ia ?? "—"}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+                            {(p as any).empresas?.nombre || "Empresa"}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--text3)" }}>{(p as any).empresas?.anios_experiencia || "—"} años experiencia</div>
+                        </div>
+                      </div>
+
+                      {/* Precio */}
+                      <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: "var(--text3)", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>Precio anual</div>
+                        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--gold)" }}>
+                          {p.precio_anual ? "$" + Number(p.precio_anual).toLocaleString() : "—"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                          {p.precio_anual ? "$" + Math.round(p.precio_anual / 12).toLocaleString() + "/mes" : ""}
+                        </div>
+                      </div>
+
+                      {/* Breakdown IA */}
+                      {analisis.total && (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Desglose IA</div>
+                          {[
+                            { label: "Precio", val: analisis.precio, max: 35, color: "var(--green)" },
+                            { label: "Experiencia", val: analisis.experiencia, max: 25, color: "var(--blue)" },
+                            { label: "Propuesta técnica", val: analisis.propuesta_tecnica, max: 25, color: "#A78BFA" },
+                            { label: "Documentación", val: analisis.documentacion, max: 10, color: "var(--gold)" },
+                            { label: "Reputación", val: analisis.reputacion, max: 5, color: "#F97316" },
+                          ].map(({ label, val, max, color }) => (
+                            <div key={label} style={{ marginBottom: 6 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text3)", marginBottom: 3 }}>
+                                <span>{label}</span>
+                                <span style={{ color: "var(--text2)", fontFamily: "'DM Mono',monospace" }}>{val ?? 0}/{max}</span>
+                              </div>
+                              <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${((val ?? 0) / max) * 100}%`, background: color, borderRadius: 2, transition: "width 0.5s ease" }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Recomendación IA */}
+                      {analisis.recomendacion && (
+                        <div style={{ background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.15)", borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
+                          <div style={{ fontSize: 10, color: "var(--blue)", fontWeight: 700, marginBottom: 3 }}>IA dice</div>
+                          <div style={{ fontSize: 11, color: "var(--text2)", lineHeight: 1.5 }}>{analisis.recomendacion}</div>
+                        </div>
+                      )}
+
+                      {/* Disponibilidad */}
+                      <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>
+                        Disponible: <span style={{ color: "var(--text2)" }}>{formatFecha(p.disponibilidad_inicio)}</span>
+                      </div>
+
+                      {/* CTA adjudicar */}
+                      {p.estado !== "ganada" && p.estado !== "no_seleccionada" && (
+                        <button
+                          className="btn btn-gold"
+                          style={{ width: "100%", justifyContent: "center" }}
+                          onClick={() => { setShowComparador(false); abrirModalAdjudicar(p.id); }}
+                        >
+                          Adjudicar esta propuesta
+                        </button>
+                      )}
+                      {p.estado === "ganada" && <span className="badge b-green" style={{ display: "block", textAlign: "center", padding: "8px 0" }}>Adjudicada</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }

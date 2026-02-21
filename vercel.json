@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/cerrar-licitaciones",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}
