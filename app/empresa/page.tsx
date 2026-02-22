@@ -821,6 +821,76 @@ function ModalPostular({
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
 
+  // ── Chat IA para propuesta técnica ──────────────────────────────────────────
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiStarted, setAiStarted] = useState(false);
+  const aiChatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    aiChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [aiMessages]);
+
+  async function startAIChat() {
+    setShowAIChat(true);
+    if (aiStarted) return;
+    setAiStarted(true);
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/propuesta-tecnica", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [],
+          licitacion_titulo: lic.titulo,
+          licitacion_descripcion: lic.descripcion,
+          licitacion_categoria: lic.categoria,
+        }),
+      });
+      const data = await res.json();
+      setAiMessages([{ role: "assistant", content: data.mensaje || "¿Cuántos años llevan prestando este servicio?" }]);
+    } catch {
+      setAiMessages([{ role: "assistant", content: "¿Cuántos años llevan prestando este servicio y cuántos edificios atienden actualmente?" }]);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function sendAIMessage() {
+    const text = aiInput.trim();
+    if (!text || aiLoading) return;
+    const newMsgs = [...aiMessages, { role: "user" as const, content: text }];
+    setAiMessages(newMsgs);
+    setAiInput("");
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/propuesta-tecnica", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: newMsgs,
+          licitacion_titulo: lic.titulo,
+          licitacion_descripcion: lic.descripcion,
+          licitacion_categoria: lic.categoria,
+        }),
+      });
+      const data = await res.json();
+      if (data.tipo === "propuesta" && data.propuesta_tecnica) {
+        setTecnica(data.propuesta_tecnica);
+        setAiMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "¡Propuesta generada! Revísala y ajústala si lo deseas." }]);
+        setShowAIChat(false);
+      } else {
+        setAiMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "..." }]);
+      }
+    } catch {
+      setAiMessages(prev => [...prev, { role: "assistant", content: "Error al conectar. Intenta de nuevo." }]);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   const todosChecked = checks.leyo_pliego && checks.inspeccion_fisica && checks.cubre_alcance && checks.no_adicionales && checks.condiciones && checks.penalidades && checks.veracidad;
 
   async function submit(e: React.FormEvent) {
@@ -921,14 +991,82 @@ function ModalPostular({
               style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
             />
           </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Propuesta técnica</span>
+          {/* Propuesta técnica con asistente IA */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Propuesta técnica</span>
+              <button
+                type="button"
+                onClick={startAIChat}
+                style={{ background: showAIChat ? C.blue + "20" : C.bgPanel, border: `1px solid ${C.blue}40`, color: C.blue, borderRadius: 20, padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}
+              >
+                🤖 {showAIChat ? "Asistente activo" : "Redactar con IA"}
+              </button>
+            </div>
+
+            {/* Chat IA */}
+            {showAIChat && (
+              <div style={{ background: C.bgPanel, border: `1px solid ${C.blue}30`, borderRadius: 10, overflow: "hidden", marginBottom: 4 }}>
+                {/* Mensajes */}
+                <div style={{ maxHeight: 220, overflowY: "auto", padding: "12px 14px" }}>
+                  {aiMessages.map((m, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
+                      {m.role === "assistant" && (
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.blue + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 6, marginTop: 2, fontSize: 11 }}>🤖</div>
+                      )}
+                      <div style={{
+                        maxWidth: "80%",
+                        background: m.role === "user" ? C.blue + "20" : C.bgCard,
+                        color: C.text, fontSize: 13, lineHeight: 1.5,
+                        borderRadius: m.role === "user" ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+                        padding: "8px 12px",
+                      }}>{m.content}</div>
+                    </div>
+                  ))}
+                  {aiLoading && (
+                    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 8 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.blue + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 6, fontSize: 11 }}>🤖</div>
+                      <div style={{ background: C.bgCard, borderRadius: "12px 12px 12px 4px", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
+                        {[0,1,2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: C.muted, animation: `pulse 1.4s ease-in-out ${i*0.2}s infinite` }} />)}
+                      </div>
+                    </div>
+                  )}
+                  <div ref={aiChatEndRef} />
+                </div>
+                {/* Input */}
+                <div style={{ borderTop: `1px solid ${C.border}`, padding: "8px 12px", display: "flex", gap: 8 }}>
+                  <input
+                    type="text" value={aiInput}
+                    onChange={e => setAiInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAIMessage(); } }}
+                    placeholder="Responde aquí..."
+                    disabled={aiLoading}
+                    style={{ flex: 1, background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 13, outline: "none" }}
+                  />
+                  <button type="button" onClick={sendAIMessage} disabled={aiLoading || !aiInput.trim()}
+                    style={{ background: aiInput.trim() ? C.blue : C.bgCard, border: "none", color: aiInput.trim() ? "#fff" : C.muted, borderRadius: 6, padding: "7px 14px", cursor: aiInput.trim() ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700 }}>
+                    →
+                  </button>
+                </div>
+                {tecnica && (
+                  <div style={{ padding: "6px 14px 10px", borderTop: `1px solid ${C.border}` }}>
+                    <button type="button" onClick={() => setShowAIChat(false)} style={{ background: C.green + "15", border: `1px solid ${C.green}30`, color: C.green, borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      ✓ Ver propuesta generada ↓
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <textarea
-              value={tecnica} onChange={e => setTecnica(e.target.value)} rows={4}
-              placeholder="Detalla tu metodología, equipo, experiencia relevante..."
-              style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
+              value={tecnica} onChange={e => setTecnica(e.target.value)} rows={tecnica ? 6 : 4}
+              placeholder={tecnica ? "" : "Detalla tu metodología, equipo, experiencia relevante... o usa el asistente IA ↑"}
+              style={{ background: C.bgPanel, border: `1px solid ${tecnica ? C.green + "40" : C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
             />
-          </label>
+            {tecnica && (
+              <p style={{ color: C.green, fontSize: 11, margin: 0 }}>✓ Propuesta técnica lista — puedes editarla directamente arriba</p>
+            )}
+          </div>
 
           {/* Verificación del pliego — NUEVO */}
           <div style={{ background: "rgba(201,168,76,0.04)", border: `1px solid rgba(201,168,76,0.2)`, borderRadius: 10, padding: 16 }}>

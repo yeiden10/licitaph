@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { RequisitoLicitacion } from "@/lib/supabase/types";
 import QASection from "./QASection";
+import VisitaTracker from "./VisitaTracker";
 
 // ── Design tokens (server-safe, no useState) ──────────────────────────────────
 const C = {
@@ -110,6 +111,8 @@ export default async function LicitacionPublicaPage({
 
   return (
     <>
+      {/* Tracking silencioso de visitas */}
+      <VisitaTracker licitacion_id={lic.id} />
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; background: ${C.bg}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: ${C.text}; }

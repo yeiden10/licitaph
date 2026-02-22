@@ -898,31 +898,56 @@ export default function PHDashboard() {
                     <div className="empty-sub">Publica tu primera licitación para recibir propuestas de empresas verificadas.</div>
                   </div>
                 ) : (
-                  <table className="tbl">
-                    <thead><tr><th>Servicio</th><th>Presupuesto</th><th>Cierre</th><th>Acción</th></tr></thead>
-                    <tbody>
-                      {licsActivas.map(l => (
-                        <tr key={l.id}>
-                          <td className="td-main">
-                            {l.titulo}
-                            {l.urgente && <span className="badge b-urgent">URGENTE</span>}
-                          </td>
-                          <td className="td-mono">
-                            {l.presupuesto_minimo ? `$${Number(l.presupuesto_minimo).toLocaleString()} - $${Number(l.presupuesto_maximo || l.presupuesto_minimo).toLocaleString()}/mes` : "—"}
-                          </td>
-                          <td style={{ color: l.urgente ? "var(--red)" : "var(--text2)" }}>{formatFecha(l.fecha_cierre)}</td>
-                          <td>
-                            <button className="btn btn-gold" onClick={() => {
-                              setLicSeleccionada(l.id);
-                              setTab("propuestas");
-                            }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              {l.fecha_cierre && new Date(l.fecha_cierre) > new Date() ? "🔒 Ver propuestas" : "Ver propuestas →"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {licsActivas.map(l => {
+                      const cierre = l.fecha_cierre ? new Date(l.fecha_cierre) : null;
+                      const abierta = cierre ? cierre > new Date() : false;
+                      const diasRestantes = cierre ? Math.ceil((cierre.getTime() - Date.now()) / 86400000) : null;
+                      const propuestaCount = propuestas.filter(p => p.licitacion_id === l.id).length;
+                      let cierreColor = "var(--text2)";
+                      let cierreLabel = formatFecha(l.fecha_cierre);
+                      if (diasRestantes !== null && abierta) {
+                        if (diasRestantes <= 3) { cierreColor = "var(--red)"; cierreLabel = `🔴 Cierra en ${diasRestantes}d`; }
+                        else if (diasRestantes <= 7) { cierreColor = "#F59E0B"; cierreLabel = `⚠ ${diasRestantes} días restantes`; }
+                        else { cierreLabel = `${diasRestantes} días restantes`; }
+                      }
+                      return (
+                        <div key={l.id} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 200 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                              <span style={{ color: "var(--text)", fontWeight: 600, fontSize: 14 }}>{l.titulo}</span>
+                              {l.urgente && <span className="badge b-urgent">URGENTE</span>}
+                            </div>
+                            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                              <span style={{ color: cierreColor, fontSize: 12, fontWeight: diasRestantes !== null && diasRestantes <= 7 ? 600 : 400 }}>
+                                🕐 {cierreLabel}
+                              </span>
+                              {l.presupuesto_minimo && (
+                                <span style={{ color: "var(--text2)", fontSize: 12 }}>
+                                  💰 ${Number(l.presupuesto_minimo).toLocaleString()} – ${Number(l.presupuesto_maximo || l.presupuesto_minimo).toLocaleString()}/año
+                                </span>
+                              )}
+                              {(l as any).visitas > 0 && (
+                                <span style={{ color: "var(--text2)", fontSize: 12 }}>
+                                  👁 {(l as any).visitas} vista{(l as any).visitas !== 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Badge propuestas */}
+                          <div style={{ textAlign: "center", minWidth: 60 }}>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: propuestaCount > 0 ? "var(--gold)" : "var(--text3)" }}>{propuestaCount}</div>
+                            <div style={{ fontSize: 11, color: "var(--text3)" }}>propuesta{propuestaCount !== 1 ? "s" : ""}</div>
+                          </div>
+                          {/* Acción */}
+                          <button className="btn btn-gold" onClick={() => { setLicSeleccionada(l.id); setTab("propuestas"); }} style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                            {abierta ? "🔒 Ver propuestas" : "Ver propuestas →"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
