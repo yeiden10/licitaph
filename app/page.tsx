@@ -449,6 +449,7 @@ export default function Home() {
         <div className="nav-links">
           <button className="nav-link" onClick={() => scrollTo("como-funciona")}>Cómo funciona</button>
           <button className="nav-link" onClick={() => scrollTo("servicios")}>Servicios</button>
+          <a href="/directorio" style={{ background: "none", border: "none", color: C.text2, fontSize: "13.5px", fontWeight: 500, cursor: "pointer", fontFamily: "'Inter',sans-serif", textDecoration: "none", transition: "color .18s" }} onMouseOver={e => (e.currentTarget.style.color = C.text)} onMouseOut={e => (e.currentTarget.style.color = C.text2)}>Directorio</a>
           <button className="nav-link" onClick={() => scrollTo("faq")}>FAQ</button>
           <button className="nav-link" onClick={() => scrollTo("contacto")}>Contacto</button>
         </div>

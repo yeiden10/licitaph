@@ -13,7 +13,7 @@ interface Notificacion {
   creado_en: string;
 }
 
-type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "copropietarios";
+type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "copropietarios" | "precios";
 
 // Default fecha_inicio: 7 days from today
 function defaultFechaInicio() {
@@ -76,6 +76,11 @@ export default function PHDashboard() {
   // ── Comparador ─────────────────────────────────────────────
   const [comparando, setComparando] = useState<string[]>([]); // array of propuesta IDs
   const [showComparador, setShowComparador] = useState(false);
+
+  // ── Historial de precios ────────────────────────────────────
+  const [historialData, setHistorialData] = useState<any>(null);
+  const [historialCat, setHistorialCat] = useState("todos");
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // ── Mobile sidebar ─────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -298,6 +303,15 @@ export default function PHDashboard() {
       .eq("ph_id", ph_id)
       .order("creado_en", { ascending: false });
     setContratos(data || []);
+  }, []);
+
+  const cargarHistorial = useCallback(async (cat: string) => {
+    setLoadingHistorial(true);
+    try {
+      const res = await fetch(`/api/historial-precios?categoria=${cat}`);
+      const data = await res.json();
+      setHistorialData(data);
+    } finally { setLoadingHistorial(false); }
   }, []);
 
   useEffect(() => {
@@ -699,12 +713,13 @@ export default function PHDashboard() {
               { key: "propuestas", icon: "📥", label: "Propuestas" },
               { key: "contratos", icon: "📄", label: "Contratos", pill: contratos.filter(c => c.estado === "vencido").length || null, pillRed: true },
               { key: "reporte", icon: "📊", label: "Reporte" },
+              { key: "precios", icon: "📈", label: "Hist. precios" },
               { key: "copropietarios", icon: "👥", label: "Copropietarios", pill: copropietarios.filter(c => c.activo).length || null },
             ].map(item => (
               <button
                 key={item.key}
                 className={`nav-item ${tab === item.key ? "active" : ""}`}
-                onClick={() => { const k = item.key as Tab; setTab(k); setSidebarOpen(false); if (k === "copropietarios") cargarCopropietarios(); }}
+                onClick={() => { const k = item.key as Tab; setTab(k); setSidebarOpen(false); if (k === "copropietarios") cargarCopropietarios(); if (k === "precios") cargarHistorial("todos"); }}
               >
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}
@@ -1330,6 +1345,124 @@ export default function PHDashboard() {
               <div style={{ background: "rgba(74,222,128,0.04)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 12, padding: "16px 20px", fontSize: 13, color: "var(--text2)", lineHeight: 1.7 }}>
                 ✅ <strong style={{ color: "var(--text)" }}>Certificación de transparencia LicitaPH:</strong> Todas las contrataciones de este período fueron realizadas mediante proceso competitivo y documentado en la plataforma. Los expedientes están disponibles para consulta de cualquier copropietario.
               </div>
+
+              {/* Botón reporte ejecutivo para Junta */}
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+                <a
+                  href="/api/reporte-junta"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-gold"
+                  style={{ textDecoration: "none", fontSize: 14, padding: "12px 28px", display: "inline-flex", alignItems: "center", gap: 8 }}
+                >
+                  <span>📄</span> Generar reporte ejecutivo para la Junta
+                </a>
+              </div>
+            </>
+          )}
+
+          {/* ── HISTORIAL PRECIOS ── */}
+          {tab === "precios" && (
+            <>
+              <div className="ph-header">
+                <h1 className="ph-title">📈 Historial de precios</h1>
+                <p className="ph-sub">Precios reales adjudicados en la plataforma — referencia de mercado panameño</p>
+              </div>
+
+              {/* Filtro de categoría */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+                {["todos", "seguridad", "limpieza", "hvac", "ascensores", "pintura", "impermeabilizacion", "piscinas", "electricidad", "generadores", "fumigacion", "areas_verdes", "cctv"].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => { setHistorialCat(cat); cargarHistorial(cat); }}
+                    style={{
+                      padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 500,
+                      border: historialCat === cat ? "1px solid rgba(201,168,76,0.4)" : "1px solid var(--border)",
+                      background: historialCat === cat ? "rgba(201,168,76,0.1)" : "transparent",
+                      color: historialCat === cat ? "var(--gold)" : "var(--text2)",
+                      cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all 0.15s",
+                    }}
+                  >
+                    {cat === "todos" ? "🌐 Todos" : cat}
+                  </button>
+                ))}
+              </div>
+
+              {loadingHistorial ? (
+                <div style={{ padding: "60px 0", textAlign: "center", color: "var(--text3)", fontSize: 13 }}>Cargando datos...</div>
+              ) : !historialData ? (
+                <div className="empty">
+                  <div className="empty-icon">📈</div>
+                  <div className="empty-title">Cargando historial</div>
+                  <div className="empty-sub">Los datos de precios se cargan automáticamente.</div>
+                </div>
+              ) : historialData.total_adjudicaciones === 0 ? (
+                <div className="empty">
+                  <div className="empty-icon">🔍</div>
+                  <div className="empty-title">Sin datos disponibles aún</div>
+                  <div className="empty-sub">A medida que se adjudiquen licitaciones en la plataforma, verás los precios de referencia aquí.</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 12, padding: "14px 20px", marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
+                    <span style={{ fontSize: 26 }}>📊</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: "var(--text2)" }}>
+                        Basado en <strong style={{ color: "var(--gold)" }}>{historialData.total_adjudicaciones}</strong> adjudicaciones reales en la plataforma
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>Precios anuales en USD. Referencia del mercado de Panamá.</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 14 }}>
+                    {historialData.categorias.map((cat: any) => (
+                      <div key={cat.categoria} className="sec" style={{ margin: 0 }}>
+                        <div className="sec-head">
+                          <div>
+                            <div className="sec-title" style={{ textTransform: "capitalize" }}>{cat.categoria}</div>
+                            <div className="sec-sub">{cat.total} adjudicación{cat.total > 1 ? "es" : ""}</div>
+                          </div>
+                          <span className="badge b-gold">{cat.total} dato{cat.total > 1 ? "s" : ""}</span>
+                        </div>
+                        <div style={{ padding: "16px 20px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+                            {[
+                              { label: "Mínimo", val: cat.minimo, color: "var(--green)" },
+                              { label: "Promedio", val: cat.promedio, color: "var(--gold)" },
+                              { label: "Máximo", val: cat.maximo, color: "var(--red)" },
+                            ].map(({ label, val, color }) => (
+                              <div key={label} style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
+                                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color }}>${(val / 1000).toFixed(0)}k</div>
+                                <div style={{ fontSize: 10, color: "var(--text3)" }}>/año</div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ position: "relative", height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden", marginBottom: 14 }}>
+                            <div style={{
+                              position: "absolute", left: 0, top: 0, height: "100%",
+                              width: cat.maximo > 0 ? `${((cat.promedio - cat.minimo) / ((cat.maximo - cat.minimo) || 1)) * 100}%` : "50%",
+                              background: "linear-gradient(90deg, var(--green), var(--gold))", borderRadius: 3,
+                            }} />
+                          </div>
+                          <div style={{ fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Adjudicaciones recientes</div>
+                          {cat.datos.slice(0, 3).map((d: any, i: number) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                              <div>
+                                <div style={{ fontSize: 12, color: "var(--text2)", fontWeight: 500 }}>{d.titulo}</div>
+                                <div style={{ fontSize: 10, color: "var(--text3)" }}>{d.ciudad} · {new Date(d.fecha).getFullYear()}</div>
+                              </div>
+                              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: "var(--gold)", fontWeight: 700 }}>
+                                ${Number(d.precio).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
 
