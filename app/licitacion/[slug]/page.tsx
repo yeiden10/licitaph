@@ -131,6 +131,7 @@ export default async function LicitacionPublicaPage({
           .portal-h1 { font-size: 22px !important; }
           .portal-stats { grid-template-columns: 1fr 1fr !important; }
           .portal-sidebar { order: -1; }
+          .modal-precio-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) {
           .portal-stats { grid-template-columns: 1fr !important; }

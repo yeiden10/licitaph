@@ -609,7 +609,8 @@ export default function NuevaLicitacion() {
           .wiz-header { padding: 12px 18px; }
         }
         @media (max-width: 480px) {
-          .wiz-cat-grid { grid-template-columns: repeat(2, 1fr); }
+          .wiz-cat-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+          .wiz-main { padding: 16px 10px 48px; }
         }
       `}</style>
 

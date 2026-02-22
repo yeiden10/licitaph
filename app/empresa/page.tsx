@@ -1443,6 +1443,11 @@ export default function EmpresaDashboard() {
         .emp-hamburger { display: none !important; }
         .emp-sidebar { transform: translateX(0); transition: transform 0.25s ease; }
 
+        @media (max-width: 1024px) {
+          .emp-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+          .emp-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
         @media (max-width: 768px) {
           .emp-hamburger { display: flex !important; align-items: center; justify-content: center; }
           .emp-sidebar { transform: translateX(-100%); }
@@ -1456,6 +1461,7 @@ export default function EmpresaDashboard() {
           .emp-grid-4 { grid-template-columns: 1fr !important; }
           .emp-grid-3 { grid-template-columns: 1fr !important; }
           .emp-main { padding: 12px !important; padding-top: 56px !important; }
+          .emp-modal-pad { padding: 16px 12px !important; }
         }
       `}</style>
 

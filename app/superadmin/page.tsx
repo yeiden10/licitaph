@@ -118,6 +118,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
 export default function SuperadminDashboard() {
   const supabase = createClient();
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -267,6 +268,133 @@ export default function SuperadminDashboard() {
     </div>
   );
 
+  const SA_STYLE = `
+    .sa-sidebar {
+      width: 240px;
+      background: ${C.bgCard};
+      border-right: 1px solid ${C.border};
+      display: flex;
+      flex-direction: column;
+      padding: 24px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      flex-shrink: 0;
+      transition: transform .3s;
+      z-index: 200;
+    }
+    .sa-hamburger {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: ${C.bgCard};
+      border: 1px solid ${C.border};
+      color: ${C.text};
+      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .sa-overlay {
+      display: none;
+    }
+    .sa-topbar {
+      display: none;
+    }
+    .sa-main {
+      flex: 1;
+      padding: 32px 36px;
+      overflow: auto;
+    }
+    .sa-stats-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .sa-stats-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .sa-quick-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sa-emp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 12px;
+    }
+    .sa-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+    .sa-close-btn {
+      display: none;
+    }
+    @media (max-width: 1024px) {
+      .sa-stats-4 { grid-template-columns: repeat(2, 1fr); }
+      .sa-stats-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .sa-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        z-index: 200;
+      }
+      .sa-sidebar.open {
+        transform: translateX(0);
+      }
+      .sa-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+        z-index: 199;
+      }
+      .sa-hamburger {
+        display: flex;
+      }
+      .sa-close-btn {
+        display: block;
+      }
+      .sa-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: ${C.bgCard};
+        border-bottom: 1px solid ${C.border};
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .sa-main {
+        padding: 20px 16px;
+      }
+      .sa-stats-4 { grid-template-columns: 1fr 1fr; }
+      .sa-stats-3 { grid-template-columns: 1fr 1fr; }
+      .sa-emp-header { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+      .sa-main { padding: 12px; }
+      .sa-stats-4 { grid-template-columns: 1fr; }
+      .sa-stats-3 { grid-template-columns: 1fr; }
+      .sa-quick-actions button { width: 100%; }
+    }
+  `;
+
   const navItems: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Dashboard", icon: "▦" },
     { id: "empresas", label: "Empresas", icon: "🏢" },
@@ -275,7 +403,9 @@ export default function SuperadminDashboard() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "Inter, sans-serif", display: "flex" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column" }}>
+      <style>{SA_STYLE}</style>
+
       {/* Notif */}
       {notif && (
         <div onClick={() => setNotif(null)} style={{
@@ -290,19 +420,33 @@ export default function SuperadminDashboard() {
         </div>
       )}
 
+      {/* Mobile topbar */}
+      <div className="sa-topbar">
+        <button className="sa-hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 6, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
+          <span style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>LicitaPH</span>
+          <span style={{ color: C.purple, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Superadmin</span>
+        </div>
+      </div>
+
+      {/* Overlay */}
+      {sidebarOpen && <div className="sa-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+
       {/* Sidebar */}
-      <aside style={{
-        width: 240, background: C.bgCard, borderRight: `1px solid ${C.border}`,
-        display: "flex", flexDirection: "column", padding: "24px 0", position: "sticky",
-        top: 0, height: "100vh", flexShrink: 0,
-      }}>
+      <aside className={`sa-sidebar${sidebarOpen ? " open" : ""}`}>
         <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚡</div>
-            <div>
-              <p style={{ color: C.text, fontSize: 14, fontWeight: 700, margin: 0 }}>LicitaPH</p>
-              <p style={{ color: C.purple, fontSize: 10, fontWeight: 600, margin: 0, textTransform: "uppercase", letterSpacing: 1 }}>Superadmin</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚡</div>
+              <div>
+                <p style={{ color: C.text, fontSize: 14, fontWeight: 700, margin: 0 }}>LicitaPH</p>
+                <p style={{ color: C.purple, fontSize: 10, fontWeight: 600, margin: 0, textTransform: "uppercase", letterSpacing: 1 }}>Superadmin</p>
+              </div>
             </div>
+            <button onClick={() => setSidebarOpen(false)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20, lineHeight: 1, padding: "0 4px" }} className="sa-close-btn">×</button>
           </div>
         </div>
 
@@ -310,7 +454,7 @@ export default function SuperadminDashboard() {
           {navItems.map(item => (
             <button
               key={item.id}
-              onClick={() => setTab(item.id)}
+              onClick={() => { setTab(item.id); setSidebarOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 10,
                 padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer",
@@ -339,7 +483,7 @@ export default function SuperadminDashboard() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, padding: "32px 36px", overflow: "auto" }}>
+      <main className="sa-main">
 
         {/* ── DASHBOARD ── */}
         {tab === "dashboard" && stats && (
@@ -350,14 +494,14 @@ export default function SuperadminDashboard() {
             </div>
 
             {/* Stats grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+            <div className="sa-stats-4">
               <StatCard label="Empresas registradas" value={stats.empresas.total} sub={`${stats.empresas.verificadas} verificadas · ${stats.empresas.pendientes} pendientes`} color={C.blue} />
               <StatCard label="PHs activas" value={stats.ph.total} color={C.gold} />
               <StatCard label="Licitaciones" value={stats.licitaciones.total} sub={`${stats.licitaciones.activas} activas ahora`} color={C.green} />
               <StatCard label="Valor contratos activos" value={usd(stats.contratos.valor_anual)} sub={`${stats.contratos.activos} contratos activos`} color={C.purple} />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+            <div className="sa-stats-3">
               <StatCard label="Total propuestas" value={stats.propuestas.total} />
               <StatCard label="Total contratos" value={stats.contratos.total} />
               <StatCard label="Empresas pendientes" value={stats.empresas.pendientes} color={stats.empresas.pendientes > 0 ? C.gold : C.green} sub={stats.empresas.pendientes > 0 ? "Requieren revisión" : "Todo al día"} />
@@ -366,21 +510,21 @@ export default function SuperadminDashboard() {
             {/* Acciones rápidas */}
             <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24 }}>
               <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 16px" }}>Acciones rápidas</h2>
-              <div style={{ display: "flex", gap: 12 }}>
+              <div className="sa-quick-actions">
                 <button
-                  onClick={() => { setTab("empresas"); setFiltroEmpresa("pendiente"); }}
+                  onClick={() => { setTab("empresas"); setFiltroEmpresa("pendiente"); setSidebarOpen(false); }}
                   style={{ background: C.goldDim, border: `1px solid ${C.gold}`, color: C.gold, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
                 >
                   Ver empresas pendientes ({stats.empresas.pendientes})
                 </button>
                 <button
-                  onClick={() => setTab("licitaciones")}
+                  onClick={() => { setTab("licitaciones"); setSidebarOpen(false); }}
                   style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.text, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}
                 >
                   Ver todas las licitaciones
                 </button>
                 <button
-                  onClick={() => setTab("ph")}
+                  onClick={() => { setTab("ph"); setSidebarOpen(false); }}
                   style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.text, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}
                 >
                   Ver propiedades horizontales
@@ -393,7 +537,7 @@ export default function SuperadminDashboard() {
         {/* ── EMPRESAS ── */}
         {tab === "empresas" && (
           <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <div className="sa-emp-header">
               <div>
                 <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>Empresas</h1>
                 <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>{empresas.length} empresa{empresas.length !== 1 ? "s" : ""}</p>
@@ -480,7 +624,7 @@ export default function SuperadminDashboard() {
         {/* ── LICITACIONES ── */}
         {tab === "licitaciones" && (
           <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <div className="sa-emp-header">
               <div>
                 <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>Licitaciones</h1>
                 <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>{licitaciones.length} licitaciones</p>
@@ -495,8 +639,8 @@ export default function SuperadminDashboard() {
               </select>
             </div>
 
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="sa-table-wrap" style={{ border: `1px solid ${C.border}`, background: C.bgCard }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${C.border}` }}>
                     {["Licitación", "PH", "Categoría", "Estado", "Propuestas", "Cierre", ""].map(h => (
@@ -544,8 +688,8 @@ export default function SuperadminDashboard() {
               <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>{phs.length} PHs registradas</p>
             </div>
 
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="sa-table-wrap" style={{ border: `1px solid ${C.border}`, background: C.bgCard }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${C.border}` }}>
                     {["Nombre", "Ciudad", "Provincia", "Unidades", "Email", "Estado", "Registro"].map(h => (
@@ -578,6 +722,7 @@ export default function SuperadminDashboard() {
           </div>
         )}
       </main>
+      </div>{/* end flex row */}
 
       {/* MODAL: Detalle empresa */}
       {empresaDetalle && (

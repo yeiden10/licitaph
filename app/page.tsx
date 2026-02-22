@@ -433,6 +433,7 @@ export default function Home() {
           .footer-grid { grid-template-columns:1fr; }
           .form-card { padding:28px 20px; }
           .steps-grid { grid-template-columns:1fr; }
+          .metric { padding:12px 16px; }
         }
       `}</style>
 

@@ -552,7 +552,7 @@ export default function PHDashboard() {
         .notif-bell-btn { width:100%; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; color:var(--text2); border:none; background:none; text-align:left; font-family:'Inter',sans-serif; }
         .notif-bell-btn:hover { color:var(--text); background:rgba(255,255,255,0.04); }
         .notif-badge { background:var(--red); color:#fff; font-size:9px; font-weight:700; min-width:16px; height:16px; border-radius:8px; padding:0 4px; display:flex; align-items:center; justify-content:center; margin-left:auto; }
-        .notif-panel { position:fixed; left:248px; top:60px; width:340px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.8); z-index:999; overflow:hidden; animation:fadeUp .2s ease; }
+        .notif-panel { position:fixed; left:248px; top:60px; width:340px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.8); z-index:999; overflow:hidden; animation:fadeUp .2s ease; max-height:80vh; overflow-y:auto; }
         .notif-panel-head { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
         .notif-panel-title { font-size:13px; font-weight:700; color:var(--text); }
         .notif-item { padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
@@ -621,7 +621,7 @@ export default function PHDashboard() {
         .s-low { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.25); }
 
         /* PROPUESTAS */
-        .prop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; padding:20px; }
+        .prop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr)); gap:14px; padding:20px; }
         .prop-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:18px; position:relative; transition:all 0.2s; }
         .prop-card:hover { border-color:var(--border2); transform:translateY(-2px); }
         .prop-card.recomendada { border-color:rgba(201,168,76,0.35); background:rgba(201,168,76,0.03); }
@@ -685,6 +685,7 @@ export default function PHDashboard() {
         /* HAMBURGER */
         .hamburger { display:none; position:fixed; top:12px; left:12px; z-index:200; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:8px 10px; cursor:pointer; font-size:18px; line-height:1; color:var(--text); }
         .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:150; }
+        .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 
         /* TABLET */
         @media(max-width:1024px){
@@ -715,6 +716,7 @@ export default function PHDashboard() {
           .modal-actions{ flex-direction:column; }
           .form-row{ margin-bottom:10px; }
           .notif{ left:12px; right:12px; max-width:100%; }
+          .notif-panel{ left:0; right:0; width:auto; top:56px; border-radius:0; max-height:60vh; }
           .alert-banner{ flex-direction:column; align-items:flex-start; gap:8px; }
           .btn{ font-size:11px; padding:6px 10px; }
         }
@@ -956,7 +958,7 @@ export default function PHDashboard() {
                   <div className="sec-head">
                     <div className="sec-title">Contratos recientes</div>
                   </div>
-                  <table className="tbl">
+                  <div className="tbl-wrap"><table className="tbl">
                     <thead><tr><th>Empresa</th><th>Servicio</th><th>Monto</th><th>Vence</th><th>Estado</th></tr></thead>
                     <tbody>
                       {contratos.slice(0, 3).map(c => {
@@ -976,7 +978,7 @@ export default function PHDashboard() {
                         );
                       })}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               )}
             </>
@@ -1000,7 +1002,7 @@ export default function PHDashboard() {
                     <div className="empty-sub">Crea tu primera licitación para empezar a recibir propuestas.</div>
                   </div>
                 ) : (
-                  <table className="tbl">
+                  <div className="tbl-wrap"><table className="tbl">
                     <thead>
                       <tr><th>Servicio</th><th>Estado</th><th>Publicada</th><th>Cierre</th><th>Acción</th></tr>
                     </thead>
@@ -1052,7 +1054,7 @@ export default function PHDashboard() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             </>
@@ -1309,7 +1311,7 @@ export default function PHDashboard() {
                     <div className="empty-sub">Los contratos aparecen aquí cuando adjudicas una licitación.</div>
                   </div>
                 ) : (
-                  <table className="tbl">
+                  <div className="tbl-wrap"><table className="tbl">
                     <thead>
                       <tr>
                         <th>Empresa</th>
@@ -1380,7 +1382,7 @@ export default function PHDashboard() {
                         );
                       })}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             </>
@@ -1419,7 +1421,7 @@ export default function PHDashboard() {
               {contratos.length > 0 && (
                 <div className="sec">
                   <div className="sec-head"><div className="sec-title">Detalle de contratos activos</div></div>
-                  <table className="tbl">
+                  <div className="tbl-wrap"><table className="tbl">
                     <thead><tr><th>Servicio</th><th>Empresa adjudicada</th><th>Monto mensual</th><th>Inicio</th><th>Vence</th></tr></thead>
                     <tbody>
                       {contratosActivos.map(c => (
@@ -1432,7 +1434,7 @@ export default function PHDashboard() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               )}
 
@@ -1742,7 +1744,7 @@ export default function PHDashboard() {
                   <div className="sec-head">
                     <div className="sec-title">Lista de copropietarios ({copropietarios.length})</div>
                   </div>
-                  <table className="tbl">
+                  <div className="tbl-wrap"><table className="tbl">
                     <thead>
                       <tr>
                         <th>Email</th>
@@ -1786,7 +1788,7 @@ export default function PHDashboard() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               )}
             </>

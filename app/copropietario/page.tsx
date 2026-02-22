@@ -246,12 +246,20 @@ export default function CopropietarioPage() {
         .empty-icon { font-size: 32px; margin-bottom: 12px; }
         .empty-sub { font-size: 13px; color: ${C.muted}; }
         .readonly-banner { background: rgba(74,158,255,0.05); border: 1px solid rgba(74,158,255,0.15); border-radius: 8px; padding: 10px 16px; margin-bottom: 24px; font-size: 12px; color: ${C.blue}; display: flex; align-items: center; gap: 8px; }
+        @media (max-width: 1024px) {
+          .cards { grid-template-columns: repeat(2, 1fr); }
+        }
         @media (max-width: 768px) {
           .sidebar { display: none; }
           .main { margin-left: 0; padding: 16px; }
           .cards { grid-template-columns: repeat(2, 1fr); }
           .ph-banner { flex-wrap: wrap; }
           .unidad-badge { margin-left: 0; }
+        }
+        @media (max-width: 480px) {
+          .cards { grid-template-columns: 1fr; }
+          .main { padding: 12px; }
+          .ph-banner { padding: 14px 16px; gap: 10px; }
         }
       `}</style>
 
