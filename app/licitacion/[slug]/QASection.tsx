@@ -2,9 +2,13 @@
 import { useState, useEffect } from "react";
 
 const C = {
-  bg: "#07090F", bgCard: "#0D1117", bgPanel: "#111827", border: "#1F2937",
-  gold: "#C9A84C", goldDim: "#2D2310", blue: "#4A9EFF", green: "#4ADE80",
-  red: "#F87171", text: "#F0F4FF", muted: "#6B7280", sub: "#9CA3AF",
+  bg: "#FFFFFF", bgCard: "#FFFFFF", bgPanel: "#F8FAFC", border: "#E2E8F0",
+  accent: "#1E3A8A", accentSoft: "#EFF6FF",
+  blue: "#3B82F6", green: "#10B981", red: "#EF4444",
+  text: "#0F172A", muted: "#94A3B8", sub: "#64748B",
+  text2: "#475569",
+  // Compat
+  gold: "#1E3A8A", goldDim: "#EFF6FF",
 };
 
 interface Pregunta {
@@ -91,10 +95,10 @@ export default function QASection({ licitacionId }: { licitacionId: string }) {
               </div>
               {/* Answer */}
               {p.respuesta && (
-                <div style={{ padding: "14px 18px", background: "rgba(201,168,76,0.03)", display: "flex", gap: 12 }}>
+                <div style={{ padding: "14px 18px", background: C.accentSoft, display: "flex", gap: 12 }}>
                   <div style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>🏢</div>
                   <div>
-                    <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Respuesta del administrador</div>
+                    <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Respuesta del administrador</div>
                     <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.6 }}>{p.respuesta}</div>
                     {p.respondida_en && (
                       <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{formatFecha(p.respondida_en)}</div>

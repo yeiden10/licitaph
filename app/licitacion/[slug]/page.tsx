@@ -6,18 +6,28 @@ import VisitaTracker from "./VisitaTracker";
 
 // ── Design tokens (server-safe, no useState) ──────────────────────────────────
 const C = {
-  bg:      "#07090F",
-  bgCard:  "#0D1117",
-  bgPanel: "#111827",
-  border:  "#1F2937",
-  gold:    "#C9A84C",
-  goldDim: "#2D2310",
-  blue:    "#4A9EFF",
-  green:   "#4ADE80",
-  red:     "#F87171",
-  text:    "#F0F4FF",
-  muted:   "#6B7280",
-  sub:     "#9CA3AF",
+  bg:      "#FFFFFF",
+  bg2:     "#F8FAFC",
+  bgCard:  "#FFFFFF",
+  bgPanel: "#F8FAFC",
+  border:  "#E2E8F0",
+  border2: "#CBD5E1",
+  accent:  "#1E3A8A",
+  accentSoft: "#EFF6FF",
+  blue:    "#3B82F6",
+  blueSoft: "#EFF6FF",
+  green:   "#10B981",
+  greenSoft: "#ECFDF5",
+  red:     "#EF4444",
+  redSoft: "#FEF2F2",
+  warning: "#F59E0B",
+  text:    "#0F172A",
+  text2:   "#475569",
+  muted:   "#94A3B8",
+  sub:     "#64748B",
+  // Compat aliases
+  gold:    "#1E3A8A",
+  goldDim: "#EFF6FF",
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -235,10 +245,11 @@ export default async function LicitacionPublicaPage({
         }}
       />
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; background: ${C.bg}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: ${C.text}; }
+        body { margin: 0; background: ${C.bg}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: ${C.text}; }
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: ${C.bg}; }
+        ::-webkit-scrollbar-track { background: ${C.bg2}; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
 
         .portal-grid { display: grid; grid-template-columns: 1fr 300px; gap: 28px; align-items: start; }
@@ -266,10 +277,10 @@ export default async function LicitacionPublicaPage({
       {/* ── Header ── */}
       <header className="portal-header" style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <div style={{ width: 32, height: 32, background: `linear-gradient(135deg, ${C.gold}, #8B6914)`, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#000", fontSize: 16, fontWeight: 900 }}>L</span>
+          <div style={{ width: 32, height: 32, background: C.accent, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#fff", fontSize: 16, fontWeight: 900 }}>L</span>
           </div>
-          <span style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>LicitaPH</span>
+          <span style={{ color: C.text, fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}><span style={{ color: C.accent }}>Licita</span>PH</span>
         </a>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <a
@@ -282,7 +293,7 @@ export default async function LicitacionPublicaPage({
             <span style={{ fontSize: 16 }}>📤</span>
             <span style={{ display: "none" }} className="share-label">Compartir</span>
           </a>
-          <span style={{ color: C.muted, fontSize: 13 }}>Portal público</span>
+          <span style={{ color: C.sub, fontSize: 13 }}>Portal público</span>
         </div>
       </header>
 
@@ -312,7 +323,7 @@ export default async function LicitacionPublicaPage({
                 URGENTE
               </span>
             )}
-            <span style={{ background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}30`, borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
+            <span style={{ background: C.accentSoft, color: C.accent, border: `1px solid rgba(30,58,138,.2)`, borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
               {lic.categoria}
             </span>
             {ph && (
@@ -320,12 +331,12 @@ export default async function LicitacionPublicaPage({
             )}
           </div>
 
-          <h1 className="portal-h1" style={{ color: C.text, fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.25 }}>
+          <h1 className="portal-h1" style={{ color: C.text, fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.25, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {lic.titulo}
           </h1>
 
           {lic.descripcion && (
-            <p style={{ color: C.sub, fontSize: 16, lineHeight: 1.75, margin: "0 0 28px", maxWidth: 700 }}>
+            <p style={{ color: C.text2, fontSize: 16, lineHeight: 1.75, margin: "0 0 28px", maxWidth: 700 }}>
               {lic.descripcion}
             </p>
           )}
@@ -333,7 +344,7 @@ export default async function LicitacionPublicaPage({
           {/* Stats row */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
             {(lic.presupuesto_minimo || lic.presupuesto_maximo) && (
-              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
+              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
                 <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Presupuesto referencial</p>
                 <p style={{ color: C.green, fontSize: 18, fontWeight: 700, margin: 0 }}>
                   {usd(lic.presupuesto_minimo)} – {usd(lic.presupuesto_maximo)}
@@ -342,25 +353,25 @@ export default async function LicitacionPublicaPage({
               </div>
             )}
             {lic.fecha_cierre && (
-              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
+              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
                 <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Cierre de recepción</p>
                 <CountdownIsland fechaCierre={lic.fecha_cierre} />
               </div>
             )}
             {lic.duracion_contrato_meses && (
-              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
+              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
                 <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Duración del contrato</p>
                 <p style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{lic.duracion_contrato_meses} meses</p>
               </div>
             )}
             {lic.precio_referencia_visible && lic.precio_referencia && (
-              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
+              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
                 <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Precio de referencia</p>
-                <p style={{ color: C.gold, fontSize: 18, fontWeight: 700, margin: 0 }}>{usd(lic.precio_referencia)}</p>
+                <p style={{ color: C.accent, fontSize: 18, fontWeight: 700, margin: 0 }}>{usd(lic.precio_referencia)}</p>
                 <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>USD</p>
               </div>
             )}
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
+            <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
               <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Requisitos del pliego</p>
               <p style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{requisitos.length}</p>
               <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>{obligatorios.length} obligatorios</p>
@@ -370,8 +381,8 @@ export default async function LicitacionPublicaPage({
 
         {/* ── Galería de fotos (si hay) ── */}
         {hayFotos && (
-          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28 }}>
-            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               <span>🖼</span> Fotos del lugar
             </h2>
             <div style={{
@@ -411,15 +422,15 @@ export default async function LicitacionPublicaPage({
 
         {/* ── Fechas de inspección (si hay) ── */}
         {hayFechas && (
-          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28 }}>
-            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               <span>📅</span> Días de inspección
             </h2>
             <p style={{ color: C.sub, fontSize: 13, margin: "0 0 16px" }}>Días de inspección del lugar</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: lic.lugar_inspeccion ? 14 : 16 }}>
               {fechasInspeccion.map((f, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 8 }}>
                   <span style={{ color: C.blue, fontSize: 16 }}>📆</span>
                   <span style={{ color: C.text, fontSize: 14, fontWeight: 500, textTransform: "capitalize" }}>
                     {formatFechaInspeccion(f)}
@@ -447,8 +458,8 @@ export default async function LicitacionPublicaPage({
         <div className="portal-grid">
           {/* ── Left: Pliego de condiciones ── */}
           <div>
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 24 }}>
-              <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: "0 0 22px" }}>
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 24, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+              <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: "0 0 22px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 Pliego de condiciones
               </h2>
 
@@ -489,11 +500,11 @@ export default async function LicitacionPublicaPage({
 
             {/* Publicado info */}
             {lic.fecha_publicacion && (
-              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", display: "flex", gap: 12, alignItems: "center" }}>
                 <span style={{ color: C.muted, fontSize: 13 }}>📅</span>
-                <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>
+                <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>
                   Publicado el {new Date(lic.fecha_publicacion).toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" })}
-                  {ph && <> por <strong style={{ color: C.sub }}>{ph.nombre}</strong></>}
+                  {ph && <> por <strong style={{ color: C.text2 }}>{ph.nombre}</strong></>}
                 </p>
               </div>
             )}
@@ -504,7 +515,7 @@ export default async function LicitacionPublicaPage({
             <CTAIsland licitacionId={lic.id} estaActiva={estaActiva} />
 
             {/* Trust block */}
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
+            <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
               <p style={{ color: C.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 14px" }}>¿Por qué LicitaPH?</p>
               {[
                 { icon: "🛡", text: "Proceso transparente y documentado" },
@@ -513,7 +524,7 @@ export default async function LicitacionPublicaPage({
               ].map(item => (
                 <div key={item.text} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: 16 }}>{item.icon}</span>
-                  <p style={{ color: C.sub, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{item.text}</p>
+                  <p style={{ color: C.text2, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{item.text}</p>
                 </div>
               ))}
             </div>
@@ -523,9 +534,9 @@ export default async function LicitacionPublicaPage({
       </main>
 
       {/* ── Footer ── */}
-      <footer style={{ borderTop: `1px solid ${C.border}`, padding: "24px 32px", textAlign: "center" }}>
-        <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>
-          LicitaPH · Plataforma de licitaciones para propiedades horizontales de Panamá
+      <footer style={{ borderTop: `1px solid ${C.border}`, padding: "24px 32px", textAlign: "center", background: C.bg2 }}>
+        <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>
+          <span style={{ color: C.accent, fontWeight: 700 }}>Licita</span>PH · Plataforma de licitaciones para propiedades horizontales de Panamá
         </p>
       </footer>
     </>
@@ -542,7 +553,7 @@ function RequisitoRow({ r, numero }: { r: RequisitoLicitacion; numero: number })
       borderBottom: `1px solid ${C.border}`,
     }}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <span style={{ color: C.gold, fontWeight: 700, fontSize: 13, minWidth: 24, paddingTop: 2 }}>{numero}.</span>
+        <span style={{ color: C.accent, fontWeight: 700, fontSize: 13, minWidth: 24, paddingTop: 2 }}>{numero}.</span>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, flexWrap: "wrap" }}>
             <span style={{ color: C.text, fontSize: 15, fontWeight: 600 }}>{r.titulo}</span>
@@ -555,14 +566,14 @@ function RequisitoRow({ r, numero }: { r: RequisitoLicitacion; numero: number })
             )}
             {tipoRespuesta === "texto" && (
               <span style={{
-                background: "rgba(255,255,255,0.06)", color: C.sub, border: `1px solid rgba(255,255,255,0.1)`,
+                background: C.bg2, color: C.sub, border: `1px solid ${C.border}`,
                 borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700, letterSpacing: .5
               }}>✏️ Texto</span>
             )}
             {/* Subsanable badge */}
             {r.subsanable ? (
               <span style={{
-                background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}30`,
+                background: C.accentSoft, color: C.accent, border: `1px solid rgba(30,58,138,.2)`,
                 borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700, letterSpacing: .5
               }}>SUBSANABLE</span>
             ) : (
@@ -605,7 +616,7 @@ function CountdownIsland({ fechaCierre }: { fechaCierre: string }) {
     <>
       <div
         id={id}
-        style={{ color: C.gold, fontSize: 18, fontWeight: 700, margin: 0, minHeight: 28 }}
+        style={{ color: C.accent, fontSize: 18, fontWeight: 700, margin: 0, minHeight: 28 }}
         suppressHydrationWarning
       >
         {new Date(fechaCierre).toLocaleDateString("es-PA", { day: "numeric", month: "short", year: "numeric" })}
@@ -634,7 +645,7 @@ function CountdownIsland({ fechaCierre }: { fechaCierre: string }) {
               if (sub) sub.textContent = days + " días restantes";
             } else if (days > 0) {
               el.textContent = days + "d " + hours + "h " + mins + "m";
-              el.style.color = days < 3 ? "${C.red}" : "${C.gold}";
+              el.style.color = days < 3 ? "${C.red}" : "${C.accent}";
               if (sub) sub.textContent = "tiempo restante";
             } else {
               el.textContent = hours + "h " + mins + "m";
@@ -657,21 +668,21 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
     <>
       <div
         id={ctaId}
-        style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24 }}
+        style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}
       >
         {!estaActiva ? (
           <div style={{ textAlign: "center", padding: "8px 0" }}>
             <p style={{ color: C.red, fontSize: 14, fontWeight: 600, margin: "0 0 8px" }}>Licitación cerrada</p>
-            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>Esta licitación ya no acepta propuestas.</p>
+            <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>Esta licitación ya no acepta propuestas.</p>
           </div>
         ) : (
           <>
-            <p style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 6px" }}>¿Tu empresa puede cubrir este servicio?</p>
-            <p style={{ color: C.sub, fontSize: 13, margin: "0 0 20px", lineHeight: 1.6 }}>Postula ahora y recibe la respuesta directamente del administrador.</p>
+            <p style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 6px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>¿Tu empresa puede cubrir este servicio?</p>
+            <p style={{ color: C.text2, fontSize: 13, margin: "0 0 20px", lineHeight: 1.6 }}>Postula ahora y recibe la respuesta directamente del administrador.</p>
             <div id={`${ctaId}-actions`}>
               <a
                 href={`/?registro=empresa`}
-                style={{ display: "block", background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "13px 0", fontSize: 15, fontWeight: 700, textDecoration: "none", textAlign: "center", width: "100%" }}
+                style={{ display: "block", background: C.accent, border: "none", color: "#fff", borderRadius: 9, padding: "13px 0", fontSize: 15, fontWeight: 700, textDecoration: "none", textAlign: "center", width: "100%" }}
               >
                 Participar como empresa →
               </a>
@@ -726,7 +737,7 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
             actionsEl.innerHTML = '';
             var btn = document.createElement("button");
             btn.textContent = "Enviar mi propuesta →";
-            btn.style.cssText = "display:block;width:100%;background:${C.gold};border:none;color:#000;border-radius:9px;padding:13px 0;font-size:15px;font-weight:700;cursor:pointer;";
+            btn.style.cssText = "display:block;width:100%;background:${C.accent};border:none;color:#fff;border-radius:9px;padding:13px 0;font-size:15px;font-weight:700;cursor:pointer;";
             btn.onclick = function() { showModal(user); };
             actionsEl.appendChild(btn);
 
@@ -742,21 +753,21 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
             var overlay = document.createElement("div");
             overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
             overlay.innerHTML = \`
-              <div style="background:${C.bgCard};border:1px solid ${C.border};border-radius:16px;padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;">
+              <div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                  <h2 style="color:${C.text};font-size:20px;font-weight:700;margin:0;">Enviar propuesta</h2>
-                  <button id="closeModalBtn" style="background:none;border:none;color:${C.muted};cursor:pointer;font-size:24px;line-height:1;">×</button>
+                  <h2 style="color:#0F172A;font-size:20px;font-weight:700;margin:0;">Enviar propuesta</h2>
+                  <button id="closeModalBtn" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:24px;line-height:1;">×</button>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:16px;">
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="modal-precio-grid">
                     <label style="display:flex;flex-direction:column;gap:6px;">
-                      <span style="color:${C.sub};font-size:13px;font-weight:500;">Precio anual ofertado (USD) *</span>
+                      <span style="color:#64748B;font-size:13px;font-weight:500;">Precio anual ofertado (USD) *</span>
                       <input id="modalPrecio" type="number" min="0" step="100" placeholder="Ej: 36000"
-                        style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:15px;outline:none;width:100%;" />
+                        style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;color:#0F172A;font-size:15px;outline:none;width:100%;" />
                     </label>
                     <label style="display:flex;flex-direction:column;gap:6px;">
-                      <span style="color:${C.sub};font-size:13px;font-weight:500;">Modalidad de pago</span>
-                      <select id="modalPago" style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:14px;outline:none;width:100%;cursor:pointer;">
+                      <span style="color:#64748B;font-size:13px;font-weight:500;">Modalidad de pago</span>
+                      <select id="modalPago" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;color:#0F172A;font-size:14px;outline:none;width:100%;cursor:pointer;">
                         <option value="mensual">Mensual</option>
                         <option value="trimestral">Trimestral</option>
                         <option value="semestral">Semestral</option>
@@ -766,34 +777,34 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                     </label>
                   </div>
                   <label style="display:flex;flex-direction:column;gap:6px;">
-                    <span style="color:${C.sub};font-size:13px;font-weight:500;">Descripción de la propuesta</span>
+                    <span style="color:#64748B;font-size:13px;font-weight:500;">Descripción de la propuesta</span>
                     <textarea id="modalDesc" rows="3" placeholder="Describe tu oferta de valor..."
-                      style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:14px;outline:none;resize:vertical;width:100%;"></textarea>
+                      style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;color:#0F172A;font-size:14px;outline:none;resize:vertical;width:100%;"></textarea>
                   </label>
                   <label style="display:flex;flex-direction:column;gap:6px;">
-                    <span style="color:${C.sub};font-size:13px;font-weight:500;">Propuesta técnica</span>
+                    <span style="color:#64748B;font-size:13px;font-weight:500;">Propuesta técnica</span>
                     <textarea id="modalTecnica" rows="4" placeholder="Detalla tu metodología, equipo, experiencia..."
-                      style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:14px;outline:none;resize:vertical;width:100%;"></textarea>
+                      style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;color:#0F172A;font-size:14px;outline:none;resize:vertical;width:100%;"></textarea>
                   </label>
-                  <div style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:10px;padding:14px;">
-                    <p style="color:${C.gold};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;">Compromisos requeridos</p>
+                  <div style="background:#EFF6FF;border:1px solid rgba(30,58,138,.15);border-radius:10px;padding:14px;">
+                    <p style="color:#1E3A8A;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;">Compromisos requeridos</p>
                     <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
-                      <input type="checkbox" id="chkInspeccion" style="margin-top:2px;accent-color:${C.gold};" />
-                      <span style="color:${C.sub};font-size:12px;line-height:1.5;">Me comprometo a inspeccionar físicamente el lugar antes de iniciar el servicio</span>
+                      <input type="checkbox" id="chkInspeccion" style="margin-top:2px;accent-color:#1E3A8A;" />
+                      <span style="color:#64748B;font-size:12px;line-height:1.5;">Me comprometo a inspeccionar físicamente el lugar antes de iniciar el servicio</span>
                     </label>
                     <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
-                      <input type="checkbox" id="chkCondiciones" style="margin-top:2px;accent-color:${C.gold};" />
-                      <span style="color:${C.sub};font-size:12px;line-height:1.5;">Acepto íntegramente las condiciones y especificaciones del pliego</span>
+                      <input type="checkbox" id="chkCondiciones" style="margin-top:2px;accent-color:#1E3A8A;" />
+                      <span style="color:#64748B;font-size:12px;line-height:1.5;">Acepto íntegramente las condiciones y especificaciones del pliego</span>
                     </label>
                     <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-                      <input type="checkbox" id="chkPenalidades" style="margin-top:2px;accent-color:${C.gold};" />
-                      <span style="color:${C.sub};font-size:12px;line-height:1.5;">Acepto penalidades por incumplimiento (mínimo 10% del valor anual)</span>
+                      <input type="checkbox" id="chkPenalidades" style="margin-top:2px;accent-color:#1E3A8A;" />
+                      <span style="color:#64748B;font-size:12px;line-height:1.5;">Acepto penalidades por incumplimiento (mínimo 10% del valor anual)</span>
                     </label>
                   </div>
                   <p id="modalErr" style="color:${C.red};font-size:13px;margin:0;display:none;"></p>
                   <div style="display:flex;gap:10px;justify-content:flex-end;">
-                    <button id="modalCancelBtn" style="background:${C.bgPanel};border:1px solid ${C.border};color:${C.sub};border-radius:8px;padding:10px 20px;cursor:pointer;font-size:14px;">Cancelar</button>
-                    <button id="modalSubmitBtn" style="background:${C.gold};border:none;color:#000;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:14px;font-weight:700;">Enviar propuesta →</button>
+                    <button id="modalCancelBtn" style="background:#F8FAFC;border:1px solid #E2E8F0;color:#64748B;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:14px;">Cancelar</button>
+                    <button id="modalSubmitBtn" style="background:#1E3A8A;border:none;color:#fff;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:14px;font-weight:700;">Enviar propuesta →</button>
                   </div>
                 </div>
               </div>
@@ -835,8 +846,8 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                 if (!r.ok) { err.textContent = data.error || "Error al enviar"; err.style.display="block"; btn2.textContent = "Enviar propuesta →"; btn2.disabled = false; return; }
                 overlay.remove();
                 var successDiv = document.createElement("div");
-                successDiv.style.cssText = "position:fixed;top:24px;right:24px;z-index:9999;background:${C.bgCard};border:1px solid ${C.green};border-left:4px solid ${C.green};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);";
-                successDiv.innerHTML = '<span style="color:${C.green};font-size:18px;">✓</span><p style="color:${C.text};font-size:14px;margin:0;">¡Propuesta enviada! El administrador te contactará pronto.</p>';
+                successDiv.style.cssText = "position:fixed;top:24px;right:24px;z-index:9999;background:#fff;border:1px solid ${C.green};border-left:4px solid ${C.green};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);";
+                successDiv.innerHTML = '<span style="color:${C.green};font-size:18px;">✓</span><p style="color:#0F172A;font-size:14px;margin:0;">¡Propuesta enviada! El administrador te contactará pronto.</p>';
                 document.body.appendChild(successDiv);
                 setTimeout(function() { successDiv.remove(); }, 5000);
               } catch(ex) {

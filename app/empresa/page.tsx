@@ -16,22 +16,27 @@ interface Notificacion {
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
-  bg:        "#07090F",
-  bgCard:    "#0D1117",
-  bgPanel:   "#111827",
-  border:    "#1F2937",
-  borderHov: "#374151",
-  blue:      "#4A9EFF",
-  blueDim:   "#1D3557",
-  gold:      "#C9A84C",
-  goldDim:   "#2D2310",
-  green:     "#4ADE80",
-  greenDim:  "#052E16",
-  red:       "#F87171",
-  redDim:    "#2D0A0A",
-  text:      "#F0F4FF",
-  muted:     "#6B7280",
-  sub:       "#9CA3AF",
+  bg:        "#FFFFFF",
+  bgCard:    "#FFFFFF",
+  bgPanel:   "#F8FAFC",
+  border:    "#E2E8F0",
+  borderHov: "#CBD5E1",
+  blue:      "#3B82F6",
+  blueDim:   "#EFF6FF",
+  // accent = azul marino — acción principal empresa
+  accent:    "#1E3A8A",
+  accentSoft: "#EFF6FF",
+  gold:      "#1E3A8A",    // compat alias
+  goldDim:   "#EFF6FF",   // compat alias
+  green:     "#10B981",
+  greenDim:  "#ECFDF5",
+  red:       "#EF4444",
+  redDim:    "#FEF2F2",
+  warning:   "#F59E0B",
+  text:      "#0F172A",
+  text2:     "#475569",
+  muted:     "#94A3B8",
+  sub:       "#64748B",
 };
 
 type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "documentos";
@@ -778,7 +783,7 @@ function ModalAceptarContrato({
               disabled={sending || !todosChecked}
               style={{
                 background: todosChecked ? C.green : C.border,
-                border: "none", color: todosChecked ? "#000" : C.muted,
+                border: "none", color: todosChecked ? "#fff" : C.muted,
                 borderRadius: 8, padding: "10px 24px",
                 cursor: sending || !todosChecked ? "not-allowed" : "pointer",
                 fontSize: 14, fontWeight: 600, opacity: sending ? 0.7 : 1,
@@ -1019,7 +1024,7 @@ function ModalPostular({
                 setErr("");
                 setFase(2);
               }}
-                style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "11px 28px", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                style={{ background: C.gold, border: "none", color: "#fff", borderRadius: 9, padding: "11px 28px", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
                 Siguiente →
               </button>
             </div>
@@ -1592,7 +1597,7 @@ export default function EmpresaDashboard() {
               </p>
               <button
                 onClick={() => setTab("documentos")}
-                style={{ marginTop: 8, background: C.gold, border: "none", color: "#000", borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", width: "100%" }}
+                style={{ marginTop: 8, background: C.gold, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", width: "100%" }}
               >
                 Subir documentos →
               </button>
@@ -1618,7 +1623,7 @@ export default function EmpresaDashboard() {
                 <span style={{ fontSize: 16 }}>{t.icon}</span>
                 {t.label}
                 {t.id === "documentos" && !docCompleto && (
-                  <span style={{ marginLeft: "auto", background: C.gold, color: "#000", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ marginLeft: "auto", background: C.gold, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     !
                   </span>
                 )}
@@ -2271,7 +2276,7 @@ export default function EmpresaDashboard() {
                     setEnviandoReview(false);
                   }
                 }}
-                style={{ background: C.gold, border: "none", color: "#07090F", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
+                style={{ background: C.gold, border: "none", color: "#fff", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
               >
                 {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
               </button>

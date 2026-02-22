@@ -497,15 +497,15 @@ export default function PHDashboard() {
   const nombrePH = ph?.nombre || user?.user_metadata?.nombre_completo || "Mi PH";
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#07090F", display: "flex", alignItems: "center", justifyContent: "center", color: "#C9A84C", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+    <div style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E3A8A", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
       Cargando...
     </div>
   );
 
   if (!user) return (
-    <div style={{ minHeight: "100vh", background: "#07090F", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, fontFamily: "Inter, sans-serif" }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color: "#F0F4FF" }}>Acceso restringido</div>
-      <a href="/" style={{ color: "#C9A84C", fontSize: 13, textDecoration: "none" }}>← Volver al inicio</a>
+    <div style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, fontFamily: "Inter, sans-serif" }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#0F172A" }}>Acceso restringido</div>
+      <a href="/" style={{ color: "#1E3A8A", fontSize: 13, textDecoration: "none" }}>← Volver al inicio</a>
     </div>
   );
 
@@ -515,10 +515,11 @@ export default function PHDashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         :root {
-          --bg:#07090F; --bg2:#0D1117; --bg3:#131920;
-          --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
-          --text:#F0F4FF; --text2:#8896AA; --text3:#3D4A5C;
-          --gold:#C9A84C; --gold2:#E8C96A; --blue:#4A9EFF; --green:#4ADE80; --red:#F87171;
+          --bg:#FFFFFF; --bg2:#F8FAFC; --bg3:#F1F5F9;
+          --border:#E2E8F0; --border2:#CBD5E1;
+          --text:#0F172A; --text2:#475569; --text3:#94A3B8;
+          --gold:#1E3A8A; --gold2:#1D4ED8; --blue:#3B82F6; --green:#10B981; --red:#EF4444;
+          --accent:#1E3A8A; --accent-soft:#EFF6FF;
         }
         body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
@@ -535,13 +536,13 @@ export default function PHDashboard() {
         .sb-badge { font-size:8px; background:var(--gold); color:var(--bg); padding:2px 5px; border-radius:3px; font-family:'DM Mono',monospace; letter-spacing:1px; vertical-align:middle; margin-left:4px; }
         .sb-sub { font-size:10px; color:var(--text3); margin-top:3px; }
         .sb-user { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
-        .sb-avatar { width:32px; height:32px; border-radius:50%; background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.3); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--gold); font-family:'Plus Jakarta Sans',sans-serif; flex-shrink:0; }
+        .sb-avatar { width:32px; height:32px; border-radius:50%; background:var(--accent-soft); border:1px solid rgba(30,58,138,0.2); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--accent); font-family:'Plus Jakarta Sans',sans-serif; flex-shrink:0; }
         .sb-name { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .sb-role { font-size:10px; color:var(--text3); margin-top:1px; }
         .sb-nav { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
         .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; color:var(--text2); border:none; background:none; width:100%; text-align:left; font-family:'Inter',sans-serif; }
-        .nav-item:hover { color:var(--text); background:rgba(255,255,255,0.04); }
-        .nav-item.active { color:var(--gold); background:rgba(201,168,76,0.08); }
+        .nav-item:hover { color:var(--text); background:rgba(30,58,138,0.06); }
+        .nav-item.active { color:var(--accent); background:var(--accent-soft); }
         .nav-icon { font-size:15px; width:20px; text-align:center; }
         .nav-pill { margin-left:auto; background:var(--gold); color:var(--bg); font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; font-family:'DM Mono',monospace; }
         .nav-pill-red { background:var(--red); }
@@ -550,14 +551,14 @@ export default function PHDashboard() {
         /* NOTIFICACIONES */
         .notif-bell-wrap { position:relative; padding:8px 10px; }
         .notif-bell-btn { width:100%; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; color:var(--text2); border:none; background:none; text-align:left; font-family:'Inter',sans-serif; }
-        .notif-bell-btn:hover { color:var(--text); background:rgba(255,255,255,0.04); }
+        .notif-bell-btn:hover { color:var(--text); background:rgba(30,58,138,0.06); }
         .notif-badge { background:var(--red); color:#fff; font-size:9px; font-weight:700; min-width:16px; height:16px; border-radius:8px; padding:0 4px; display:flex; align-items:center; justify-content:center; margin-left:auto; }
-        .notif-panel { position:fixed; left:248px; top:60px; width:340px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.8); z-index:999; overflow:hidden; animation:fadeUp .2s ease; max-height:80vh; overflow-y:auto; }
+        .notif-panel { position:fixed; left:248px; top:60px; width:340px; background:var(--bg); border:1px solid var(--border2); border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,.12); z-index:999; overflow:hidden; animation:fadeUp .2s ease; max-height:80vh; overflow-y:auto; }
         .notif-panel-head { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
         .notif-panel-title { font-size:13px; font-weight:700; color:var(--text); }
         .notif-item { padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
-        .notif-item:hover { background:rgba(255,255,255,0.03); }
-        .notif-item.unread { border-left:3px solid var(--gold); }
+        .notif-item:hover { background:var(--bg2); }
+        .notif-item.unread { border-left:3px solid var(--accent); }
         .notif-item.read { border-left:3px solid transparent; opacity:.65; }
         .notif-item-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:3px; }
         .notif-item-msg { font-size:11px; color:var(--text2); }
@@ -588,30 +589,30 @@ export default function PHDashboard() {
         .tbl th { padding:10px 16px; text-align:left; font-size:10px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border); }
         .tbl td { padding:13px 16px; font-size:13px; color:var(--text2); border-bottom:1px solid var(--border); vertical-align:middle; }
         .tbl tr:last-child td { border-bottom:none; }
-        .tbl tr:hover td { background:rgba(255,255,255,0.015); }
+        .tbl tr:hover td { background:var(--bg2); }
         .td-main { color:var(--text) !important; font-weight:500; }
         .td-mono { font-family:'DM Mono',monospace; font-size:12px !important; }
 
         /* BADGES */
         .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:5px; font-size:11px; font-weight:600; }
         .b-green { background:rgba(74,222,128,0.1); color:var(--green); border:1px solid rgba(74,222,128,0.2); }
-        .b-gold { background:rgba(201,168,76,0.1); color:var(--gold); border:1px solid rgba(201,168,76,0.2); }
+        .b-gold { background:var(--accent-soft); color:var(--accent); border:1px solid rgba(30,58,138,0.2); }
         .b-blue { background:rgba(74,158,255,0.1); color:var(--blue); border:1px solid rgba(74,158,255,0.2); }
         .b-yellow { background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.2); }
         .b-red { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
-        .b-gray { background:rgba(255,255,255,0.05); color:var(--text3); border:1px solid var(--border); }
+        .b-gray { background:var(--bg2); color:var(--text3); border:1px solid var(--border); }
         .b-urgent { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); font-size:9px; padding:2px 6px; margin-left:6px; letter-spacing:0.5px; }
         .b-orange { background:rgba(249,115,22,0.1); color:#F97316; border:1px solid rgba(249,115,22,0.2); }
 
         /* BUTTONS */
         .btn { padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; border:none; display:inline-flex; align-items:center; gap:5px; }
-        .btn-gold { background:var(--gold); color:#07090F; }
+        .btn-gold { background:var(--accent); color:#fff; }
         .btn-gold:hover { background:var(--gold2); transform:translateY(-1px); }
-        .btn-blue { background:var(--blue); color:#07090F; }
-        .btn-blue:hover { background:#6DB3FF; }
-        .btn-green { background:var(--green); color:#07090F; }
+        .btn-blue { background:var(--blue); color:#fff; }
+        .btn-blue:hover { background:#2563EB; }
+        .btn-green { background:var(--green); color:#fff; }
         .btn-ghost { background:transparent; border:1px solid var(--border2); color:var(--text2); }
-        .btn-ghost:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+        .btn-ghost:hover { color:var(--text); border-color:var(--border2); background:var(--bg2); }
         .btn-red { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
 
         /* SCORE */
@@ -622,12 +623,12 @@ export default function PHDashboard() {
 
         /* PROPUESTAS */
         .prop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr)); gap:14px; padding:20px; }
-        .prop-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:18px; position:relative; transition:all 0.2s; }
-        .prop-card:hover { border-color:var(--border2); transform:translateY(-2px); }
-        .prop-card.recomendada { border-color:rgba(201,168,76,0.35); background:rgba(201,168,76,0.03); }
-        .prop-card.recomendada::before { content:'⭐ IA RECOMIENDA'; position:absolute; top:-1px; left:50%; transform:translateX(-50%); background:var(--gold); color:var(--bg); font-size:9px; font-weight:700; padding:3px 10px; border-radius:0 0 6px 6px; letter-spacing:1px; font-family:'DM Mono',monospace; white-space:nowrap; }
+        .prop-card { background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:18px; position:relative; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+        .prop-card:hover { border-color:var(--border2); transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.08); }
+        .prop-card.recomendada { border-color:rgba(30,58,138,0.3); background:var(--accent-soft); }
+        .prop-card.recomendada::before { content:'⭐ IA RECOMIENDA'; position:absolute; top:-1px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; font-size:9px; font-weight:700; padding:3px 10px; border-radius:0 0 6px 6px; letter-spacing:1px; font-family:'DM Mono',monospace; white-space:nowrap; }
         .prop-empresa { font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; margin-bottom:4px; margin-top:8px; }
-        .prop-monto { font-family:'DM Mono',monospace; font-size:18px; font-weight:700; color:var(--gold); margin-bottom:12px; }
+        .prop-monto { font-family:'DM Mono',monospace; font-size:18px; font-weight:700; color:var(--accent); margin-bottom:12px; }
         .prop-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }
         .prop-row-label { color:var(--text3); }
         .prop-row-val { color:var(--text); font-weight:500; }
@@ -638,32 +639,32 @@ export default function PHDashboard() {
         .lic-tabs { display:flex; gap:6px; padding:14px 20px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
         .lic-tab { padding:6px 14px; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; border:1px solid var(--border); background:transparent; color:var(--text2); display:flex; align-items:center; gap:6px; }
         .lic-tab:hover { color:var(--text); border-color:var(--border2); }
-        .lic-tab.active { background:rgba(201,168,76,0.1); border-color:rgba(201,168,76,0.3); color:var(--gold); }
-        .lic-tab-count { background:rgba(255,255,255,0.08); color:var(--text2); font-size:10px; padding:1px 5px; border-radius:4px; font-family:'DM Mono',monospace; }
+        .lic-tab.active { background:var(--accent-soft); border-color:rgba(30,58,138,0.25); color:var(--accent); }
+        .lic-tab-count { background:var(--bg3); color:var(--text2); font-size:10px; padding:1px 5px; border-radius:4px; font-family:'DM Mono',monospace; }
 
         /* ALERTA */
         .alert-banner { background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.15); border-radius:10px; padding:14px 18px; margin-bottom:16px; display:flex; align-items:center; gap:14px; font-size:13px; }
 
         /* MODAL */
         .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:20px; }
-        .modal { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:28px; width:560px; max-width:100%; position:relative; max-height:90vh; overflow-y:auto; }
-        .modal::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent); border-radius:18px 18px 0 0; }
+        .modal { background:var(--bg); border:1px solid var(--border); border-radius:18px; padding:28px; width:560px; max-width:100%; position:relative; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+        .modal::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--accent),var(--blue)); border-radius:18px 18px 0 0; }
         .modal-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:700; margin-bottom:6px; }
         .modal-sub { font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.6; }
         .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
 
         /* FORM INPUTS */
         .form-label { font-size:12px; color:var(--text2); margin-bottom:5px; display:block; font-weight:500; }
-        .form-input { width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; }
-        .form-input:focus { border-color:rgba(201,168,76,0.4); }
-        .form-select { width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; cursor:pointer; appearance:none; }
-        .form-textarea { width:100%; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; resize:vertical; }
+        .form-input { width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; }
+        .form-input:focus { border-color:rgba(30,58,138,0.4); background:var(--accent-soft); }
+        .form-select { width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; cursor:pointer; appearance:none; }
+        .form-textarea { width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:7px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif; outline:none; resize:vertical; }
         .form-row { margin-bottom:14px; }
 
         /* NOTIF */
         .notif { position:fixed; top:20px; right:20px; z-index:500; max-width:380px; padding:14px 18px; border-radius:10px; font-size:13px; font-weight:500; animation:fadeUp 0.3s ease both; }
-        .notif-ok { background:rgba(74,222,128,0.12); border:1px solid rgba(74,222,128,0.3); color:var(--green); }
-        .notif-err { background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.3); color:var(--red); }
+        .notif-ok { background:#ECFDF5; border:1px solid rgba(16,185,129,0.3); color:var(--green); box-shadow:0 4px 16px rgba(0,0,0,.1); }
+        .notif-err { background:#FEF2F2; border:1px solid rgba(239,68,68,0.3); color:var(--red); box-shadow:0 4px 16px rgba(0,0,0,.1); }
 
         /* EMPTY STATE */
         .empty { padding:48px 20px; text-align:center; }
@@ -673,17 +674,17 @@ export default function PHDashboard() {
 
         /* REPORTE */
         .rep-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:20px; }
-        .rep-stat { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+        .rep-stat { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.04); }
         .rep-val { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
         .rep-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; }
 
         /* SECTION DIVIDER */
-        .modal-section { border-top:1px solid rgba(255,255,255,0.07); padding-top:18px; margin-top:18px; }
+        .modal-section { border-top:1px solid var(--border); padding-top:18px; margin-top:18px; }
         .modal-section-title { font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px; }
         .modal-section-sub { font-size:11px; color:var(--text3); margin-bottom:14px; }
 
         /* HAMBURGER */
-        .hamburger { display:none; position:fixed; top:12px; left:12px; z-index:200; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:8px 10px; cursor:pointer; font-size:18px; line-height:1; color:var(--text); }
+        .hamburger { display:none; position:fixed; top:12px; left:12px; z-index:200; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; cursor:pointer; font-size:18px; line-height:1; color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.1); }
         .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:150; }
         .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 
@@ -838,7 +839,7 @@ export default function PHDashboard() {
           </div>
 
           <div className="sb-bottom">
-            <a href="/ph/nueva-licitacion" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#07090F", background: "var(--gold)", textDecoration: "none", marginBottom: 6 }}>
+            <a href="/ph/nueva-licitacion" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff", background: "var(--accent)", textDecoration: "none", marginBottom: 6 }}>
               <span>➕</span> Nueva licitación
             </a>
             <button className="nav-item" onClick={() => { supabase.auth.signOut(); window.location.href = "/"; }}>
@@ -1100,11 +1101,11 @@ export default function PHDashboard() {
                       Las propuestas solo son visibles luego de que cierre el período de recepción.
                       Esto garantiza un proceso justo y transparente.
                     </div>
-                    <div style={{ marginTop: 20, display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 10, padding: "12px 20px" }}>
+                    <div style={{ marginTop: 20, display: "inline-flex", alignItems: "center", gap: 10, background: "var(--accent-soft)", border: "1px solid rgba(30,58,138,0.2)", borderRadius: 10, padding: "12px 20px" }}>
                       <span style={{ fontSize: 18 }}>📅</span>
                       <div>
                         <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 2 }}>FECHA DE CIERRE</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--gold)", fontFamily: "'DM Mono',monospace" }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--accent)", fontFamily: "'DM Mono',monospace" }}>
                           {new Date(propuestasBloqueadas.fecha_cierre).toLocaleString("es-PA", { dateStyle: "full", timeStyle: "short" })}
                         </div>
                       </div>
@@ -1121,7 +1122,7 @@ export default function PHDashboard() {
                   </div>
                 ) : (
                   <>
-                    <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: "rgba(201,168,76,0.02)", fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: "var(--bg2)", fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 14 }}>🤖</span>
                       La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (35)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (25)</strong> · <strong style={{ color: "var(--text)" }}>propuesta técnica (25)</strong> · <strong style={{ color: "var(--text)" }}>documentación (10)</strong> · <strong style={{ color: "var(--text)" }}>reputación (5)</strong>
                     </div>
@@ -1473,9 +1474,9 @@ export default function PHDashboard() {
                     onClick={() => { setHistorialCat(cat); cargarHistorial(cat); }}
                     style={{
                       padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 500,
-                      border: historialCat === cat ? "1px solid rgba(201,168,76,0.4)" : "1px solid var(--border)",
-                      background: historialCat === cat ? "rgba(201,168,76,0.1)" : "transparent",
-                      color: historialCat === cat ? "var(--gold)" : "var(--text2)",
+                      border: historialCat === cat ? "1px solid rgba(30,58,138,0.3)" : "1px solid var(--border)",
+                      background: historialCat === cat ? "var(--accent-soft)" : "transparent",
+                      color: historialCat === cat ? "var(--accent)" : "var(--text2)",
                       cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all 0.15s",
                     }}
                   >
@@ -1500,11 +1501,11 @@ export default function PHDashboard() {
                 </div>
               ) : (
                 <>
-                  <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 12, padding: "14px 20px", marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ background: "var(--accent-soft)", border: "1px solid rgba(30,58,138,0.15)", borderRadius: 12, padding: "14px 20px", marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
                     <span style={{ fontSize: 26 }}>📊</span>
                     <div>
                       <div style={{ fontSize: 13, color: "var(--text2)" }}>
-                        Basado en <strong style={{ color: "var(--gold)" }}>{historialData.total_adjudicaciones}</strong> adjudicaciones reales en la plataforma
+                        Basado en <strong style={{ color: "var(--accent)" }}>{historialData.total_adjudicaciones}</strong> adjudicaciones reales en la plataforma
                       </div>
                       <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>Precios anuales en USD. Referencia del mercado de Panamá.</div>
                     </div>
@@ -1583,9 +1584,9 @@ export default function PHDashboard() {
                         key={opt.id}
                         onClick={() => { setQaLicId(opt.id); cargarQa(opt.id); }}
                         style={{
-                          background: qaLicId === opt.id ? "rgba(201,168,76,0.12)" : "var(--bg2)",
-                          border: `1px solid ${qaLicId === opt.id ? "var(--gold)" : "var(--border)"}`,
-                          color: qaLicId === opt.id ? "var(--gold)" : "var(--text2)",
+                          background: qaLicId === opt.id ? "var(--accent-soft)" : "var(--bg2)",
+                          border: `1px solid ${qaLicId === opt.id ? "rgba(30,58,138,0.3)" : "var(--border)"}`,
+                          color: qaLicId === opt.id ? "var(--accent)" : "var(--text2)",
                           borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer",
                         }}
                       >{opt.titulo}</button>
@@ -1610,7 +1611,7 @@ export default function PHDashboard() {
                     return (
                       <div key={seccion}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: seccion === "pendiente" ? "var(--gold)" : "var(--green)" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: seccion === "pendiente" ? "var(--accent)" : "var(--green)" }}>
                             {seccion === "pendiente" ? `⏳ Sin responder (${items.length})` : `✓ Respondidas (${items.length})`}
                           </span>
                           <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
@@ -1621,16 +1622,16 @@ export default function PHDashboard() {
                           return (
                             <div key={p.id} style={{
                               background: "var(--bg2)",
-                              border: `1px solid ${sinRespuesta ? "rgba(201,168,76,0.25)" : "var(--border)"}`,
+                              border: `1px solid ${sinRespuesta ? "rgba(30,58,138,0.2)" : "var(--border)"}`,
                               borderRadius: 12, padding: 20,
-                              boxShadow: sinRespuesta ? "0 0 0 1px rgba(201,168,76,0.08)" : "none",
+                              boxShadow: sinRespuesta ? "0 2px 8px rgba(30,58,138,0.06)" : "0 1px 3px rgba(0,0,0,.04)",
                             }}>
                               {/* Header */}
                               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
                                 <div style={{ flex: 1 }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                                     {sinRespuesta ? (
-                                      <span style={{ background: "rgba(201,168,76,0.12)", color: "var(--gold)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>PENDIENTE</span>
+                                      <span style={{ background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid rgba(30,58,138,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>PENDIENTE</span>
                                     ) : (
                                       <span style={{ background: "rgba(74,222,128,0.10)", color: "var(--green)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>RESPONDIDA</span>
                                     )}
@@ -1690,8 +1691,8 @@ export default function PHDashboard() {
                                     onClick={() => responderPregunta(p.id, p.licitacion_id, true)}
                                     disabled={guardandoQa === p.id || !(qaRespuesta[p.id] || "").trim()}
                                     style={{
-                                      background: (qaRespuesta[p.id] || "").trim() ? "var(--gold)" : "var(--border)",
-                                      color: (qaRespuesta[p.id] || "").trim() ? "#07090F" : "var(--text2)",
+                                      background: (qaRespuesta[p.id] || "").trim() ? "var(--accent)" : "var(--border)",
+                                      color: (qaRespuesta[p.id] || "").trim() ? "#fff" : "var(--text2)",
                                       border: "none", borderRadius: 7, padding: "7px 18px",
                                       fontSize: 12, fontWeight: 700, cursor: (qaRespuesta[p.id] || "").trim() ? "pointer" : "not-allowed",
                                     }}
@@ -1814,7 +1815,7 @@ export default function PHDashboard() {
                       <span style={{ marginLeft: 8, color: "var(--text3)", fontSize: 12 }}>Puntaje IA: <strong style={{ color: "var(--green)" }}>{p.puntaje_ia}</strong></span>
                     )}
                   </p>
-                  <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)", marginBottom: 4 }}>
+                  <div style={{ background: "var(--accent-soft)", border: "1px solid rgba(30,58,138,0.15)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)", marginBottom: 4 }}>
                     📄 Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
                   </div>
                   <div style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "var(--red)", marginTop: 8, display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -1920,7 +1921,7 @@ export default function PHDashboard() {
               >
                 {adjudicando ? (
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ width: 12, height: 12, border: "2px solid #07090F", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                    <span style={{ width: 12, height: 12, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                     Procesando...
                   </span>
                 ) : "✓ Confirmar adjudicación"}
@@ -1961,14 +1962,14 @@ export default function PHDashboard() {
               {modalEditar.fechas.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {modalEditar.fechas.map(f => (
-                    <div key={f} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "7px 12px" }}>
-                      <span style={{ fontSize: 13, color: "#F0F4FF" }}>
+                    <div key={f} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, padding: "7px 12px" }}>
+                      <span style={{ fontSize: 13, color: "var(--text)" }}>
                         {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                       </span>
                       <button
                         type="button"
                         onClick={() => quitarFechaInspeccion(f)}
-                        style={{ background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px" }}
+                        style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px" }}
                       >
                         ×
                       </button>
@@ -2010,7 +2011,7 @@ export default function PHDashboard() {
               <button className="btn btn-gold" disabled={guardandoEdicion} onClick={guardarEdicion}>
                 {guardandoEdicion ? (
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ width: 12, height: 12, border: "2px solid #07090F", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                    <span style={{ width: 12, height: 12, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                     Guardando...
                   </span>
                 ) : "💾 Guardar cambios"}
@@ -2023,18 +2024,18 @@ export default function PHDashboard() {
       {/* ── MODAL REVIEW ── */}
       {showReview && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: "#0D1117", border: "1px solid #1F2937", borderRadius: 16, width: "100%", maxWidth: 460, padding: 28 }}>
+          <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, width: "100%", maxWidth: 460, padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>
-                <p style={{ color: "#C9A84C", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Reseña de contrato</p>
-                <h3 style={{ color: "#F0F4FF", fontSize: 18, fontWeight: 700, margin: 0 }}>Califica el servicio prestado</h3>
+                <p style={{ color: "#1E3A8A", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Reseña de contrato</p>
+                <h3 style={{ color: "#0F172A", fontSize: 18, fontWeight: 700, margin: 0 }}>Califica el servicio prestado</h3>
               </div>
-              <button onClick={() => setShowReview(null)} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", fontSize: 22 }}>×</button>
+              <button onClick={() => setShowReview(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", fontSize: 22 }}>×</button>
             </div>
 
             {/* Estrellas */}
             <div style={{ marginBottom: 20 }}>
-              <p style={{ color: "#9CA3AF", fontSize: 13, margin: "0 0 10px" }}>Puntaje general</p>
+              <p style={{ color: "#64748B", fontSize: 13, margin: "0 0 10px" }}>Puntaje general</p>
               <div style={{ display: "flex", gap: 8 }}>
                 {[1, 2, 3, 4, 5].map(n => (
                   <button
@@ -2045,19 +2046,19 @@ export default function PHDashboard() {
                     ⭐
                   </button>
                 ))}
-                <span style={{ color: "#F0F4FF", fontSize: 14, fontWeight: 700, alignSelf: "center", marginLeft: 4 }}>{reviewPuntaje}/5</span>
+                <span style={{ color: "#0F172A", fontSize: 14, fontWeight: 700, alignSelf: "center", marginLeft: 4 }}>{reviewPuntaje}/5</span>
               </div>
             </div>
 
             {/* Comentario */}
             <div style={{ marginBottom: 20 }}>
-              <p style={{ color: "#9CA3AF", fontSize: 13, margin: "0 0 8px" }}>Comentario (opcional)</p>
+              <p style={{ color: "#64748B", fontSize: 13, margin: "0 0 8px" }}>Comentario (opcional)</p>
               <textarea
                 rows={4}
                 value={reviewComentario}
                 onChange={e => setReviewComentario(e.target.value)}
                 placeholder="Describe la calidad del servicio, puntualidad, profesionalismo..."
-                style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 8, padding: "10px 14px", color: "#F0F4FF", fontSize: 13, outline: "none", width: "100%", resize: "vertical" }}
+                style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 14px", color: "#0F172A", fontSize: 13, outline: "none", width: "100%", resize: "vertical" }}
               />
             </div>
 
@@ -2082,11 +2083,11 @@ export default function PHDashboard() {
                     setEnviandoReview(false);
                   }
                 }}
-                style={{ background: "#C9A84C", border: "none", color: "#07090F", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
+                style={{ background: "#1E3A8A", border: "none", color: "#fff", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
               >
                 {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
               </button>
-              <button onClick={() => setShowReview(null)} style={{ background: "#111827", border: "1px solid #1F2937", color: "#6B7280", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
+              <button onClick={() => setShowReview(null)} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
                 Cancelar
               </button>
             </div>
@@ -2155,7 +2156,7 @@ export default function PHDashboard() {
               <button
                 onClick={agregarCopropietario}
                 disabled={savingCoprop || !newCoprop.email.trim()}
-                style={{ background: "var(--gold)", border: "none", color: "#07090F", borderRadius: 8, padding: "10px 24px", cursor: savingCoprop ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: savingCoprop || !newCoprop.email.trim() ? 0.6 : 1 }}
+                style={{ background: "var(--accent)", border: "none", color: "#fff", borderRadius: 8, padding: "10px 24px", cursor: savingCoprop ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: savingCoprop || !newCoprop.email.trim() ? 0.6 : 1 }}
               >
                 {savingCoprop ? "Guardando..." : "Agregar copropietario"}
               </button>
@@ -2196,13 +2197,13 @@ export default function PHDashboard() {
                     <div
                       key={p.id}
                       style={{
-                        background: isRecomendada ? "rgba(201,168,76,0.05)" : "var(--bg3)",
-                        border: isRecomendada ? "1px solid rgba(201,168,76,0.3)" : "1px solid var(--border)",
+                        background: isRecomendada ? "var(--accent-soft)" : "var(--bg2)",
+                        border: isRecomendada ? "1px solid rgba(30,58,138,0.25)" : "1px solid var(--border)",
                         borderRadius: 12, padding: 18,
                       }}
                     >
                       {isRecomendada && (
-                        <div style={{ fontSize: 9, color: "var(--bg)", background: "var(--gold)", padding: "2px 8px", borderRadius: 4, fontWeight: 700, letterSpacing: 1, display: "inline-block", marginBottom: 10, fontFamily: "'DM Mono',monospace" }}>
+                        <div style={{ fontSize: 9, color: "#fff", background: "var(--accent)", padding: "2px 8px", borderRadius: 4, fontWeight: 700, letterSpacing: 1, display: "inline-block", marginBottom: 10, fontFamily: "'DM Mono',monospace" }}>
                           MAYOR PUNTAJE
                         </div>
                       )}

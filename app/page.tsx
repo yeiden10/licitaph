@@ -5,19 +5,27 @@ import { createClient } from "@/lib/supabase/client";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
-  bg:      "#07090F",
-  bg2:     "#0D1117",
-  bg3:     "#111827",
-  border:  "rgba(255,255,255,0.07)",
-  border2: "rgba(255,255,255,0.12)",
-  text:    "#F0F4FF",
-  text2:   "#8896AA",
-  text3:   "#3D4A5C",
-  gold:    "#C9A84C",
-  goldL:   "#E8C96A",
-  blue:    "#4A9EFF",
-  green:   "#4ADE80",
-  red:     "#F87171",
+  bg:          "#FFFFFF",
+  bg2:         "#F8FAFC",
+  bg3:         "#F1F5F9",
+  border:      "#E2E8F0",
+  border2:     "#CBD5E1",
+  text:        "#0F172A",
+  text2:       "#475569",
+  text3:       "#94A3B8",
+  accent:      "#1E3A8A",
+  accentMid:   "#1D4ED8",
+  accentSoft:  "#EFF6FF",
+  blue:        "#3B82F6",
+  blueSoft:    "#EFF6FF",
+  green:       "#10B981",
+  greenSoft:   "#ECFDF5",
+  red:         "#EF4444",
+  redSoft:     "#FEF2F2",
+  warning:     "#F59E0B",
+  warningSoft: "#FFFBEB",
+  // Marca — solo logo y BETA badge
+  gold: "#C9A84C",
 };
 
 // ── Servicios PH ──────────────────────────────────────────────────────────────
@@ -41,7 +49,7 @@ const SERVICIOS_PH = [
 
 // ── Testimonios ───────────────────────────────────────────────────────────────
 const TESTIMONIOS = [
-  { quote: "Antes tardábamos 3 semanas en conseguir cotizaciones. Con LicitaPH tuvimos 5 propuestas comparables en 48 horas, todas con documentos verificados.", name: "María González", role: "Administradora · PH Costa del Este", color: C.gold, initial: "M" },
+  { quote: "Antes tardábamos 3 semanas en conseguir cotizaciones. Con LicitaPH tuvimos 5 propuestas comparables en 48 horas, todas con documentos verificados.", name: "María González", role: "Administradora · PH Costa del Este", color: C.accent, initial: "M" },
   { quote: "Ganamos 2 contratos el primer mes. El proceso es transparente — si no ganamos, sabemos exactamente por qué. Eso nos hace mejorar.", name: "Carlos Ramos", role: "Director · SecuroPanamá S.A.", color: C.blue, initial: "C" },
   { quote: "En la asamblea presenté el reporte de LicitaPH y los copropietarios quedaron sin preguntas. Por fin todos ven exactamente en qué se gasta la cuota.", name: "Ana Díaz", role: "Copropietaria · PH Punta Pacífica", color: C.green, initial: "A" },
 ];
@@ -179,105 +187,104 @@ export default function Home() {
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         html { scroll-behavior: smooth; }
         body { background:${C.bg}; color:${C.text}; font-family:'Inter',sans-serif; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
-        ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:${C.bg}; } ::-webkit-scrollbar-thumb { background:${C.bg3}; border-radius:3px; }
+        ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:${C.bg}; } ::-webkit-scrollbar-thumb { background:${C.border2}; border-radius:3px; }
 
-        @keyframes fadeUp   { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeUp   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
         @keyframes spin     { to{transform:rotate(360deg)} }
-        @keyframes pulse    { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.8;transform:scale(1.06)} }
+        @keyframes pulse    { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
         @keyframes ticker   { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-        @keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes shimmer  { 0%{background-position:-200% center} 100%{background-position:200% center} }
+        @keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
 
-        /* ── BG ── */
+        /* ── BG SUTIL ── */
         .bg-mesh { position:fixed; inset:0; pointer-events:none; z-index:0;
-          background-image:
-            radial-gradient(ellipse 70% 55% at 65% -5%, rgba(201,168,76,.08) 0%, transparent 60%),
-            radial-gradient(ellipse 55% 45% at -5% 85%, rgba(74,158,255,.05) 0%, transparent 55%); }
+          background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(30,58,138,.04) 0%, transparent 65%); }
         .bg-grid { position:fixed; inset:0; pointer-events:none; z-index:0;
-          background-image: linear-gradient(rgba(255,255,255,.016) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255,255,255,.016) 1px, transparent 1px);
-          background-size:60px 60px;
-          mask-image:radial-gradient(ellipse 100% 90% at 50% 0%, black 20%, transparent 75%); }
+          background-image: linear-gradient(${C.border} 1px, transparent 1px),
+                            linear-gradient(90deg, ${C.border} 1px, transparent 1px);
+          background-size:64px 64px; opacity:.35;
+          mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 10%, transparent 70%); }
 
         /* ── NAV ── */
-        .nav { position:fixed; top:0; left:0; right:0; z-index:300; height:62px;
-          padding:0 clamp(18px,5vw,64px); display:flex; align-items:center; justify-content:space-between; transition:all .3s; }
-        .nav.scrolled { background:rgba(7,9,15,.88); backdrop-filter:blur(24px) saturate(180%); border-bottom:1px solid ${C.border}; }
+        .nav { position:fixed; top:0; left:0; right:0; z-index:300; height:60px;
+          padding:0 clamp(18px,5vw,64px); display:flex; align-items:center; justify-content:space-between; transition:all .2s; }
+        .nav.scrolled { background:rgba(255,255,255,.93); backdrop-filter:blur(20px) saturate(180%); border-bottom:1px solid ${C.border}; box-shadow:0 1px 0 ${C.border}; }
         .nav-logo { font-family:'Plus Jakarta Sans',sans-serif; font-size:21px; font-weight:800;
           background:none; border:none; padding:0; cursor:pointer; display:flex; align-items:center; gap:5px; }
         .nav-links { display:flex; align-items:center; gap:28px; }
         .nav-link { background:none; border:none; color:${C.text2}; font-size:13.5px; font-weight:500;
-          cursor:pointer; font-family:'Inter',sans-serif; transition:color .18s; padding:0; }
+          cursor:pointer; font-family:'Inter',sans-serif; transition:color .15s; padding:0; }
         .nav-link:hover { color:${C.text}; }
         .btn-ghost { padding:8px 17px; border-radius:8px; background:transparent; border:1px solid ${C.border2};
-          color:${C.text2}; font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; }
-        .btn-ghost:hover { color:${C.text}; border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.04); }
-        .btn-gold { padding:8px 18px; border-radius:8px; background:${C.gold}; border:none;
-          color:#07090F; font-size:13px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
-        .btn-gold:hover { background:${C.goldL}; transform:translateY(-1px); box-shadow:0 8px 24px ${C.gold}38; }
+          color:${C.text2}; font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; }
+        .btn-ghost:hover { color:${C.text}; border-color:${C.text3}; background:${C.bg3}; }
+        .btn-primary { padding:8px 18px; border-radius:8px; background:${C.accent}; border:none;
+          color:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; }
+        .btn-primary:hover { background:${C.accentMid}; transform:translateY(-1px); box-shadow:0 4px 16px rgba(30,58,138,.22); }
 
         /* ── HERO ── */
         .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
           padding:100px clamp(18px,5vw,80px) 60px; position:relative; z-index:1; text-align:center; }
-        .hero-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 14px 6px 6px;
-          border-radius:100px; border:1px solid rgba(201,168,76,.25); background:rgba(201,168,76,.07);
-          font-size:12px; font-weight:600; color:${C.goldL}; margin-bottom:28px; animation:fadeUp .5s ease both; }
-        .pill-dot { width:6px; height:6px; border-radius:50%; background:${C.gold}; animation:pulse 2s ease-in-out infinite; flex-shrink:0; }
+        .hero-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 16px 6px 8px;
+          border-radius:100px; border:1px solid ${C.border2}; background:${C.bg2};
+          font-size:12px; font-weight:600; color:${C.accent}; margin-bottom:28px; animation:fadeUp .5s ease both; }
+        .pill-dot { width:6px; height:6px; border-radius:50%; background:${C.accent}; animation:pulse 2s ease-in-out infinite; flex-shrink:0; }
         .hero-h1 { font-family:'Plus Jakarta Sans',sans-serif;
-          font-size:clamp(40px,6.5vw,78px); font-weight:800; line-height:1.06;
-          letter-spacing:-2.5px; margin-bottom:22px; animation:fadeUp .55s ease .08s both; }
-        .hero-h1 em { font-style:normal; color:${C.gold}; }
-        .hero-sub { font-size:clamp(15px,1.6vw,18px); color:${C.text2}; line-height:1.75;
-          max-width:560px; margin:0 auto 36px; animation:fadeUp .55s ease .14s both; }
-        .hero-sub strong { color:${C.text}; }
+          font-size:clamp(38px,6vw,74px); font-weight:800; line-height:1.06;
+          letter-spacing:-2.5px; margin-bottom:22px; animation:fadeUp .5s ease .08s both; color:${C.text}; }
+        .hero-h1 em { font-style:normal; color:${C.accent}; }
+        .hero-sub { font-size:clamp(15px,1.6vw,18px); color:${C.text2}; line-height:1.8;
+          max-width:560px; margin:0 auto 36px; animation:fadeUp .5s ease .14s both; }
+        .hero-sub strong { color:${C.text}; font-weight:600; }
         .hero-ctas { display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
-          margin-bottom:56px; animation:fadeUp .55s ease .2s both; }
-        .cta-primary { padding:14px 30px; border-radius:10px; background:${C.gold}; border:none;
-          color:#07090F; font-size:15px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
-          display:flex; align-items:center; gap:8px; transition:all .22s; }
-        .cta-primary:hover { background:${C.goldL}; transform:translateY(-2px); box-shadow:0 14px 40px ${C.gold}38; }
-        .cta-secondary { padding:14px 26px; border-radius:10px; background:rgba(255,255,255,.04);
-          border:1px solid ${C.border2}; color:${C.text2}; font-size:15px; font-weight:500;
-          cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s;
+          margin-bottom:56px; animation:fadeUp .5s ease .2s both; }
+        .cta-primary { padding:14px 30px; border-radius:10px; background:${C.accent}; border:none;
+          color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+          display:flex; align-items:center; gap:8px; transition:all .2s; }
+        .cta-primary:hover { background:${C.accentMid}; transform:translateY(-2px); box-shadow:0 10px 32px rgba(30,58,138,.28); }
+        .cta-secondary { padding:14px 26px; border-radius:10px; background:${C.bg};
+          border:1.5px solid ${C.border2}; color:${C.text2}; font-size:15px; font-weight:500;
+          cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s;
           display:flex; align-items:center; gap:8px; }
-        .cta-secondary:hover { color:${C.text}; border-color:rgba(255,255,255,.2); }
+        .cta-secondary:hover { color:${C.text}; border-color:${C.text3}; background:${C.bg2}; }
 
         /* ── METRICS ── */
         .metrics { display:flex; border:1px solid ${C.border}; border-radius:16px;
-          background:rgba(255,255,255,.02); overflow:hidden; animation:fadeUp .55s ease .26s both; }
+          background:${C.bg}; overflow:hidden; animation:fadeUp .5s ease .26s both;
+          box-shadow:0 1px 4px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); }
         .metric { flex:1; padding:20px 28px; text-align:center; position:relative; }
         .metric:not(:last-child)::after { content:''; position:absolute; right:0; top:20%; bottom:20%; width:1px; background:${C.border}; }
-        .metric-n { font-family:'Plus Jakarta Sans',sans-serif; font-size:27px; font-weight:800; color:${C.gold}; line-height:1; }
+        .metric-n { font-family:'Plus Jakarta Sans',sans-serif; font-size:27px; font-weight:800; color:${C.accent}; line-height:1; }
         .metric-l { font-size:11px; color:${C.text3}; text-transform:uppercase; letter-spacing:1.5px; margin-top:5px; }
 
         /* ── TICKER ── */
-        .ticker-wrap { overflow:hidden; background:rgba(201,168,76,.04);
-          border-top:1px solid rgba(201,168,76,.1); border-bottom:1px solid rgba(201,168,76,.1);
+        .ticker-wrap { overflow:hidden; background:${C.bg3};
+          border-top:1px solid ${C.border}; border-bottom:1px solid ${C.border};
           padding:11px 0; position:relative; z-index:1; }
         .ticker-inner { display:flex; width:max-content; animation:ticker 32s linear infinite; }
         .ticker-item { display:flex; align-items:center; gap:10px; padding:0 28px; font-size:12px;
           font-weight:600; color:${C.text3}; text-transform:uppercase; letter-spacing:1.5px; white-space:nowrap; }
-        .ticker-sep { width:4px; height:4px; border-radius:50%; background:${C.gold}; opacity:.45; }
+        .ticker-sep { width:4px; height:4px; border-radius:50%; background:${C.accent}; opacity:.35; }
 
         /* ── SECTIONS ── */
         .section { position:relative; z-index:1; padding:88px clamp(18px,5vw,80px); max-width:1160px; margin:0 auto; }
         .section-label { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700;
-          letter-spacing:2.5px; text-transform:uppercase; color:${C.gold}; margin-bottom:14px; }
-        .section-label::before { content:''; display:block; width:18px; height:1.5px; background:${C.gold}; border-radius:2px; }
+          letter-spacing:2px; text-transform:uppercase; color:${C.accent}; margin-bottom:14px; }
+        .section-label::before { content:''; display:block; width:18px; height:2px; background:${C.accent}; border-radius:2px; }
         .section-h { font-family:'Plus Jakarta Sans',sans-serif; font-size:clamp(26px,3.2vw,44px);
-          font-weight:800; letter-spacing:-.9px; line-height:1.12; margin-bottom:16px; }
+          font-weight:800; letter-spacing:-.9px; line-height:1.12; margin-bottom:16px; color:${C.text}; }
         .section-p { font-size:16px; color:${C.text2}; line-height:1.75; max-width:560px; }
 
         /* ── PROBLEMA / SOLUCIÓN ── */
         .prob-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:52px; }
-        .prob-col { background:${C.bg2}; border-radius:22px; padding:34px; }
-        .prob-col.bad  { border:1px solid rgba(248,113,113,.2); }
-        .prob-col.good { border:1px solid rgba(74,222,128,.2); }
+        .prob-col { background:${C.bg}; border-radius:20px; padding:32px;
+          box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04); }
+        .prob-col.bad  { border-left:4px solid ${C.red}; border:1px solid ${C.redSoft}; border-left:4px solid ${C.red}; }
+        .prob-col.good { border-left:4px solid ${C.green}; border:1px solid ${C.greenSoft}; border-left:4px solid ${C.green}; }
         .col-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:100px;
           font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:22px; }
-        .col-tag.bad  { background:rgba(248,113,113,.1); color:${C.red}; border:1px solid rgba(248,113,113,.22); }
-        .col-tag.good { background:rgba(74,222,128,.08); color:${C.green}; border:1px solid rgba(74,222,128,.2); }
+        .col-tag.bad  { background:${C.redSoft}; color:${C.red}; border:1px solid rgba(239,68,68,.25); }
+        .col-tag.good { background:${C.greenSoft}; color:${C.green}; border:1px solid rgba(16,185,129,.25); }
         .prob-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:15px; }
         .prob-text { font-size:13.5px; line-height:1.65; color:${C.text2}; }
         .prob-text strong { color:${C.text}; display:block; margin-bottom:2px; font-size:13.5px; font-weight:600; }
@@ -285,123 +292,129 @@ export default function Home() {
         /* ── VIDEO ── */
         .video-wrap { position:relative; z-index:1; padding:0 clamp(18px,5vw,80px) 88px; }
         .video-inner-wrap { max-width:1160px; margin:0 auto; }
-        .video-box { position:relative; border-radius:22px; overflow:hidden; background:${C.bg2};
+        .video-box { position:relative; border-radius:20px; overflow:hidden; background:${C.bg3};
           border:1px solid ${C.border}; aspect-ratio:16/9;
-          display:flex; align-items:center; justify-content:center; cursor:pointer; transition:border-color .3s; }
-        .video-box:hover { border-color:rgba(201,168,76,.3); }
+          display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .25s;
+          box-shadow:0 4px 24px rgba(0,0,0,.06); }
+        .video-box:hover { border-color:${C.accentMid}; box-shadow:0 8px 40px rgba(30,58,138,.12); }
         .vbg { position:absolute; inset:0;
-          background:radial-gradient(ellipse 70% 60% at 50% 50%, rgba(201,168,76,.06) 0%, transparent 65%); }
+          background:radial-gradient(ellipse 60% 50% at 50% 50%, rgba(30,58,138,.04) 0%, transparent 65%); }
         .vgrid { position:absolute; inset:0;
-          background-image:linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
-                           linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
-          background-size:44px 44px; }
-        .play-btn { position:relative; z-index:2; width:82px; height:82px; border-radius:50%;
-          background:${C.gold}; border:none; display:flex; align-items:center; justify-content:center;
-          cursor:pointer; transition:all .25s; animation:float 3.5s ease-in-out infinite; }
-        .play-btn:hover { transform:scale(1.12); box-shadow:0 0 0 24px ${C.gold}14; animation:none; }
+          background-image:linear-gradient(${C.border} 1px, transparent 1px),
+                           linear-gradient(90deg, ${C.border} 1px, transparent 1px);
+          background-size:48px 48px; opacity:.5; }
+        .play-btn { position:relative; z-index:2; width:80px; height:80px; border-radius:50%;
+          background:${C.accent}; border:none; display:flex; align-items:center; justify-content:center;
+          cursor:pointer; transition:all .22s; animation:float 3.5s ease-in-out infinite;
+          box-shadow:0 8px 32px rgba(30,58,138,.3); }
+        .play-btn:hover { transform:scale(1.1); box-shadow:0 12px 48px rgba(30,58,138,.4); animation:none; }
         .video-label { position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
-          background:rgba(7,9,15,.82); backdrop-filter:blur(12px);
-          border:1px solid ${C.border2}; border-radius:100px; padding:8px 20px;
+          background:rgba(255,255,255,.92); backdrop-filter:blur(12px);
+          border:1px solid ${C.border}; border-radius:100px; padding:8px 20px;
           white-space:nowrap; font-size:13px; font-weight:500; color:${C.text2}; z-index:2; }
 
         /* ── STEPS ── */
         .steps-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:52px; }
-        .step-card { background:${C.bg2}; border:1px solid ${C.border}; border-radius:18px; padding:28px 22px;
-          position:relative; overflow:hidden; transition:all .25s; }
-        .step-card::before { content:attr(data-n); position:absolute; top:-14px; right:14px;
-          font-family:'Plus Jakarta Sans',sans-serif; font-size:90px; font-weight:800;
-          color:rgba(255,255,255,.025); line-height:1; pointer-events:none; }
-        .step-card:hover { border-color:rgba(255,255,255,.12); transform:translateY(-3px); }
-        .step-num { width:38px; height:38px; border-radius:50%; background:rgba(201,168,76,.1);
-          border:1px solid rgba(201,168,76,.28); display:flex; align-items:center; justify-content:center;
-          font-family:'DM Mono',monospace; font-size:12px; font-weight:500; color:${C.gold}; margin-bottom:18px; }
-        .step-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; margin-bottom:8px; }
+        .step-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:16px; padding:28px 22px;
+          position:relative; overflow:hidden; transition:all .2s;
+          box-shadow:0 1px 3px rgba(0,0,0,.05); }
+        .step-card::before { content:attr(data-n); position:absolute; top:-10px; right:14px;
+          font-family:'Plus Jakarta Sans',sans-serif; font-size:88px; font-weight:800;
+          color:rgba(30,58,138,.04); line-height:1; pointer-events:none; }
+        .step-card:hover { border-color:rgba(30,58,138,.2); transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,.08); }
+        .step-num { width:36px; height:36px; border-radius:50%; background:${C.accentSoft};
+          border:1px solid rgba(30,58,138,.18); display:flex; align-items:center; justify-content:center;
+          font-family:'DM Mono',monospace; font-size:12px; font-weight:600; color:${C.accent}; margin-bottom:18px; }
+        .step-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; margin-bottom:8px; color:${C.text}; }
         .step-desc  { font-size:13px; color:${C.text2}; line-height:1.7; }
 
         /* ── SERVICES GRID ── */
-        .svc-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:44px; }
-        .svc-card { background:${C.bg2}; border:1px solid ${C.border}; border-radius:14px;
-          padding:20px 14px; display:flex; flex-direction:column; align-items:center; gap:9px;
-          text-align:center; transition:all .2s; }
-        .svc-card:hover { border-color:rgba(201,168,76,.25); background:rgba(201,168,76,.04); transform:translateY(-2px); }
-        .svc-icon  { font-size:24px; }
+        .svc-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:44px; }
+        .svc-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:12px;
+          padding:18px 12px; display:flex; flex-direction:column; align-items:center; gap:9px;
+          text-align:center; transition:all .18s; }
+        .svc-card:hover { border-color:rgba(30,58,138,.2); background:${C.accentSoft}; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.06); }
+        .svc-icon  { font-size:22px; }
         .svc-label { font-size:11.5px; font-weight:500; color:${C.text2}; line-height:1.4; }
 
         /* ── PROFILES ── */
         .profiles-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:52px; }
-        .profile-card { background:${C.bg2}; border-radius:22px; padding:34px 28px;
-          display:flex; flex-direction:column; transition:all .25s; position:relative; overflow:hidden; }
-        .profile-card:hover { transform:translateY(-4px); }
-        .profile-accent { position:absolute; top:0; left:0; right:0; height:2px; }
-        .profile-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center;
-          justify-content:center; font-size:24px; margin-bottom:20px; }
-        .profile-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:700; margin-bottom:8px; }
-        .profile-sub   { font-size:13.5px; color:${C.text2}; line-height:1.7; margin-bottom:22px; }
-        .profile-bullets { list-style:none; display:flex; flex-direction:column; gap:9px; margin-bottom:26px; flex:1; }
+        .profile-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:20px; padding:32px 28px;
+          display:flex; flex-direction:column; transition:all .2s; position:relative; overflow:hidden;
+          box-shadow:0 1px 3px rgba(0,0,0,.05); }
+        .profile-card:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,.08); }
+        .profile-accent { position:absolute; top:0; left:0; right:0; height:3px; border-radius:20px 20px 0 0; }
+        .profile-icon { width:50px; height:50px; border-radius:12px; display:flex; align-items:center;
+          justify-content:center; font-size:22px; margin-bottom:18px; }
+        .profile-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:700; margin-bottom:8px; color:${C.text}; }
+        .profile-sub   { font-size:13.5px; color:${C.text2}; line-height:1.7; margin-bottom:20px; }
+        .profile-bullets { list-style:none; display:flex; flex-direction:column; gap:9px; margin-bottom:24px; flex:1; }
         .pbullet { display:flex; align-items:flex-start; gap:9px; font-size:13px; color:${C.text2}; }
-        .profile-cta { padding:11px 20px; border-radius:9px; border:1px solid; font-size:13px;
-          font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; text-align:center; }
+        .profile-cta { padding:10px 20px; border-radius:8px; border:1.5px solid; font-size:13px;
+          font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; text-align:center; }
 
         /* ── TESTIMONIALS ── */
-        .testi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:52px; }
-        .testi-card { background:${C.bg2}; border:1px solid ${C.border}; border-radius:18px;
-          padding:28px; display:flex; flex-direction:column; gap:18px; }
-        .testi-stars { color:${C.gold}; font-size:13px; letter-spacing:2px; }
-        .testi-quote { font-size:14px; color:${C.text2}; line-height:1.75; font-style:italic; flex:1; }
+        .testi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:52px; }
+        .testi-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:16px;
+          padding:26px; display:flex; flex-direction:column; gap:16px;
+          box-shadow:0 1px 3px rgba(0,0,0,.04); }
+        .testi-stars { color:${C.warning}; font-size:13px; letter-spacing:2px; }
+        .testi-quote { font-size:14px; color:${C.text2}; line-height:1.75; flex:1; }
         .testi-author { display:flex; align-items:center; gap:12px; }
         .t-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center;
-          justify-content:center; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; flex-shrink:0; }
-        .t-name { font-size:13px; font-weight:600; }
+          justify-content:center; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; flex-shrink:0; }
+        .t-name { font-size:13px; font-weight:600; color:${C.text}; }
         .t-role { font-size:11px; color:${C.text3}; margin-top:1px; }
 
         /* ── FAQ ── */
         .faq-wrap { display:grid; grid-template-columns:1fr 1.3fr; gap:60px; align-items:start; }
-        .faq-list { display:flex; flex-direction:column; gap:9px; }
-        .faq-item { background:${C.bg2}; border:1px solid ${C.border}; border-radius:14px; overflow:hidden; }
+        .faq-list { display:flex; flex-direction:column; gap:8px; }
+        .faq-item { background:${C.bg}; border:1px solid ${C.border}; border-radius:12px; overflow:hidden; }
         .faq-q { width:100%; display:flex; align-items:center; justify-content:space-between; gap:14px;
           padding:18px 22px; background:none; border:none; color:${C.text}; font-size:14.5px;
-          font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; text-align:left; transition:background .15s; }
-        .faq-q:hover { background:rgba(255,255,255,.02); }
-        .faq-chev { width:22px; height:22px; border-radius:50%; border:1px solid ${C.border2};
+          font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; text-align:left; transition:background .12s; }
+        .faq-q:hover { background:${C.bg2}; }
+        .faq-chev { width:22px; height:22px; border-radius:50%; border:1.5px solid ${C.border2};
           display:flex; align-items:center; justify-content:center; font-size:11px;
-          color:${C.text3}; flex-shrink:0; transition:transform .25s, color .2s, border-color .2s; }
-        .faq-chev.open { transform:rotate(180deg); color:${C.gold}; border-color:rgba(201,168,76,.3); }
+          color:${C.text3}; flex-shrink:0; transition:transform .22s, color .18s, border-color .18s; }
+        .faq-chev.open { transform:rotate(180deg); color:${C.accent}; border-color:rgba(30,58,138,.3); }
         .faq-a { padding:0 22px 18px; font-size:13.5px; color:${C.text2}; line-height:1.75; }
 
         /* ── CONTACT ── */
         .contact-grid { display:grid; grid-template-columns:1fr 1.25fr; gap:56px; margin-top:52px; align-items:start; }
         .contact-points { display:flex; flex-direction:column; gap:26px; }
         .cp { display:flex; align-items:flex-start; gap:16px; }
-        .cp-icon { width:44px; height:44px; border-radius:12px; background:rgba(201,168,76,.08);
-          border:1px solid rgba(201,168,76,.2); display:flex; align-items:center; justify-content:center;
+        .cp-icon { width:44px; height:44px; border-radius:12px; background:${C.accentSoft};
+          border:1px solid rgba(30,58,138,.15); display:flex; align-items:center; justify-content:center;
           font-size:18px; flex-shrink:0; }
         .cp-title { font-size:13.5px; font-weight:600; color:${C.text}; margin-bottom:2px; }
         .cp-val { font-size:13px; color:${C.text2}; }
-        .contact-form-box { background:${C.bg2}; border:1px solid ${C.border}; border-radius:20px; padding:34px; }
+        .contact-form-box { background:${C.bg}; border:1px solid ${C.border}; border-radius:18px; padding:32px;
+          box-shadow:0 2px 12px rgba(0,0,0,.05); }
         .cf-field { margin-bottom:15px; }
         .cf-label { display:block; font-size:11px; font-weight:600; color:${C.text3};
           text-transform:uppercase; letter-spacing:1px; margin-bottom:7px; }
-        .cf-input { width:100%; background:rgba(255,255,255,.04); border:1px solid ${C.border};
+        .cf-input { width:100%; background:${C.bg2}; border:1.5px solid ${C.border};
           border-radius:9px; padding:11px 14px; font-size:14px; color:${C.text};
-          font-family:'Inter',sans-serif; outline:none; transition:all .18s; }
-        .cf-input:focus { border-color:${C.gold}; background:rgba(201,168,76,.03); }
+          font-family:'Inter',sans-serif; outline:none; transition:all .15s; }
+        .cf-input:focus { border-color:${C.accent}; background:${C.accentSoft}; box-shadow:0 0 0 3px rgba(30,58,138,.07); }
         .cf-input::placeholder { color:${C.text3}; }
         .cf-textarea { resize:vertical; min-height:108px; }
 
         /* ── CTA FINAL ── */
         .cta-section { position:relative; z-index:1; padding:0 clamp(18px,5vw,80px) 88px; }
-        .cta-box { max-width:1160px; margin:0 auto; border-radius:28px; padding:72px 60px; text-align:center;
-          background:linear-gradient(135deg,rgba(201,168,76,.09) 0%,rgba(201,168,76,.03) 50%,rgba(74,158,255,.04) 100%);
-          border:1px solid rgba(201,168,76,.22); position:relative; overflow:hidden; }
+        .cta-box { max-width:1160px; margin:0 auto; border-radius:24px; padding:72px 60px; text-align:center;
+          background:linear-gradient(135deg,${C.accentSoft} 0%,${C.bg} 60%);
+          border:1px solid rgba(30,58,138,.12); position:relative; overflow:hidden; }
         .cta-box::before { content:''; position:absolute; inset:0;
-          background:radial-gradient(ellipse 60% 80% at 50% 110%, rgba(201,168,76,.06) 0%, transparent 65%); }
+          background:radial-gradient(ellipse 60% 80% at 50% 120%, rgba(30,58,138,.06) 0%, transparent 65%); }
         .cta-inner { position:relative; z-index:1; }
         .cta-h { font-family:'Plus Jakarta Sans',sans-serif; font-size:clamp(28px,3.6vw,50px);
-          font-weight:800; letter-spacing:-1.2px; line-height:1.1; margin-bottom:16px; }
+          font-weight:800; letter-spacing:-1.2px; line-height:1.1; margin-bottom:16px; color:${C.text}; }
         .cta-p { font-size:16px; color:${C.text2}; line-height:1.75; max-width:480px; margin:0 auto 36px; }
 
         /* ── FOOTER ── */
-        .footer { position:relative; z-index:1; border-top:1px solid ${C.border}; }
+        .footer { position:relative; z-index:1; border-top:1px solid ${C.border}; background:${C.bg2}; }
         .footer-grid { max-width:1160px; margin:0 auto;
           padding:48px clamp(18px,5vw,80px) 32px;
           display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:40px; }
@@ -409,7 +422,7 @@ export default function Home() {
         .footer-desc { font-size:13px; color:${C.text2}; line-height:1.7; max-width:240px; }
         .footer-col-title { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:${C.text3}; margin-bottom:14px; }
         .footer-link { display:block; font-size:13px; color:${C.text2}; cursor:pointer; margin-bottom:9px;
-          transition:color .18s; background:none; border:none; font-family:'Inter',sans-serif; text-align:left; padding:0; }
+          transition:color .15s; background:none; border:none; font-family:'Inter',sans-serif; text-align:left; padding:0; }
         .footer-link:hover { color:${C.text}; }
         .footer-bottom { border-top:1px solid ${C.border};
           padding:20px clamp(18px,5vw,80px); display:flex; align-items:center;
@@ -417,40 +430,40 @@ export default function Home() {
 
         /* ── AUTH FORMS ── */
         .form-page { min-height:100vh; display:flex; flex-direction:column; align-items:center;
-          justify-content:center; padding:80px 24px 60px; position:relative; z-index:1; }
-        .form-box { max-width:440px; width:100%; animation:fadeUp .35s ease both; }
+          justify-content:center; padding:80px 24px 60px; position:relative; z-index:1; background:${C.bg2}; }
+        .form-box { max-width:440px; width:100%; animation:fadeUp .3s ease both; }
         .back-btn { display:inline-flex; align-items:center; gap:6px; background:none; border:none;
           color:${C.text2}; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif;
-          margin-bottom:26px; padding:0; transition:color .15s; }
+          margin-bottom:26px; padding:0; transition:color .13s; }
         .back-btn:hover { color:${C.text}; }
-        .form-card { background:${C.bg2}; border:1px solid ${C.border}; border-radius:20px;
-          padding:38px; position:relative; overflow:hidden; }
-        .form-card::after { content:''; position:absolute; top:0; left:0; right:0; height:1px;
-          background:linear-gradient(90deg,transparent,${C.gold},transparent); opacity:.3; }
-        .form-h   { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; letter-spacing:-.5px; margin-bottom:6px; }
+        .form-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:20px;
+          padding:40px; position:relative; box-shadow:0 4px 24px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.04); }
+        .form-card::after { content:''; position:absolute; top:0; left:0; right:0; height:3px;
+          background:${C.accent}; border-radius:20px 20px 0 0; }
+        .form-h   { font-family:'Plus Jakarta Sans',sans-serif; font-size:26px; font-weight:800; letter-spacing:-.5px; margin-bottom:6px; color:${C.text}; }
         .form-sub { font-size:13.5px; color:${C.text2}; margin-bottom:24px; line-height:1.6; }
-        .type-toggle { display:flex; gap:5px; padding:4px; background:rgba(255,255,255,.03); border-radius:10px; margin-bottom:20px; }
+        .type-toggle { display:flex; gap:5px; padding:4px; background:${C.bg3}; border-radius:10px; margin-bottom:20px; border:1px solid ${C.border}; }
         .type-btn { flex:1; padding:9px 6px; border-radius:7px; font-size:12px; font-weight:600;
-          cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; text-align:center; border:none; }
-        .type-btn.on  { background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.28) !important; color:${C.goldL}; }
+          cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; text-align:center; border:none; }
+        .type-btn.on  { background:${C.accent}; color:#fff; box-shadow:0 1px 4px rgba(30,58,138,.2); }
         .type-btn.off { background:transparent; color:${C.text3}; }
         .f-field { margin-bottom:14px; }
         .f-label { display:block; font-size:11px; font-weight:600; color:${C.text3};
           text-transform:uppercase; letter-spacing:1px; margin-bottom:7px; }
-        .f-input { width:100%; background:rgba(255,255,255,.04); border:1px solid ${C.border};
+        .f-input { width:100%; background:${C.bg2}; border:1.5px solid ${C.border};
           border-radius:9px; padding:11px 14px; font-size:14px; color:${C.text};
-          font-family:'Inter',sans-serif; transition:all .18s; outline:none; }
-        .f-input:focus { border-color:${C.gold}; background:rgba(201,168,76,.03); box-shadow:0 0 0 3px rgba(201,168,76,.07); }
+          font-family:'Inter',sans-serif; transition:all .15s; outline:none; }
+        .f-input:focus { border-color:${C.accent}; background:${C.accentSoft}; box-shadow:0 0 0 3px rgba(30,58,138,.07); }
         .f-input::placeholder { color:${C.text3}; }
-        .a-ok  { padding:11px 14px; border-radius:9px; font-size:13px; line-height:1.5; margin-bottom:14px; background:rgba(74,222,128,.07); border:1px solid rgba(74,222,128,.2); color:${C.green}; }
-        .a-err { padding:11px 14px; border-radius:9px; font-size:13px; line-height:1.5; margin-bottom:14px; background:rgba(248,113,113,.07); border:1px solid rgba(248,113,113,.2); color:${C.red}; }
-        .f-submit { width:100%; padding:13px; border-radius:9px; background:${C.gold}; border:none;
-          color:#07090F; font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; margin-bottom:16px; }
-        .f-submit:hover:not(:disabled) { background:${C.goldL}; transform:translateY(-1px); }
-        .f-submit:disabled { opacity:.55; cursor:not-allowed; }
+        .a-ok  { padding:11px 14px; border-radius:9px; font-size:13px; line-height:1.5; margin-bottom:14px; background:${C.greenSoft}; border:1px solid rgba(16,185,129,.25); color:${C.green}; }
+        .a-err { padding:11px 14px; border-radius:9px; font-size:13px; line-height:1.5; margin-bottom:14px; background:${C.redSoft}; border:1px solid rgba(239,68,68,.25); color:${C.red}; }
+        .f-submit { width:100%; padding:13px; border-radius:9px; background:${C.accent}; border:none;
+          color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; margin-bottom:16px; }
+        .f-submit:hover:not(:disabled) { background:${C.accentMid}; transform:translateY(-1px); box-shadow:0 4px 14px rgba(30,58,138,.22); }
+        .f-submit:disabled { opacity:.5; cursor:not-allowed; }
         .f-foot { text-align:center; font-size:13px; color:${C.text2}; }
-        .f-switch { cursor:pointer; font-weight:600; color:${C.gold}; }
-        .info-badge { background:rgba(74,222,128,.06); border:1px solid rgba(74,222,128,.18);
+        .f-switch { cursor:pointer; font-weight:600; color:${C.accent}; }
+        .info-badge { background:${C.greenSoft}; border:1px solid rgba(16,185,129,.2);
           border-radius:8px; padding:10px 14px; font-size:12px; color:${C.green}; line-height:1.55; margin-bottom:4px; }
 
         /* ── RESPONSIVE ── */
@@ -487,9 +500,9 @@ export default function Home() {
       {/* ── NAV ───────────────────────────────────────────────────────────── */}
       <nav className={`nav ${navScrolled ? "scrolled" : ""}`}>
         <button className="nav-logo" onClick={() => setVista("inicio")}>
-          <span style={{ color: C.gold }}>Licita</span>
+          <span style={{ color: C.accent }}>Licita</span>
           <span style={{ color: C.text }}>PH</span>
-          <span style={{ marginLeft: 6, fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: C.gold, color: C.bg, fontFamily: "'DM Mono',monospace", letterSpacing: 1 }}>BETA</span>
+          <span style={{ marginLeft: 6, fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: C.accent, color: "#fff", fontFamily: "'DM Mono',monospace", letterSpacing: 1 }}>BETA</span>
         </button>
         <div className="nav-links">
           <button className="nav-link" onClick={() => scrollTo("como-funciona")}>Cómo funciona</button>
@@ -500,7 +513,7 @@ export default function Home() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button className="btn-ghost" onClick={() => { setVista("login"); setMensaje(""); }}>Iniciar sesión</button>
-          <button className="btn-gold" onClick={() => { setVista("registro"); setMensaje(""); }}>Empezar gratis →</button>
+          <button className="btn-primary" onClick={() => { setVista("registro"); setMensaje(""); }}>Empezar gratis →</button>
         </div>
       </nav>
 
@@ -529,7 +542,7 @@ export default function Home() {
                 Crear cuenta gratis →
               </button>
               <button className="cta-secondary" onClick={() => scrollTo("video")}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill={C.gold}><polygon points="5,3 19,12 5,21"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill={C.accent}><polygon points="5,3 19,12 5,21"/></svg>
                 Ver demo
               </button>
             </div>
@@ -606,7 +619,7 @@ export default function Home() {
                 <div className="section-label" style={{ justifyContent: "center" }}>Demo</div>
                 <h2 className="section-h" style={{ textAlign: "center" }}>
                   Mira LicitaPH en acción<br />
-                  <span style={{ color: C.gold }}>en menos de 3 minutos</span>
+                  <span style={{ color: C.accent }}>en menos de 3 minutos</span>
                 </h2>
               </div>
               <div className="video-box" ref={videoRef}>
@@ -615,13 +628,13 @@ export default function Home() {
                 {/* ─── Reemplazar con <iframe> o <video> cuando el video esté listo ─── */}
                 <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
                   <button className="play-btn" onClick={() => scrollTo("contacto")}>
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="#07090F">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill={C.accent}>
                       <polygon points="5,3 19,12 5,21" />
                     </svg>
                   </button>
                   <div style={{ textAlign: "center" }}>
                     <p style={{ color: C.text, fontSize: 16, fontWeight: 600, margin: 0 }}>Video demo — próximamente</p>
-                    <p style={{ color: C.text2, fontSize: 13, margin: "6px 0 0" }}>Estamos grabando el demo completo. Mientras tanto, <span style={{ color: C.gold, cursor: "pointer" }} onClick={() => scrollTo("contacto")}>solicita una presentación en vivo →</span></p>
+                    <p style={{ color: C.text2, fontSize: 13, margin: "6px 0 0" }}>Estamos grabando el demo completo. Mientras tanto, <span style={{ color: C.accent, cursor: "pointer" }} onClick={() => scrollTo("contacto")}>solicita una presentación en vivo →</span></p>
                   </div>
                 </div>
                 <div className="video-label">🎬 LicitaPH para administradores de PH · Demo completo · ~3 min</div>
@@ -675,49 +688,49 @@ export default function Home() {
             <h2 className="section-h">Una plataforma,<br />tres perspectivas</h2>
             <div className="profiles-grid">
               {/* Administrador */}
-              <div className="profile-card" style={{ border: "1px solid rgba(201,168,76,.25)" }}>
-                <div className="profile-accent" style={{ background: `linear-gradient(90deg,${C.gold},transparent)` }} />
-                <div className="profile-icon" style={{ background: "rgba(201,168,76,.1)", border: "1px solid rgba(201,168,76,.2)" }}>🏗️</div>
+              <div className="profile-card" style={{ border: `1px solid rgba(30,58,138,.15)` }}>
+                <div className="profile-accent" style={{ background: C.accent }} />
+                <div className="profile-icon" style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)` }}>🏗️</div>
                 <div className="profile-title">Administrador de PH</div>
                 <div className="profile-sub">Gestiona todas las contrataciones con un proceso ordenado, documentado y legalmente respaldado.</div>
                 <ul className="profile-bullets">
                   {["Publica licitaciones en 5 minutos","Recibe propuestas de empresas verificadas","IA rankea y justifica cada propuesta","Contratos con cláusulas de protección","Reportes para junta directiva en 1 clic"].map(b => (
-                    <li className="pbullet" key={b}><span style={{ color: C.gold, marginTop: 1, flexShrink: 0 }}>✓</span><span>{b}</span></li>
+                    <li className="pbullet" key={b}><span style={{ color: C.accent, marginTop: 1, flexShrink: 0, fontWeight: 700 }}>✓</span><span>{b}</span></li>
                   ))}
                 </ul>
-                <button className="profile-cta" style={{ background: "rgba(201,168,76,.1)", borderColor: "rgba(201,168,76,.3)", color: C.goldL }}
+                <button className="profile-cta" style={{ background: C.accent, borderColor: C.accent, color: "#fff" }}
                   onClick={() => { setTipoUsuario("ph_admin"); setVista("registro"); setMensaje(""); }}>
                   Crear cuenta de PH →
                 </button>
               </div>
               {/* Empresa */}
-              <div className="profile-card" style={{ border: "1px solid rgba(74,158,255,.2)" }}>
-                <div className="profile-accent" style={{ background: `linear-gradient(90deg,${C.blue},transparent)` }} />
-                <div className="profile-icon" style={{ background: "rgba(74,158,255,.1)", border: "1px solid rgba(74,158,255,.2)" }}>🏢</div>
+              <div className="profile-card" style={{ border: `1px solid rgba(59,130,246,.2)` }}>
+                <div className="profile-accent" style={{ background: C.blue }} />
+                <div className="profile-icon" style={{ background: C.blueSoft, border: `1px solid rgba(59,130,246,.15)` }}>🏢</div>
                 <div className="profile-title">Empresa proveedora</div>
                 <div className="profile-sub">Accede a más de 4,500 PHs que contratan regularmente. Compite con tus credenciales, no con tus contactos.</div>
                 <ul className="profile-bullets">
                   {["Alertas de licitaciones en tu categoría","Perfil verificado que inspira confianza","Evaluación 100% objetiva y transparente","Construye reputación con cada contrato","Historial como referencia comercial"].map(b => (
-                    <li className="pbullet" key={b}><span style={{ color: C.blue, marginTop: 1, flexShrink: 0 }}>✓</span><span>{b}</span></li>
+                    <li className="pbullet" key={b}><span style={{ color: C.blue, marginTop: 1, flexShrink: 0, fontWeight: 700 }}>✓</span><span>{b}</span></li>
                   ))}
                 </ul>
-                <button className="profile-cta" style={{ background: "rgba(74,158,255,.1)", borderColor: "rgba(74,158,255,.25)", color: "#7BB8FF" }}
+                <button className="profile-cta" style={{ background: C.blue, borderColor: C.blue, color: "#fff" }}
                   onClick={() => { setTipoUsuario("empresa"); setVista("registro"); setMensaje(""); }}>
                   Registrar mi empresa →
                 </button>
               </div>
               {/* Copropietario */}
-              <div className="profile-card" style={{ border: "1px solid rgba(74,222,128,.15)" }}>
-                <div className="profile-accent" style={{ background: `linear-gradient(90deg,${C.green},transparent)` }} />
-                <div className="profile-icon" style={{ background: "rgba(74,222,128,.08)", border: "1px solid rgba(74,222,128,.2)" }}>🏠</div>
+              <div className="profile-card" style={{ border: `1px solid rgba(16,185,129,.2)` }}>
+                <div className="profile-accent" style={{ background: C.green }} />
+                <div className="profile-icon" style={{ background: C.greenSoft, border: `1px solid rgba(16,185,129,.15)` }}>🏠</div>
                 <div className="profile-title">Copropietario</div>
                 <div className="profile-sub">Sabe exactamente en qué se gasta tu cuota. Portal de transparencia con acceso a licitaciones y contratos.</div>
                 <ul className="profile-bullets">
                   {["Ve todas las licitaciones de tu PH","Accede al resultado de cada adjudicación","Consulta contratos vigentes en tiempo real","Recibe alertas de nuevas contrataciones","Llega a la asamblea con datos concretos"].map(b => (
-                    <li className="pbullet" key={b}><span style={{ color: C.green, marginTop: 1, flexShrink: 0 }}>✓</span><span>{b}</span></li>
+                    <li className="pbullet" key={b}><span style={{ color: C.green, marginTop: 1, flexShrink: 0, fontWeight: 700 }}>✓</span><span>{b}</span></li>
                   ))}
                 </ul>
-                <button className="profile-cta" style={{ background: "rgba(74,222,128,.06)", borderColor: "rgba(74,222,128,.2)", color: "#6FEBB8" }}
+                <button className="profile-cta" style={{ background: C.green, borderColor: C.green, color: "#fff" }}
                   onClick={() => { setTipoUsuario("copropietario"); setVista("registro"); setMensaje(""); }}>
                   Acceder como copropietario →
                 </button>
@@ -751,7 +764,7 @@ export default function Home() {
                 <h2 className="section-h">Preguntas<br />frecuentes</h2>
                 <p className="section-p" style={{ marginTop: 16, fontSize: 14 }}>
                   ¿Tienes más preguntas? Escríbenos a{" "}
-                  <span style={{ color: C.gold, cursor: "pointer" }} onClick={() => scrollTo("contacto")}>soporte@licitaph.com</span>
+                  <span style={{ color: C.accent, cursor: "pointer", fontWeight: 500 }} onClick={() => scrollTo("contacto")}>soporte@licitaph.com</span>
                 </p>
               </div>
               <div className="faq-list">
@@ -771,7 +784,7 @@ export default function Home() {
           {/* ── CONTACTO ── */}
           <section className="section" id="contacto" style={{ paddingTop: 0 }}>
             <div className="section-label">Contacto</div>
-            <h2 className="section-h">Agenda una demostración<br /><span style={{ color: C.gold }}>personalizada</span></h2>
+            <h2 className="section-h">Agenda una demostración<br /><span style={{ color: C.accent }}>personalizada</span></h2>
             <p className="section-p">¿Quieres ver LicitaPH en tu PH? Nuestro equipo te hace una presentación en vivo, responde todas tus preguntas y configura tu cuenta el mismo día.</p>
             <div className="contact-grid">
               <div className="contact-points">
@@ -786,9 +799,9 @@ export default function Home() {
                     <div><div className="cp-title">{cp.t}</div><div className="cp-val">{cp.v}</div></div>
                   </div>
                 ))}
-                <div style={{ background: "rgba(201,168,76,.06)", border: "1px solid rgba(201,168,76,.2)", borderRadius: 14, padding: "18px 20px" }}>
+                <div style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)`, borderRadius: 14, padding: "18px 20px" }}>
                   <p style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: 0 }}>
-                    <span style={{ color: C.gold, fontWeight: 600 }}>Oferta de lanzamiento:</span> Los primeros 50 PHs que se registren obtienen acceso completo{" "}
+                    <span style={{ color: C.accent, fontWeight: 600 }}>Oferta de lanzamiento:</span> Los primeros 50 PHs que se registren obtienen acceso completo{" "}
                     <strong style={{ color: C.text }}>sin costo durante todo el período beta</strong>.
                   </p>
                 </div>
@@ -836,7 +849,7 @@ export default function Home() {
           <div className="cta-section">
             <div className="cta-box">
               <div className="cta-inner">
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", color: C.gold, marginBottom: 18 }}>Gratis durante el beta</div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", color: C.accent, marginBottom: 18 }}>Gratis durante el beta</div>
                 <h2 className="cta-h">Tu PH se merece<br />un proceso moderno.</h2>
                 <p className="cta-p">Sin tarjeta de crédito. Sin contratos. Los primeros 50 PHs obtienen acceso completo sin costo. Empieza hoy.</p>
                 <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -852,8 +865,8 @@ export default function Home() {
             <div className="footer-grid">
               <div>
                 <div className="footer-brand">
-                  <span style={{ color: C.gold }}>Licita</span>
-                  <span style={{ color: C.text3 }}>PH</span>
+                  <span style={{ color: C.accent }}>Licita</span>
+                  <span style={{ color: C.text }}>PH</span>
                 </div>
                 <p className="footer-desc">La plataforma digital de licitaciones para Propiedades Horizontales en Panamá. Procesos transparentes, contratos sólidos.</p>
               </div>
