@@ -131,6 +131,9 @@ export default async function LicitacionPublicaPage({
         }
         @media (max-width: 480px) {
           .portal-stats { grid-template-columns: 1fr !important; }
+          .portal-h1 { font-size: 18px !important; }
+          .portal-main { padding: 20px 12px 60px; }
+          .modal-precio-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -230,9 +233,9 @@ export default async function LicitacionPublicaPage({
             </h2>
             <div style={{
               display: "grid",
-              gridTemplateColumns: fotos.length === 1 ? "1fr" : fotos.length === 2 ? "1fr 1fr" : "repeat(3, 1fr)",
-              gap: 12,
-              overflowX: fotos.length > 3 ? "auto" : "visible",
+              gridTemplateColumns: fotos.length === 1 ? "1fr" : fotos.length === 2 ? "1fr 1fr" : "repeat(auto-fill,minmax(160px,1fr))",
+              gap: 10,
+              overflowX: "auto",
             }}>
               {fotos.slice(0, 5).map((src, i) => (
                 <div
@@ -602,7 +605,7 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                   <button id="closeModalBtn" style="background:none;border:none;color:${C.muted};cursor:pointer;font-size:24px;line-height:1;">×</button>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:16px;">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="modal-precio-grid">
                     <label style="display:flex;flex-direction:column;gap:6px;">
                       <span style="color:${C.sub};font-size:13px;font-weight:500;">Precio anual ofertado (USD) *</span>
                       <input id="modalPrecio" type="number" min="0" step="100" placeholder="Ej: 36000"

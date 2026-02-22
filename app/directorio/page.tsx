@@ -61,28 +61,49 @@ export default async function DirectorioPage() {
         @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
         .dir-card { background:#0D1117; border:1px solid #1F2937; border-radius:14px; padding:22px; transition:border-color 0.2s; }
         .dir-card:hover { border-color:rgba(201,168,76,0.3); }
+
+        /* ── RESPONSIVE ── */
+        .dir-nav-links { display:flex; gap:20px; align-items:center; }
+        .dir-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:44px; }
+        .dir-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+        .dir-hero-h1 { font-family:'Plus Jakarta Sans',sans-serif; font-size:40px; font-weight:800; color:#F0F4FF; letter-spacing:-0.6px; margin-bottom:14px; line-height:1.15; }
+        .dir-main { max-width:1100px; margin:0 auto; padding:48px 24px; }
+
+        @media(max-width:768px){
+          .dir-nav-links { gap:14px; }
+          .dir-nav-links a:first-child { display:none; }
+          .dir-stats { grid-template-columns:1fr 1fr; gap:10px; margin-bottom:28px; }
+          .dir-grid { grid-template-columns:1fr; }
+          .dir-hero-h1 { font-size:28px; letter-spacing:-0.3px; }
+          .dir-main { padding:32px 16px; }
+        }
+        @media(max-width:480px){
+          .dir-stats { grid-template-columns:1fr; }
+          .dir-hero-h1 { font-size:24px; }
+          .dir-main { padding:24px 14px; }
+        }
       `}</style>
 
       {/* Nav */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(7,9,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.border}`, padding: "0 32px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(7,9,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px 0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <a href="/" style={{ textDecoration: "none", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800 }}>
           <span style={{ color: C.gold }}>Licita</span><span style={{ color: C.text }}>PH</span>
         </a>
-        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+        <div className="dir-nav-links">
           <a href="/" style={{ color: C.muted, textDecoration: "none", fontSize: 13, fontWeight: 500 }}>Inicio</a>
           <a href="/directorio" style={{ color: C.gold, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Directorio</a>
           <a href="/" style={{ background: C.gold, color: "#07090F", textDecoration: "none", fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 7 }}>Ingresar</a>
         </div>
       </nav>
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
+      <main className="dir-main">
 
         {/* Hero */}
         <div style={{ textAlign: "center", marginBottom: 52, animation: "fadeUp 0.5s ease" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 20, padding: "5px 16px", fontSize: 12, color: C.green, fontWeight: 600, marginBottom: 20 }}>
             ✓ {lista.length} empresa{lista.length !== 1 ? "s" : ""} con verificación completa
           </div>
-          <h1 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 40, fontWeight: 800, color: C.text, letterSpacing: "-0.6px", marginBottom: 14, lineHeight: 1.15 }}>
+          <h1 className="dir-hero-h1">
             Directorio de proveedores<br /><span style={{ color: C.gold }}>verificados</span> para PHs
           </h1>
           <p style={{ fontSize: 16, color: C.muted, maxWidth: 580, margin: "0 auto", lineHeight: 1.75 }}>
@@ -91,7 +112,7 @@ export default async function DirectorioPage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 44 }}>
+        <div className="dir-stats">
           {[
             { icon: "🏢", val: lista.length, label: "Empresas verificadas", color: C.green },
             { icon: "🔧", val: allCats.length, label: "Categorías de servicio", color: C.blue },
@@ -115,7 +136,7 @@ export default async function DirectorioPage() {
             <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>Las empresas aparecen aquí después de completar el proceso de verificación.</div>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 16 }}>
+          <div className="dir-grid">
             {lista.map((e) => {
               const rating = e.calificacion_promedio && e.calificacion_promedio > 0 ? e.calificacion_promedio : null;
               return (
