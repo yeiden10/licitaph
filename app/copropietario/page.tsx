@@ -38,6 +38,8 @@ interface Licitacion {
   presupuesto_maximo: number | null;
   urgente: boolean;
   creado_en: string;
+  fechas_inspeccion: string[] | null;
+  lugar_inspeccion: string | null;
   propuestas: { count: number }[];
 }
 
@@ -115,6 +117,17 @@ export default function CopropietarioPage() {
     if (!s) return "—";
     return new Date(s + (s.includes("T") ? "" : "T12:00:00")).toLocaleDateString("es-PA", { day: "numeric", month: "short", year: "numeric" });
   };
+  // Formatear fecha de inspección con hora (formato "YYYY-MM-DD HH:mm" o legacy "YYYY-MM-DD")
+  const fmtInspeccion = (dateStr: string): string => {
+    const [datePart, timePart] = dateStr.split(" ");
+    const d = new Date(datePart + "T" + (timePart || "09:00") + ":00");
+    const fechaLabel = d.toLocaleDateString("es-PA", { weekday: "short", day: "numeric", month: "short" });
+    const [hStr, mStr] = (timePart || "09:00").split(":");
+    const h = parseInt(hStr, 10);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${fechaLabel} · ${h12}:${mStr} ${ampm}`;
+  };
 
   useEffect(() => {
     (async () => {
@@ -149,7 +162,7 @@ export default function CopropietarioPage() {
       // Cargar licitaciones del PH (activas + historial)
       const { data: lics } = await supabase
         .from("licitaciones")
-        .select("*, propuestas(count)")
+        .select("*, propuestas(count), fechas_inspeccion, lugar_inspeccion")
         .eq("ph_id", phData.id)
         .not("estado", "eq", "borrador")
         .order("creado_en", { ascending: false });
@@ -424,6 +437,19 @@ export default function CopropietarioPage() {
                           {l.fecha_cierre && ` · Cierre: ${fmtFecha(l.fecha_cierre)}`}
                           {` · ${(l.propuestas?.[0] as any)?.count ?? 0} propuestas recibidas`}
                         </div>
+                        {l.fechas_inspeccion && l.fechas_inspeccion.length > 0 && (
+                          <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            <span style={{ fontSize: 11, color: C.muted }}>🗓 Inspección:</span>
+                            {l.fechas_inspeccion.map((f, i) => (
+                              <span key={i} style={{ fontSize: 11, background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 5, padding: "2px 8px", color: C.sub }}>
+                                {fmtInspeccion(f)}
+                              </span>
+                            ))}
+                            {l.lugar_inspeccion && (
+                              <span style={{ fontSize: 11, color: C.muted }}>📍 {l.lugar_inspeccion}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <span className={`badge ${estadoBadge.cls}`}>{estadoBadge.label}</span>
                     </div>

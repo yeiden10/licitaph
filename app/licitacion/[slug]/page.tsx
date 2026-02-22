@@ -253,6 +253,7 @@ export default async function LicitacionPublicaPage({
           .portal-stats { grid-template-columns: 1fr 1fr !important; }
           .portal-sidebar { order: -1; }
           .modal-precio-grid { grid-template-columns: 1fr !important; }
+          .share-label { display: inline !important; }
         }
         @media (max-width: 480px) {
           .portal-stats { grid-template-columns: 1fr !important; }
@@ -271,19 +272,36 @@ export default async function LicitacionPublicaPage({
           <span style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>LicitaPH</span>
         </a>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ color: C.muted, fontSize: 13 }}>Portal público de licitación</span>
+          <a
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`¡Oportunidad de negocio! Licitación: ${lic.titulo} — postula tu empresa en LicitaPH: https://licitaph.vercel.app/licitacion/${lic.url_slug}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Compartir en WhatsApp"
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#25D366", border: "none", color: "#fff", borderRadius: 8, padding: "7px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}
+          >
+            <span style={{ fontSize: 16 }}>📤</span>
+            <span style={{ display: "none" }} className="share-label">Compartir</span>
+          </a>
+          <span style={{ color: C.muted, fontSize: 13 }}>Portal público</span>
         </div>
       </header>
 
       {/* ── Inactive banner ── */}
-      {!estaActiva && (
-        <div style={{ background: C.red + "15", borderBottom: `1px solid ${C.red}30`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ color: C.red, fontSize: 16 }}>⚠</span>
-          <p style={{ color: C.red, fontSize: 14, fontWeight: 600, margin: 0 }}>
-            Esta licitación ya no está abierta — Estado: <strong>{lic.estado}</strong>
-          </p>
-        </div>
-      )}
+      {!estaActiva && (() => {
+        const bannerInfo: Record<string, { bg: string; border: string; icon: string; color: string; msg: string }> = {
+          en_evaluacion: { bg: C.blue + "15", border: C.blue + "30", icon: "🔍", color: C.blue, msg: "Esta licitación está en período de evaluación — no se aceptan más propuestas." },
+          adjudicada:    { bg: C.green + "15", border: C.green + "30", icon: "✓", color: C.green, msg: "Esta licitación ya fue adjudicada. El servicio fue contratado." },
+          cancelada:     { bg: C.red + "15", border: C.red + "30", icon: "✗", color: C.red, msg: "Esta licitación fue cancelada por el administrador." },
+          borrador:      { bg: C.muted + "15", border: C.muted + "30", icon: "📝", color: C.muted, msg: "Esta licitación aún no ha sido publicada." },
+        };
+        const b = bannerInfo[lic.estado] ?? { bg: C.red + "15", border: C.red + "30", icon: "⚠", color: C.red, msg: `Esta licitación no está activa (${lic.estado}).` };
+        return (
+          <div style={{ background: b.bg, borderBottom: `1px solid ${b.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ color: b.color, fontSize: 16 }}>{b.icon}</span>
+            <p style={{ color: b.color, fontSize: 14, fontWeight: 600, margin: 0 }}>{b.msg}</p>
+          </div>
+        );
+      })()}
 
       <main className="portal-main" style={{ maxWidth: 900, margin: "0 auto" }}>
         {/* ── Hero section ── */}
@@ -794,7 +812,7 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
               var chkInsp = document.getElementById("chkInspeccion").checked;
               var chkCond = document.getElementById("chkCondiciones").checked;
               var chkPen  = document.getElementById("chkPenalidades").checked;
-              if (!precio) { err.textContent = "El precio anual es requerido."; err.style.display="block"; return; }
+              if (!precio || Number(precio) <= 0) { err.textContent = "El precio anual debe ser mayor a $0."; err.style.display="block"; return; }
               if (!chkInsp || !chkCond || !chkPen) { err.textContent = "Debes aceptar todos los compromisos para enviar la propuesta."; err.style.display="block"; return; }
               btn2.textContent = "Enviando..."; btn2.disabled = true;
               err.style.display = "none";

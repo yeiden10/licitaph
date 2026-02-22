@@ -1817,6 +1817,10 @@ export default function PHDashboard() {
                   <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)", marginBottom: 4 }}>
                     📄 Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
                   </div>
+                  <div style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "var(--red)", marginTop: 8, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <span style={{ fontSize: 15, flexShrink: 0 }}>⚠️</span>
+                    <span><strong>Acción irreversible.</strong> Una vez confirmada, no podrás adjudicar a otra empresa ni reabrir la licitación.</span>
+                  </div>
                 </>
               );
             })()}
