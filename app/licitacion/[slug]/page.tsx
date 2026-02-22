@@ -602,11 +602,23 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                   <button id="closeModalBtn" style="background:none;border:none;color:${C.muted};cursor:pointer;font-size:24px;line-height:1;">×</button>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:16px;">
-                  <label style="display:flex;flex-direction:column;gap:6px;">
-                    <span style="color:${C.sub};font-size:13px;font-weight:500;">Precio anual ofertado (USD) *</span>
-                    <input id="modalPrecio" type="number" min="0" step="100" placeholder="Ej: 36000"
-                      style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:15px;outline:none;width:100%;" />
-                  </label>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <label style="display:flex;flex-direction:column;gap:6px;">
+                      <span style="color:${C.sub};font-size:13px;font-weight:500;">Precio anual ofertado (USD) *</span>
+                      <input id="modalPrecio" type="number" min="0" step="100" placeholder="Ej: 36000"
+                        style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:15px;outline:none;width:100%;" />
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:6px;">
+                      <span style="color:${C.sub};font-size:13px;font-weight:500;">Modalidad de pago</span>
+                      <select id="modalPago" style="background:${C.bgPanel};border:1px solid ${C.border};border-radius:8px;padding:10px 14px;color:${C.text};font-size:14px;outline:none;width:100%;cursor:pointer;">
+                        <option value="mensual">Mensual</option>
+                        <option value="trimestral">Trimestral</option>
+                        <option value="semestral">Semestral</option>
+                        <option value="anual">Anual</option>
+                        <option value="personalizado">Personalizado</option>
+                      </select>
+                    </label>
+                  </div>
                   <label style="display:flex;flex-direction:column;gap:6px;">
                     <span style="color:${C.sub};font-size:13px;font-weight:500;">Descripción de la propuesta</span>
                     <textarea id="modalDesc" rows="3" placeholder="Describe tu oferta de valor..."
@@ -667,6 +679,7 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                     precio_anual: Number(precio),
                     descripcion: document.getElementById("modalDesc").value,
                     propuesta_tecnica: document.getElementById("modalTecnica").value,
+                    modalidad_pago: document.getElementById("modalPago").value,
                     acepta_condiciones: true,
                     acepta_inspeccion: true,
                     acepta_penalidades: true,
