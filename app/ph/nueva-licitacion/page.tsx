@@ -395,8 +395,9 @@ export default function NuevaLicitacion() {
     }
     if (!form.fecha_cierre) errs.fecha_cierre = "La fecha de cierre es requerida";
     else {
-      const cierre = new Date(form.fecha_cierre);
-      if (cierre <= new Date()) errs.fecha_cierre = "La fecha de cierre debe ser futura";
+      // Comparar end-of-day en hora de Panamá (UTC-5): "2025-05-01" = hasta las 23:59:59 UTC-5
+      const cierreEndOfDay = new Date(form.fecha_cierre + "T23:59:59-05:00");
+      if (cierreEndOfDay <= new Date()) errs.fecha_cierre = "La fecha de cierre debe ser futura";
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -481,6 +482,25 @@ export default function NuevaLicitacion() {
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   async function handlePublish(publicar: boolean) {
+    // Revalidar campos requeridos antes de publicar (previene errores de servidor)
+    if (!form.titulo.trim() || !form.categoria || !form.descripcion.trim()) {
+      setToast({ msg: "Faltan campos requeridos: título, categoría o descripción.", tipo: "err" });
+      setStep(1);
+      return;
+    }
+    if (!form.fecha_cierre) {
+      setToast({ msg: "La fecha de cierre es requerida para publicar.", tipo: "err" });
+      setStep(1);
+      return;
+    }
+    // Validar que la fecha de cierre sea futura (end-of-day Panamá)
+    const cierreEndOfDay = new Date(form.fecha_cierre + "T23:59:59-05:00");
+    if (cierreEndOfDay <= new Date()) {
+      setToast({ msg: "La fecha de cierre debe ser una fecha futura.", tipo: "err" });
+      setStep(1);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {

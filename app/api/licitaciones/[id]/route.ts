@@ -43,6 +43,21 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  // Verificar ownership: el admin solo puede editar licitaciones de su propio PH
+  const { data: licitacionVerif } = await supabase
+    .from("licitaciones")
+    .select("id, propiedades_horizontales(admin_id)")
+    .eq("id", id)
+    .single();
+
+  if (!licitacionVerif) {
+    return NextResponse.json({ error: "Licitación no encontrada" }, { status: 404 });
+  }
+  const ownerAdminId = (licitacionVerif as any).propiedades_horizontales?.admin_id;
+  if (ownerAdminId !== user.id) {
+    return NextResponse.json({ error: "No tienes permiso para editar esta licitación" }, { status: 403 });
+  }
+
   const body = await request.json();
   const updates: Record<string, unknown> = {};
 

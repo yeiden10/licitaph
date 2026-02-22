@@ -65,6 +65,24 @@ export async function POST(
 
   if (!licitacion) return NextResponse.json({ error: "Licitación no encontrada" }, { status: 404 });
 
+  // Verificar que no esté ya adjudicada (evita doble adjudicación y race condition)
+  if (licitacion.estado === "adjudicada") {
+    return NextResponse.json({ error: "Esta licitación ya fue adjudicada anteriormente" }, { status: 400 });
+  }
+
+  // Verificar que el PH admin sea dueño de esta licitación
+  const { data: phVerif } = await supabase
+    .from("propiedades_horizontales")
+    .select("id")
+    .eq("admin_id", user.id)
+    .single();
+  if (!phVerif || phVerif.id !== licitacion.propiedades_horizontales?.id) {
+    return NextResponse.json({ error: "No tienes permiso para adjudicar esta licitación" }, { status: 403 });
+  }
+
+  // Guardar si es primera adjudicación ANTES de actualizar
+  const esPrimeraAdjudicacion = !licitacion.empresa_ganadora_id;
+
   // 1. Marcar propuesta ganadora
   await supabase.from("propuestas").update({ estado: "ganada" }).eq("id", propuesta_id);
 
@@ -123,16 +141,8 @@ export async function POST(
     // No detenemos la adjudicación, pero reportamos el error
   }
 
-  // 5b. Incrementar total_contratos_ganados (solo si la licitación acaba de adjudicarse,
-  // verificando que no se haya incrementado ya para evitar doble conteo)
-  const { data: licitacionEstado } = await supabase
-    .from("licitaciones")
-    .select("empresa_ganadora_id")
-    .eq("id", licitacion_id)
-    .single();
-
-  // Solo incrementar si la empresa ganadora cambió (primera vez adjudicando)
-  const esPrimeraAdjudicacion = licitacionEstado?.empresa_ganadora_id !== propuesta.empresa_id;
+  // 5b. Incrementar total_contratos_ganados (solo si es la primera adjudicación)
+  // esPrimeraAdjudicacion fue calculado ANTES del UPDATE para evitar race condition
   if (esPrimeraAdjudicacion) {
     const { data: empresaActual } = await supabase
       .from("empresas")

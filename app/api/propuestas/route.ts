@@ -133,10 +133,10 @@ export async function POST(request: NextRequest) {
 
   if (!empresa) return NextResponse.json({ error: "Empresa no encontrada" }, { status: 404 });
 
-  // Verificar que la licitación existe y está activa
+  // Verificar que la licitación existe, está activa y no ha cerrado por fecha
   const { data: licitacion } = await supabase
     .from("licitaciones")
-    .select("id, titulo, categoria, descripcion, ph_id, estado, presupuesto_minimo, presupuesto_maximo, duracion_contrato_meses")
+    .select("id, titulo, categoria, descripcion, ph_id, estado, fecha_cierre, presupuesto_minimo, presupuesto_maximo, duracion_contrato_meses")
     .eq("id", licitacion_id)
     .single();
 
@@ -144,13 +144,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Licitación no disponible" }, { status: 400 });
   }
 
+  // Verificar que la fecha de cierre no haya pasado (end-of-day Panamá UTC-5)
+  if (licitacion.fecha_cierre) {
+    const cierreEndOfDay = new Date(
+      licitacion.fecha_cierre.includes("T")
+        ? licitacion.fecha_cierre
+        : `${licitacion.fecha_cierre}T23:59:59-05:00`
+    );
+    if (cierreEndOfDay < new Date()) {
+      return NextResponse.json({ error: "El período de recepción de propuestas ya cerró" }, { status: 400 });
+    }
+  }
+
   // Verificar que la empresa no haya enviado propuesta previamente
+  // Usar maybeSingle() para no lanzar error cuando no hay filas (PGRST116)
   const { data: propuestaExistente } = await supabase
     .from("propuestas")
     .select("id, estado")
     .eq("licitacion_id", licitacion_id)
     .eq("empresa_id", empresa.id)
-    .single();
+    .maybeSingle();
 
   if (propuestaExistente) {
     return NextResponse.json({
