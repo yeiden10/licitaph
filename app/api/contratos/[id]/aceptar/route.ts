@@ -50,7 +50,9 @@ export async function POST(
   }
 
   // Verificar que el contrato está pendiente de aceptación
-  if (contrato.estado_firma && contrato.estado_firma !== "pendiente") {
+  // Nota: estado_firma puede ser null (sin firma requerida) o "pendiente" (esperando empresa)
+  // Solo bloqueamos si ya fue procesado: "empresa_acepto", "rechazado", etc.
+  if (contrato.estado_firma !== null && contrato.estado_firma !== "pendiente") {
     return NextResponse.json(
       { error: "El contrato ya fue procesado anteriormente" },
       { status: 400 }

@@ -124,6 +124,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Paso de chat conversacional
+    // Guard: si no hay mensajes del usuario, devolver saludo inicial sin consumir API
+    if (messages.length === 0 || !messages.some(m => m.role === "user")) {
+      return NextResponse.json({
+        tipo: "texto",
+        mensaje: "¡Hola! Soy tu asistente para crear la licitación. Cuéntame: ¿qué servicio necesitas contratar para tu edificio?",
+      });
+    }
+
     const res = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 1024,
