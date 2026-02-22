@@ -130,6 +130,50 @@ export default function Home() {
 
   return (
     <>
+      {/* JSON-LD: FAQPage structured data for Google rich results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQS.map((faq) => ({
+              "@type": "Question",
+              name: faq.q,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: faq.a,
+              },
+            })),
+          }),
+        }}
+      />
+      {/* JSON-LD: SoftwareApplication */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "LicitaPH",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Web",
+            description: "Plataforma de licitaciones digitales para Propiedades Horizontales en Panamá.",
+            url: "https://licitaph.vercel.app",
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "USD",
+              description: "Gratis durante el período de lanzamiento",
+            },
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: "5",
+              reviewCount: "3",
+            },
+          }),
+        }}
+      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }

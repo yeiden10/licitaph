@@ -1,4 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Directorio de Empresas Verificadas en Panamá | LicitaPH",
+  description: "Encuentra empresas verificadas de seguridad, limpieza, HVAC, ascensores, piscinas y más para tu Propiedad Horizontal en Panamá. Todas con documentos validados por LicitaPH.",
+  openGraph: {
+    title: "Directorio de Empresas Verificadas | LicitaPH",
+    description: "Empresas verificadas para Propiedades Horizontales en Panamá. Seguridad, limpieza, mantenimiento, HVAC y más.",
+    url: "https://licitaph.vercel.app/directorio",
+    siteName: "LicitaPH",
+    locale: "es_PA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Directorio de Empresas Verificadas | LicitaPH",
+    description: "Empresas verificadas para PHs en Panamá. Seguridad, limpieza, mantenimiento y más.",
+  },
+  alternates: {
+    canonical: "https://licitaph.vercel.app/directorio",
+  },
+};
 
 const C = {
   bg: "#07090F", bgCard: "#0D1117", bgPanel: "#111827", border: "#1F2937",

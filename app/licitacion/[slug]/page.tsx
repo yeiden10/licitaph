@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
 import type { RequisitoLicitacion } from "@/lib/supabase/types";
 import QASection from "./QASection";
 import VisitaTracker from "./VisitaTracker";
@@ -58,6 +59,80 @@ function formatFechaInspeccion(dateStr: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DYNAMIC METADATA — per-licitacion SEO
+// ─────────────────────────────────────────────────────────────────────────────
+const CATEGORIAS_LABELS: Record<string, string> = {
+  seguridad: "Seguridad y vigilancia", limpieza: "Limpieza y aseo",
+  hvac: "HVAC / Climatización", jardineria: "Jardinería", ascensores: "Ascensores",
+  electricidad: "Electricidad", pintura: "Pintura", plagas: "Control de plagas",
+  piscinas: "Piscinas", impermeabilizacion: "Impermeabilización", cctv: "CCTV",
+  generadores: "Generadores", fumigacion: "Fumigación", obras_civiles: "Obras civiles",
+  tecnologia: "IT / Tecnología", administracion: "Administración", legal_contable: "Legal / Contable",
+  portones: "Portones / Acceso", conserje: "Conserjería", valet: "Valet parking",
+  mudanzas: "Mudanzas", energia_solar: "Energía solar", gestion_residuos: "Residuos",
+  otros: "Otros servicios",
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  const { data: lic } = await supabase
+    .from("licitaciones")
+    .select("titulo, descripcion, categoria, estado, url_slug, propiedades_horizontales(nombre, ciudad)")
+    .eq("url_slug", slug)
+    .single();
+
+  if (!lic) {
+    return {
+      title: "Licitación no encontrada | LicitaPH",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const ph = (lic as any).propiedades_horizontales;
+  const categoria = CATEGORIAS_LABELS[lic.categoria] ?? lic.categoria;
+  const ciudad = ph?.ciudad ?? "Panamá";
+  const phNombre = ph?.nombre ? ` — ${ph.nombre}` : "";
+
+  const title = `${lic.titulo}${phNombre} | LicitaPH`;
+  const description = lic.descripcion
+    ? lic.descripcion.slice(0, 155)
+    : `Licitación de ${categoria} en ${ciudad}. Postula tu empresa en LicitaPH — la plataforma de contrataciones para Propiedades Horizontales en Panamá.`;
+
+  const isIndexable = ["activa", "en_evaluacion"].includes(lic.estado);
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://licitaph.vercel.app/licitacion/${lic.url_slug}`,
+      siteName: "LicitaPH",
+      locale: "es_PA",
+      type: "article",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+    robots: {
+      index: isIndexable,
+      follow: true,
+    },
+    alternates: {
+      canonical: `https://licitaph.vercel.app/licitacion/${lic.url_slug}`,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SERVER COMPONENT — page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 export default async function LicitacionPublicaPage({
@@ -113,6 +188,44 @@ export default async function LicitacionPublicaPage({
     <>
       {/* Tracking silencioso de visitas */}
       <VisitaTracker licitacion_id={lic.id} />
+      {/* JSON-LD: BreadcrumbList */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Inicio", item: "https://licitaph.vercel.app" },
+              { "@type": "ListItem", position: 2, name: "Licitaciones", item: "https://licitaph.vercel.app" },
+              { "@type": "ListItem", position: 3, name: lic.titulo, item: `https://licitaph.vercel.app/licitacion/${lic.url_slug}` },
+            ],
+          }),
+        }}
+      />
+      {/* JSON-LD: JobPosting (licitaciones = "job" para buscadores de contratos B2B) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Event",
+            name: lic.titulo,
+            description: lic.descripcion ?? `Licitación de servicios para Propiedad Horizontal en Panamá.`,
+            organizer: { "@type": "Organization", name: ph?.nombre ?? "LicitaPH" },
+            location: {
+              "@type": "Place",
+              name: ph?.ciudad ?? "Panamá",
+              address: { "@type": "PostalAddress", addressCountry: "PA", addressLocality: ph?.ciudad ?? "Ciudad de Panamá" },
+            },
+            eventStatus: "https://schema.org/EventScheduled",
+            eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+            startDate: lic.fecha_publicacion ?? new Date().toISOString(),
+            endDate: lic.fecha_cierre ? (lic.fecha_cierre.includes("T") ? lic.fecha_cierre : `${lic.fecha_cierre}T23:59:59-05:00`) : undefined,
+            url: `https://licitaph.vercel.app/licitacion/${lic.url_slug}`,
+          }),
+        }}
+      />
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; background: ${C.bg}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: ${C.text}; }

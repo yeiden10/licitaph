@@ -38,6 +38,36 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body style={{ margin: 0, padding: 0, background: "#07090F" }}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "LicitaPH",
+              url: "https://licitaph.vercel.app",
+              logo: "https://licitaph.vercel.app/favicon.ico",
+              description: "Plataforma de licitaciones digitales para Propiedades Horizontales en Panamá. Transparencia total, empresas verificadas y contratos con respaldo legal.",
+              address: {
+                "@type": "PostalAddress",
+                addressCountry: "PA",
+                addressLocality: "Ciudad de Panamá",
+              },
+              areaServed: {
+                "@type": "Country",
+                name: "Panamá",
+              },
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "customer support",
+                availableLanguage: "Spanish",
+              },
+              sameAs: [
+                "https://licitaph.vercel.app",
+              ],
+            }),
+          }}
+        />
         {children}
       </body>
     </html>
