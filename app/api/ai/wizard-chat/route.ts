@@ -14,6 +14,7 @@ interface WizardChatRequest {
   categoria?: string;
   titulo?: string;
   descripcion?: string;
+  presupuesto_maximo?: number | null;
 }
 
 const SYSTEM_CHAT = `Eres un asistente experto en administración de Propiedades Horizontales (PH) en Panamá con 20 años de experiencia elaborando licitaciones profesionales.
@@ -74,9 +75,56 @@ IMPORTANTE: clausulas_anti_adicionales debe contener 2-4 cláusulas específicas
 
 Si no tienes suficiente info todavía, responde con texto normal (sin JSON) haciendo la siguiente pregunta.`;
 
-const SYSTEM_REQUISITOS = `Eres un experto en pliegos de cargos para Propiedades Horizontales en Panamá.
+// SYSTEM_REQUISITOS se genera dinámicamente con escala de presupuesto
+function getSystemRequisitos(presupuesto_maximo?: number | null): string {
+  // Determinar escala según presupuesto anual
+  let escala = "mediana";
+  let polizaMin = "B/. 50,000";
+  let experienciaMin = "3 años";
+  let cantidadReqs = "6 y 10";
+  let nivelExigencia = "razonable para el valor del contrato";
+
+  if (presupuesto_maximo && presupuesto_maximo > 0) {
+    if (presupuesto_maximo < 2000) {
+      // Trabajo pequeño: piso, reparación menor, etc.
+      escala = "pequeña";
+      polizaMin = "B/. 10,000";
+      experienciaMin = "1 año";
+      cantidadReqs = "4 y 7";
+      nivelExigencia = "apropiado para un contrato pequeño (bajo B/. 2,000/año). NO pidas pólizas de 100k ni fianzas excesivas para trabajos menores.";
+    } else if (presupuesto_maximo < 10000) {
+      // Trabajo mediano: limpieza, seguridad edificio pequeño
+      escala = "mediana";
+      polizaMin = "B/. 25,000";
+      experienciaMin = "2 años";
+      cantidadReqs = "5 y 9";
+      nivelExigencia = "proporcional a un contrato de entre B/. 2,000 y B/. 10,000/año";
+    } else if (presupuesto_maximo < 50000) {
+      // Trabajo grande: seguridad edificio grande, HVAC, etc.
+      escala = "grande";
+      polizaMin = "B/. 50,000";
+      experienciaMin = "3 años";
+      cantidadReqs = "7 y 12";
+      nivelExigencia = "apropiado para un contrato de entre B/. 10,000 y B/. 50,000/año";
+    } else {
+      // Megaproyecto
+      escala = "gran empresa";
+      polizaMin = "B/. 100,000";
+      experienciaMin = "5 años";
+      cantidadReqs = "8 y 14";
+      nivelExigencia = "apropiado para un contrato mayor de B/. 50,000/año";
+    }
+  }
+
+  return `Eres un experto en pliegos de cargos para Propiedades Horizontales en Panamá.
 
 Basándote en el contexto de la licitación, genera una lista de requisitos específicos y relevantes para el servicio.
+
+ESCALA DEL CONTRATO: ${escala}
+Presupuesto de referencia: ${presupuesto_maximo ? `B/. ${presupuesto_maximo.toLocaleString()}/año` : "no especificado"}
+Nivel de exigencia: ${nivelExigencia}
+Póliza de responsabilidad civil mínima recomendada: ${polizaMin}
+Experiencia mínima recomendada: ${experienciaMin}
 
 Responde ÚNICAMENTE con este JSON (sin markdown, sin texto adicional):
 {
@@ -95,21 +143,23 @@ REGLAS:
 - tipo_respuesta: "documento" para certificados/pólizas/cartas, "texto" para declaraciones/metodologías
 - obligatorio: true para los críticos para este servicio específico
 - subsanable: true si puede entregarse después con un plazo razonable
-- Genera entre 8 y 14 requisitos específicos para este tipo de servicio
+- Genera entre ${cantidadReqs} requisitos específicos para este tipo de servicio
 - NO incluyas los requisitos legales básicos (Registro Público, Paz y Salvo CSS/DGI, cédula) porque ya están en la lista estándar
 - Enfócate en requisitos TÉCNICOS y ESPECÍFICOS para este servicio
-- Adapta al contexto panameño (AOTC para ascensores, CSS, MITRADEL, etc.)`;
+- Adapta al contexto panameño (AOTC para ascensores, CSS, MITRADEL, etc.)
+- IMPORTANTE: Los requisitos deben ser PROPORCIONALES al tamaño y valor del contrato. Para contratos pequeños, NO pidas pólizas millonarias ni fianzas excesivas.`;
+}
 
 export async function POST(request: NextRequest) {
   const body: WizardChatRequest = await request.json();
-  const { messages, step, contextoChatResumen, categoria, titulo, descripcion } = body;
+  const { messages, step, contextoChatResumen, categoria, titulo, descripcion, presupuesto_maximo } = body;
 
   if (!process.env.ANTHROPIC_API_KEY) {
     // Fallback sin API key
     if (step === "requisitos") {
       return NextResponse.json({
         tipo: "requisitos",
-        requisitos: getFallbackRequisitos(categoria || "otros"),
+        requisitos: getFallbackRequisitos(categoria || "otros", presupuesto_maximo),
       });
     }
     return NextResponse.json({
@@ -122,15 +172,19 @@ export async function POST(request: NextRequest) {
 
   try {
     if (step === "requisitos") {
-      // Generar requisitos específicos basados en el contexto
+      // Generar requisitos específicos basados en el contexto, proporcionales al presupuesto
+      const presupuestoStr = presupuesto_maximo
+        ? `\nPresupuesto máximo anual: B/. ${presupuesto_maximo.toLocaleString()}`
+        : "";
+
       const contextMsg = contextoChatResumen
-        ? `Contexto de la licitación: ${contextoChatResumen}\nCategoría: ${categoria || "general"}\nTítulo: ${titulo || ""}\nDescripción: ${descripcion || ""}`
-        : `Categoría: ${categoria || "general"}\nTítulo: ${titulo || ""}\nDescripción: ${descripcion || ""}`;
+        ? `Contexto de la licitación: ${contextoChatResumen}\nCategoría: ${categoria || "general"}\nTítulo: ${titulo || ""}\nDescripción: ${descripcion || ""}${presupuestoStr}`
+        : `Categoría: ${categoria || "general"}\nTítulo: ${titulo || ""}\nDescripción: ${descripcion || ""}${presupuestoStr}`;
 
       const res = await anthropic.messages.create({
         model: "claude-haiku-4-5",
         max_tokens: 2048,
-        system: SYSTEM_REQUISITOS,
+        system: getSystemRequisitos(presupuesto_maximo),
         messages: [{ role: "user", content: contextMsg }],
       });
 
@@ -190,19 +244,48 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function getFallbackRequisitos(categoria: string): Array<{
+function getFallbackRequisitos(categoria: string, presupuesto_maximo?: number | null): Array<{
   titulo: string;
   descripcion: string;
   obligatorio: boolean;
   subsanable: boolean;
   tipo_respuesta: "documento" | "texto";
 }> {
+  // Escalar póliza y fianza según presupuesto
+  let polizaCobertura = "B/. 50,000";
+  let fianzaPorcentaje = "30%";
+  let refsRequeridas = "2";
+  let esContratoPequeno = false;
+
+  if (presupuesto_maximo && presupuesto_maximo > 0) {
+    if (presupuesto_maximo < 2000) {
+      polizaCobertura = "B/. 10,000";
+      fianzaPorcentaje = "20%";
+      refsRequeridas = "1";
+      esContratoPequeno = true;
+    } else if (presupuesto_maximo < 10000) {
+      polizaCobertura = "B/. 25,000";
+      fianzaPorcentaje = "30%";
+      refsRequeridas = "2";
+    } else if (presupuesto_maximo < 50000) {
+      polizaCobertura = "B/. 50,000";
+      fianzaPorcentaje = "40%";
+      refsRequeridas = "3";
+    } else {
+      polizaCobertura = "B/. 100,000";
+      fianzaPorcentaje = "50%";
+      refsRequeridas = "3";
+    }
+  }
+
   const comunes = [
-    { titulo: "Póliza de seguro de responsabilidad civil", descripcion: "Vigente, cobertura mínima B/. 100,000. Emitida por aseguradora autorizada en Panamá.", obligatorio: true, subsanable: false, tipo_respuesta: "documento" as const },
-    { titulo: "Fianza de cumplimiento", descripcion: "Mínimo 50% del valor anual del contrato, emitida por compañía de seguros autorizada.", obligatorio: true, subsanable: false, tipo_respuesta: "documento" as const },
-    { titulo: "Metodología detallada de trabajo", descripcion: "Descripción de cómo se ejecutará el servicio, frecuencias, protocolos y equipo asignado.", obligatorio: true, subsanable: false, tipo_respuesta: "texto" as const },
-    { titulo: "Referencias de 3 PH o edificios atendidos", descripcion: "Con datos de contacto del administrador o junta directiva que pueda verificar el servicio.", obligatorio: true, subsanable: true, tipo_respuesta: "documento" as const },
-    { titulo: "Hoja de vida del personal asignado", descripcion: "CV del equipo que trabajará directamente en el edificio, con experiencia relevante.", obligatorio: true, subsanable: true, tipo_respuesta: "documento" as const },
+    { titulo: "Póliza de seguro de responsabilidad civil", descripcion: `Vigente, cobertura mínima ${polizaCobertura}. Emitida por aseguradora autorizada en Panamá.`, obligatorio: true, subsanable: esContratoPequeno, tipo_respuesta: "documento" as const },
+    ...(esContratoPequeno ? [] : [
+      { titulo: "Fianza de cumplimiento", descripcion: `Mínimo ${fianzaPorcentaje} del valor anual del contrato, emitida por compañía de seguros autorizada.`, obligatorio: false, subsanable: true, tipo_respuesta: "documento" as const },
+    ]),
+    { titulo: "Metodología de trabajo", descripcion: "Descripción de cómo se ejecutará el servicio, frecuencias, protocolos y equipo asignado.", obligatorio: true, subsanable: false, tipo_respuesta: "texto" as const },
+    { titulo: `Referencias de ${refsRequeridas} cliente${Number(refsRequeridas) > 1 ? "s" : ""} atendido${Number(refsRequeridas) > 1 ? "s" : ""}`, descripcion: "Con datos de contacto que puedan verificar la calidad del servicio.", obligatorio: !esContratoPequeno, subsanable: true, tipo_respuesta: "documento" as const },
+    { titulo: "Hoja de vida del personal asignado", descripcion: "CV del equipo que trabajará directamente en el edificio, con experiencia relevante.", obligatorio: !esContratoPequeno, subsanable: true, tipo_respuesta: "documento" as const },
   ];
 
   const especificos: Record<string, typeof comunes> = {

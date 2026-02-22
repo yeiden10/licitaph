@@ -53,9 +53,17 @@ function usd(n: number | null) {
 }
 
 function formatFechaInspeccion(dateStr: string): string {
-  // dateStr is YYYY-MM-DD — append noon to avoid timezone shifts
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " — 9:00 AM";
+  // dateStr puede ser "YYYY-MM-DD" (legacy) o "YYYY-MM-DD HH:mm" (nuevo formato con hora)
+  const [datePart, timePart] = dateStr.split(" ");
+  const d = new Date(datePart + "T" + (timePart || "09:00") + ":00");
+  const fechaLabel = d.toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  // Formatear hora en formato 12h
+  const [hStr, mStr] = (timePart || "09:00").split(":");
+  const h = parseInt(hStr, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const horaLabel = `${h12}:${mStr} ${ampm}`;
+  return `${fechaLabel} — ${horaLabel}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

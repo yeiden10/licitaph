@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(request: NextRequest) {
-  const { categoria, titulo, descripcion } = await request.json();
+  const { categoria, titulo, descripcion, presupuesto_maximo } = await request.json();
 
   if (!categoria) {
     return NextResponse.json({ error: "categoria requerida" }, { status: 400 });
@@ -12,6 +12,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(fallbackSugerencias(categoria), { status: 200 });
   }
 
+  // Determinar escala según presupuesto para orientar la IA
+  let escalaStr = "";
+  if (presupuesto_maximo && presupuesto_maximo > 0) {
+    if (presupuesto_maximo < 2000) {
+      escalaStr = `\n\nIMPORTANTE — ESCALA DEL CONTRATO: Este es un contrato PEQUEÑO (B/. ${presupuesto_maximo.toLocaleString()}/año). Las especificaciones, garantías y personal requerido deben ser PROPORCIONALES a este tamaño. NO pidas requisitos de grandes empresas ni garantías excesivas. Adapta todo a una empresa pequeña o mediana que puede atender este trabajo.`;
+    } else if (presupuesto_maximo < 10000) {
+      escalaStr = `\n\nIMPORTANTE — ESCALA DEL CONTRATO: Contrato de tamaño mediano (B/. ${presupuesto_maximo.toLocaleString()}/año). Las especificaciones deben ser profesionales pero proporcionales.`;
+    } else {
+      escalaStr = `\n\nIMPORTANTE — ESCALA DEL CONTRATO: Contrato de tamaño grande (B/. ${presupuesto_maximo.toLocaleString()}/año). Aplican especificaciones completas y garantías robustas.`;
+    }
+  }
+
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -19,7 +31,7 @@ export async function POST(request: NextRequest) {
 
 El administrador de un edificio de apartamentos en Panamá necesita crear un pliego de cargos para contratar el servicio de: **${titulo || categoria}**
 
-Descripción adicional: ${descripcion || "No especificada"}
+Descripción adicional: ${descripcion || "No especificada"}${escalaStr}
 
 Genera un pliego de cargos técnico en español panameño con las siguientes secciones. Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
 

@@ -252,6 +252,7 @@ export default function NuevaLicitacion() {
   const [fotosPreview, setFotosPreview] = useState<string[]>([]);
   const [fechasInspeccion, setFechasInspeccion] = useState<string[]>([]);
   const [fechaInspeccionInput, setFechaInspeccionInput] = useState("");
+  const [horaInspeccionInput, setHoraInspeccionInput] = useState("09:00");
   const [lugarInspeccion, setLugarInspeccion] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -369,6 +370,8 @@ export default function NuevaLicitacion() {
           categoria: form.categoria,
           titulo: form.titulo,
           descripcion: form.descripcion,
+          // Pasar presupuesto para que la IA escale los requisitos apropiadamente
+          presupuesto_maximo: form.presupuesto_maximo ? Number(form.presupuesto_maximo) : null,
         }),
       });
       const data = await res.json();
@@ -461,8 +464,10 @@ export default function NuevaLicitacion() {
 
   function addFechaInspeccion() {
     if (!fechaInspeccionInput) return;
-    if (fechasInspeccion.includes(fechaInspeccionInput)) return;
-    setFechasInspeccion(prev => [...prev, fechaInspeccionInput]);
+    // Guardar como "YYYY-MM-DD HH:mm" para incluir hora
+    const fechaConHora = `${fechaInspeccionInput} ${horaInspeccionInput || "09:00"}`;
+    if (fechasInspeccion.includes(fechaConHora)) return;
+    setFechasInspeccion(prev => [...prev, fechaConHora]);
     setFechaInspeccionInput("");
   }
 
@@ -1363,31 +1368,39 @@ export default function NuevaLicitacion() {
                 Las empresas deben inspeccionar el lugar antes de enviar su propuesta.
               </p>
 
-              <Field label="Fechas disponibles para inspección del lugar">
-                <div style={{ display: "flex", gap: 10 }}>
+              <Field label="Fechas y hora disponibles para inspección del lugar">
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <input type="date" value={fechaInspeccionInput}
                     onChange={e => setFechaInspeccionInput(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
-                    style={{ ...inputStyle, flex: 1, colorScheme: "dark" }} />
+                    style={{ ...inputStyle, flex: "1 1 140px", colorScheme: "dark" }} />
+                  <input type="time" value={horaInspeccionInput}
+                    onChange={e => setHoraInspeccionInput(e.target.value)}
+                    style={{ ...inputStyle, flex: "0 0 110px", colorScheme: "dark" }} />
                   <button
                     onClick={addFechaInspeccion} disabled={!fechaInspeccionInput}
                     style={{ background: fechaInspeccionInput ? C.gold : C.bgPanel, border: `1px solid ${fechaInspeccionInput ? C.gold : C.border}`, color: fechaInspeccionInput ? "#000" : C.muted, borderRadius: 8, padding: "10px 18px", cursor: fechaInspeccionInput ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap" }}
                   >
-                    Agregar fecha
+                    + Agregar
                   </button>
                 </div>
               </Field>
 
               {fechasInspeccion.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                  {fechasInspeccion.map((f, i) => (
-                    <div key={i} style={{ background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "5px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ color: C.blue, fontSize: 13 }}>
-                        {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" })}
-                      </span>
-                      <button onClick={() => removeFechaInspeccion(i)} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
-                    </div>
-                  ))}
+                  {fechasInspeccion.map((f, i) => {
+                    // f puede ser "YYYY-MM-DD HH:mm" o "YYYY-MM-DD" (legacy)
+                    const [datePart, timePart] = f.split(" ");
+                    const dateObj = new Date(datePart + "T" + (timePart || "09:00") + ":00");
+                    const fechaLabel = dateObj.toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" });
+                    const horaLabel = timePart || "09:00";
+                    return (
+                      <div key={i} style={{ background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "5px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ color: C.blue, fontSize: 13 }}>📅 {fechaLabel} · {horaLabel}</span>
+                        <button onClick={() => removeFechaInspeccion(i)} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -1470,11 +1483,17 @@ export default function NuevaLicitacion() {
                 <div style={{ marginTop: 16 }}>
                   <p style={{ color: C.sub, fontSize: 12, margin: "0 0 8px", fontWeight: 600 }}>FECHAS DE INSPECCIÓN</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {fechasInspeccion.map((f, i) => (
-                      <span key={i} style={{ background: C.blue + "15", color: C.blue, border: `1px solid ${C.blue}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12 }}>
-                        {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" })}
-                      </span>
-                    ))}
+                    {fechasInspeccion.map((f, i) => {
+                      const [datePart, timePart] = f.split(" ");
+                      const dateObj = new Date(datePart + "T" + (timePart || "09:00") + ":00");
+                      const fechaLabel = dateObj.toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" });
+                      const horaLabel = timePart || "09:00";
+                      return (
+                        <span key={i} style={{ background: C.blue + "15", color: C.blue, border: `1px solid ${C.blue}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12 }}>
+                          📅 {fechaLabel} · {horaLabel}
+                        </span>
+                      );
+                    })}
                   </div>
                   {lugarInspeccion && (
                     <p style={{ color: C.muted, fontSize: 13, margin: "8px 0 0" }}>
@@ -1513,6 +1532,27 @@ export default function NuevaLicitacion() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Edición rápida de fecha de cierre en paso 4 */}
+            <div style={{ background: C.bgCard, border: `1px solid ${form.fecha_cierre ? C.border : C.red + "60"}`, borderRadius: 12, padding: "18px 24px", marginBottom: 20 }}>
+              <p style={{ color: form.fecha_cierre ? C.sub : C.red, fontSize: 13, fontWeight: 600, margin: "0 0 10px" }}>
+                {form.fecha_cierre ? "Fecha de cierre de recepción" : "⚠️ Fecha de cierre requerida para publicar"}
+              </p>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  type="date"
+                  value={form.fecha_cierre}
+                  onChange={e => setForm(f => ({ ...f, fecha_cierre: e.target.value }))}
+                  min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                  style={{ ...inputStyle, flex: "1 1 180px", borderColor: form.fecha_cierre ? C.border : C.red, colorScheme: "dark" }}
+                />
+                {form.fecha_cierre && (
+                  <span style={{ color: C.green, fontSize: 13, whiteSpace: "nowrap" }}>
+                    ✓ {new Date(form.fecha_cierre + "T12:00:00").toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div style={{ background: C.goldDim, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "18px 24px", marginBottom: 24 }}>
