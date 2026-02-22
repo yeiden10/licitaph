@@ -6,135 +6,133 @@ interface ChatMessage {
   content: string;
 }
 
-interface PropuestaChatRequest {
+interface EvaluacionRequest {
   messages: ChatMessage[];
-  // Contexto de la licitación para que Claude sepa qué generar
   licitacion_titulo: string;
   licitacion_descripcion?: string;
   licitacion_categoria?: string;
-  // Cuando Claude termina, devuelve la propuesta generada
-  generar?: boolean;
 }
 
-const SYSTEM_CHAT = `Eres un asesor experto en licitaciones para Propiedades Horizontales en Panamá. Tu rol es ayudar a empresas proveedoras a redactar propuestas técnicas profesionales y ganadoras.
+// Sistema de evaluación: Claude interroga a la empresa para extraer info real
+// NO ayuda a redactar — extrae hechos concretos que el PH verá estructurados
+const SYSTEM_EVALUACION = `Eres un evaluador profesional de empresas para licitaciones de Propiedades Horizontales en Panamá. Tu rol es INTERROGAR a la empresa postulante para obtener información concreta y verificable que el administrador del PH usará para tomar su decisión.
 
-MISIÓN: Hacer 3-4 preguntas específicas para entender la fortaleza de la empresa, luego generar un texto de propuesta técnica profesional.
+OBJETIVO: Extraer hechos reales, no redactar textos bonitos. El administrador necesita datos concretos para comparar empresas.
 
 REGLAS:
-1. Haz UNA sola pregunta a la vez. Máximo 2 oraciones.
-2. Sé directo y amigable. Habla de "tú" a la empresa.
-3. Después de 3-4 respuestas, genera la propuesta automáticamente.
-4. La propuesta debe ser específica, con datos concretos del servicio, NO genérica.
+1. Haz UNA sola pregunta a la vez. Sé directo y específico.
+2. Si la empresa da respuestas vagas ("tenemos mucha experiencia"), presiona con preguntas de seguimiento para obtener datos concretos (números, nombres, fechas).
+3. Después de 4-5 preguntas (o antes si ya tienes suficientes datos), genera el resumen estructurado.
+4. NO uses lenguaje elogioso. Sé neutral y objetivo.
+5. Si la empresa no sabe o no responde algo, anótalo como "No especificado".
 
-PREGUNTAS SUGERIDAS (en orden):
-1. "¿Cuántos años llevan prestando este servicio y cuántos edificios/propiedades horizontales atienden actualmente?"
-2. "¿Qué los diferencia de otras empresas del ramo? (Ej: personal certificado, tiempo de respuesta, equipos propios, garantías)"
-3. "¿Tienen algún caso de éxito o referencia relevante en este tipo de servicio?"
-4. (Opcional si hace falta): "¿Qué incluye exactamente su servicio? ¿Qué herramientas, personal o protocolos específicos utilizan?"
+PREGUNTAS PRIORITARIAS (elige las más relevantes para el servicio):
+- "¿Cuántos años llevan operando y cuántas propiedades horizontales atienden actualmente?" (número exacto)
+- "¿Cuánto personal asignarían específicamente a este edificio y cuáles serían sus horarios?"
+- "¿Pueden dar el nombre y teléfono de un administrador de PH al que hayan prestado este servicio en los últimos 12 meses?"
+- "¿Qué pasaría si un empleado suyo falla o causa un daño en el edificio? ¿Tienen seguro y de cuánto?"
+- "¿Cuál es su tiempo de respuesta garantizado ante una emergencia o reclamo?"
+- (Si aplica) "¿Tienen las certificaciones o licencias requeridas para este servicio? ¿Cuáles?"
 
-CUANDO TENGAS SUFICIENTE INFORMACIÓN (después de 3-4 respuestas), responde SOLO con este JSON:
+CUANDO TENGAS SUFICIENTE INFORMACIÓN (4-5 respuestas), responde SOLO con este JSON:
 {
   "listo": true,
-  "propuesta_tecnica": "Texto profesional de 3-5 párrafos, específico, con los datos del servicio, metodología, experiencia y diferenciadores mencionados por la empresa. Listo para copiar y pegar en la licitación.",
-  "mensaje_final": "Mensaje amigable animando a la empresa a revisar y personalizar el texto si lo desea"
-}
-
-Si aún necesitas más información, responde con texto normal haciendo la siguiente pregunta.`;
+  "resumen_estructurado": "EVALUACIÓN TÉCNICA\\n\\n[EMPRESA: resumen objetivo de lo que dijeron, con datos concretos mencionados]\\n\\nEXPERIENCIA: [años, cantidad de PHs, referencias mencionadas]\\n\\nCAPACIDAD OPERATIVA: [personal asignado, horarios, equipos]\\n\\nGARANTÍAS Y SEGUROS: [lo que mencionaron]\\n\\nTIEMPO DE RESPUESTA: [lo comprometido]\\n\\nOBSERVACIONES: [respuestas vagas, datos no confirmados, aspectos a verificar]",
+  "datos_clave": {
+    "anos_experiencia": 0,
+    "phs_actuales": 0,
+    "tiene_seguro": true,
+    "tiempo_respuesta": "",
+    "referencia_verificable": true
+  },
+  "mensaje_final": "Cuestionario completado. Tus respuestas han sido registradas para evaluación del administrador."
+}`;
 
 export async function POST(request: NextRequest) {
-  const body: PropuestaChatRequest = await request.json();
-  const { messages, licitacion_titulo, licitacion_descripcion, licitacion_categoria, generar } = body;
+  const body: EvaluacionRequest = await request.json();
+  const { messages, licitacion_titulo, licitacion_descripcion, licitacion_categoria } = body;
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    // Fallback sin API key
-    if (generar || messages.length >= 4) {
-      return NextResponse.json({
-        tipo: "propuesta",
-        propuesta_tecnica: generarPropuestaFallback(licitacion_categoria || "otros", licitacion_titulo),
-        mensaje: "Propuesta generada. Revísala y personalízala con tus datos específicos antes de enviar.",
-      });
-    }
+  // Sin mensajes de usuario: primera pregunta
+  if (messages.length === 0 || !messages.some(m => m.role === "user")) {
     return NextResponse.json({
-      tipo: "texto",
-      mensaje: "¿Cuántos años llevan prestando este servicio y cuántos edificios atienden actualmente?",
+      tipo: "pregunta",
+      mensaje: `Para completar tu postulación a "${licitacion_titulo}", necesito hacerte algunas preguntas para que el administrador del edificio pueda evaluar tu propuesta. Empecemos: ¿Cuántos años llevan operando como empresa y cuántas propiedades horizontales atienden actualmente?`,
     });
   }
 
-  // Guard: sin mensajes de usuario, devolver primera pregunta
-  if (messages.length === 0 || !messages.some(m => m.role === "user")) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    // Fallback sin API key: preguntas fijas
+    const preguntasFallback = [
+      "¿Cuánto personal asignarían específicamente a este edificio y en qué horarios?",
+      "¿Pueden proporcionar el nombre y teléfono de un administrador de PH al que hayan prestado este servicio recientemente?",
+      "¿Tienen seguro de responsabilidad civil? ¿De cuánto es la cobertura?",
+      "¿Cuál es su tiempo de respuesta garantizado ante emergencias?",
+    ];
+    const preguntaIdx = Math.floor(messages.filter(m => m.role === "assistant").length);
+
+    if (preguntaIdx >= preguntasFallback.length) {
+      // Compilar resumen con las respuestas dadas
+      const respuestasTexto = messages
+        .filter(m => m.role === "user")
+        .map((m, i) => `P${i + 1}: ${m.content}`)
+        .join("\n");
+      return NextResponse.json({
+        tipo: "completado",
+        resumen_estructurado: `EVALUACIÓN TÉCNICA\n\n${respuestasTexto}\n\nOBSERVACIONES: Información proporcionada por la empresa. Verificar antes de adjudicar.`,
+        datos_clave: { anos_experiencia: 0, phs_actuales: 0, tiene_seguro: false, tiempo_respuesta: "", referencia_verificable: false },
+        mensaje: "Cuestionario completado. Tus respuestas han sido registradas.",
+      });
+    }
+
     return NextResponse.json({
-      tipo: "texto",
-      mensaje: `Para ayudarte a redactar una propuesta técnica ganadora para "${licitacion_titulo}", te haré unas preguntas rápidas. ¿Cuántos años llevan prestando este servicio y cuántos edificios o propiedades horizontales atienden actualmente?`,
+      tipo: "pregunta",
+      mensaje: preguntasFallback[preguntaIdx],
     });
   }
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    // Contexto de licitación al inicio del sistema
-    const systemWithContext = `${SYSTEM_CHAT}
+    const systemConContexto = `${SYSTEM_EVALUACION}
 
-CONTEXTO DE LA LICITACIÓN:
+LICITACIÓN EN EVALUACIÓN:
 - Título: ${licitacion_titulo}
-- Categoría: ${licitacion_categoria || "no especificada"}
+- Categoría: ${licitacion_categoria || "general"}
 - Descripción: ${licitacion_descripcion || "no especificada"}
 
-Adapta tus preguntas y la propuesta generada a este tipo específico de servicio.`;
+Adapta las preguntas a este tipo específico de servicio.`;
 
     const res = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 1024,
-      system: systemWithContext,
+      system: systemConContexto,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     });
 
     const rawText = (res.content[0] as { type: string; text: string }).text.trim();
 
-    // Intentar parsear como JSON (propuesta lista)
+    // Intentar parsear como JSON (evaluación completada)
     try {
       const clean = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
       const parsed = JSON.parse(clean);
-      if (parsed.listo && parsed.propuesta_tecnica) {
+      if (parsed.listo && parsed.resumen_estructurado) {
         return NextResponse.json({
-          tipo: "propuesta",
-          propuesta_tecnica: parsed.propuesta_tecnica,
-          mensaje: parsed.mensaje_final || "¡Propuesta lista! Revísala y ajusta lo que necesites.",
+          tipo: "completado",
+          resumen_estructurado: parsed.resumen_estructurado,
+          datos_clave: parsed.datos_clave || {},
+          mensaje: parsed.mensaje_final || "Cuestionario completado.",
         });
       }
     } catch {
-      // No es JSON, respuesta de texto normal
+      // No es JSON — pregunta normal
     }
 
     return NextResponse.json({
-      tipo: "texto",
+      tipo: "pregunta",
       mensaje: rawText,
     });
   } catch (err) {
-    console.error("Error en propuesta-tecnica:", err);
+    console.error("Error en evaluacion empresa:", err);
     return NextResponse.json({ error: "Error al conectar con IA" }, { status: 500 });
   }
-}
-
-function generarPropuestaFallback(categoria: string, titulo: string): string {
-  const templates: Record<string, string> = {
-    seguridad: `Nuestra empresa cuenta con más de 10 años de experiencia en servicios de seguridad para propiedades horizontales en Panamá. Actualmente prestamos servicio a más de 15 edificios residenciales en la ciudad, con un equipo de agentes certificados ante el SENIAP y entrenados en protocolos de emergencia.
-
-Nuestra metodología incluye supervisión 24/7, rondas periódicas documentadas, y un sistema de reporte digital en tiempo real al administrador. Cada agente cuenta con equipos de comunicación, uniforme identificado y capacitación continua. El tiempo de respuesta ante incidentes es de máximo 5 minutos dentro del edificio.
-
-Garantizamos sustitución inmediata del personal en caso de ausencia, sin costo adicional. Contamos con seguro de responsabilidad civil vigente por B/. 500,000 y fianza de cumplimiento disponible. Nuestras referencias incluyen edificios de más de 200 unidades en áreas premium de Ciudad de Panamá.`,
-
-    limpieza: `Con más de 8 años especializados en limpieza de propiedades horizontales, mantenemos actualmente contratos con 20+ edificios residenciales en Panamá. Nuestro equipo está conformado por operarios uniformados, capacitados en técnicas de limpieza profesional y con exámenes de salud al día.
-
-Utilizamos exclusivamente productos certificados y biodegradables, con registro sanitario del MINSA. Nuestra metodología incluye limpieza diaria de áreas comunes, limpieza profunda mensual programada, y un sistema de bitácora digital que el administrador puede consultar en tiempo real.
-
-Ofrecemos sustitución del personal en menos de 2 horas ante cualquier ausencia. El supervisor de área visita el edificio al menos dos veces por semana para garantizar los estándares de calidad. Todos los incidentes de daño a propiedades están cubiertos por nuestro seguro de responsabilidad civil.`,
-  };
-
-  const base = templates[categoria] || `Contamos con amplia experiencia en la prestación de servicios de ${titulo} para propiedades horizontales en Panamá. Nuestro equipo está compuesto por profesionales certificados con más de 5 años de experiencia en el sector.
-
-Nuestra metodología de trabajo está basada en estándares internacionales, adaptados a la realidad panameña. Ofrecemos respuesta rápida ante emergencias, supervisión continua y reportes periódicos al administrador. Todos nuestros servicios están respaldados por póliza de seguro de responsabilidad civil vigente.
-
-Nos diferenciamos por nuestra capacidad de respuesta, el profesionalismo de nuestro equipo y nuestro compromiso con la satisfacción del cliente. Tenemos referencias verificables de propiedades horizontales de diferentes tamaños en Ciudad de Panamá y áreas metropolitanas.`;
-
-  return base;
 }

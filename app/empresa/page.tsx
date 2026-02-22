@@ -803,11 +803,11 @@ function ModalPostular({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  // Fase 1: precio | Fase 2: cuestionario IA | Fase 3: compromisos
+  const [fase, setFase] = useState<1 | 2 | 3>(1);
   const [precio, setPrecio] = useState("");
   const [modalidadPago, setModalidadPago] = useState("mensual");
   const [detallePago, setDetallePago] = useState("");
-  const [desc, setDesc] = useState("");
-  const [tecnica, setTecnica] = useState("");
   const [checks, setChecks] = useState({
     leyo_pliego: false,
     inspeccion_fisica: false,
@@ -817,54 +817,53 @@ function ModalPostular({
     penalidades: false,
     veracidad: false,
   });
-  const [observacionesInspeccion, setObservacionesInspeccion] = useState("");
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
 
-  // ── Chat IA para propuesta técnica ──────────────────────────────────────────
-  const [showAIChat, setShowAIChat] = useState(false);
-  const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
-  const [aiInput, setAiInput] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiStarted, setAiStarted] = useState(false);
-  const aiChatEndRef = useRef<HTMLDivElement>(null);
+  // ── Cuestionario IA (fase 2) ─────────────────────────────────────────────
+  type QMsg = { role: "user" | "assistant"; content: string };
+  const [qMessages, setQMessages] = useState<QMsg[]>([]);
+  const [qInput, setQInput] = useState("");
+  const [qLoading, setQLoading] = useState(false);
+  const [qCompletado, setQCompletado] = useState(false);
+  const [evaluacionTexto, setEvaluacionTexto] = useState(""); // resumen estructurado para propuesta_tecnica
+  const qEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    aiChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [aiMessages]);
+    qEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [qMessages]);
 
-  async function startAIChat() {
-    setShowAIChat(true);
-    if (aiStarted) return;
-    setAiStarted(true);
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/ai/propuesta-tecnica", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [],
-          licitacion_titulo: lic.titulo,
-          licitacion_descripcion: lic.descripcion,
-          licitacion_categoria: lic.categoria,
-        }),
-      });
-      const data = await res.json();
-      setAiMessages([{ role: "assistant", content: data.mensaje || "¿Cuántos años llevan prestando este servicio?" }]);
-    } catch {
-      setAiMessages([{ role: "assistant", content: "¿Cuántos años llevan prestando este servicio y cuántos edificios atienden actualmente?" }]);
-    } finally {
-      setAiLoading(false);
-    }
-  }
+  // Arrancar el cuestionario al entrar en fase 2
+  useEffect(() => {
+    if (fase !== 2 || qMessages.length > 0) return;
+    setQLoading(true);
+    fetch("/api/ai/propuesta-tecnica", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [],
+        licitacion_titulo: lic.titulo,
+        licitacion_descripcion: (lic as any).descripcion,
+        licitacion_categoria: lic.categoria,
+      }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        setQMessages([{ role: "assistant", content: data.mensaje || "¿Cuántos años llevan operando y cuántas propiedades horizontales atienden actualmente?" }]);
+      })
+      .catch(() => {
+        setQMessages([{ role: "assistant", content: "¿Cuántos años llevan operando y cuántas propiedades horizontales atienden actualmente?" }]);
+      })
+      .finally(() => setQLoading(false));
+  }, [fase]);
 
-  async function sendAIMessage() {
-    const text = aiInput.trim();
-    if (!text || aiLoading) return;
-    const newMsgs = [...aiMessages, { role: "user" as const, content: text }];
-    setAiMessages(newMsgs);
-    setAiInput("");
-    setAiLoading(true);
+  async function enviarRespuesta() {
+    const text = qInput.trim();
+    if (!text || qLoading || qCompletado) return;
+    const newMsgs: QMsg[] = [...qMessages, { role: "user", content: text }];
+    setQMessages(newMsgs);
+    setQInput("");
+    setQLoading(true);
     try {
       const res = await fetch("/api/ai/propuesta-tecnica", {
         method: "POST",
@@ -872,31 +871,29 @@ function ModalPostular({
         body: JSON.stringify({
           messages: newMsgs,
           licitacion_titulo: lic.titulo,
-          licitacion_descripcion: lic.descripcion,
+          licitacion_descripcion: (lic as any).descripcion,
           licitacion_categoria: lic.categoria,
         }),
       });
       const data = await res.json();
-      if (data.tipo === "propuesta" && data.propuesta_tecnica) {
-        setTecnica(data.propuesta_tecnica);
-        setAiMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "¡Propuesta generada! Revísala y ajústala si lo deseas." }]);
-        setShowAIChat(false);
+      if (data.tipo === "completado" && data.resumen_estructurado) {
+        setEvaluacionTexto(data.resumen_estructurado);
+        setQCompletado(true);
+        setQMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "Cuestionario completado. Puedes continuar con el siguiente paso." }]);
       } else {
-        setAiMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "..." }]);
+        setQMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "..." }]);
       }
     } catch {
-      setAiMessages(prev => [...prev, { role: "assistant", content: "Error al conectar. Intenta de nuevo." }]);
+      setQMessages(prev => [...prev, { role: "assistant", content: "Error de conexión. Intenta de nuevo." }]);
     } finally {
-      setAiLoading(false);
+      setQLoading(false);
     }
   }
 
   const todosChecked = checks.leyo_pliego && checks.inspeccion_fisica && checks.cubre_alcance && checks.no_adicionales && checks.condiciones && checks.penalidades && checks.veracidad;
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!precio) { setErr("El precio anual es requerido."); return; }
-    if (!todosChecked) { setErr("Debes aceptar todos los compromisos legales."); return; }
+  async function submit() {
+    if (!todosChecked) { setErr("Debes aceptar todos los compromisos para enviar."); return; }
     setSending(true);
     setErr("");
     try {
@@ -906,8 +903,7 @@ function ModalPostular({
         body: JSON.stringify({
           licitacion_id: lic.id,
           precio_anual: Number(precio),
-          descripcion: desc,
-          propuesta_tecnica: tecnica,
+          propuesta_tecnica: evaluacionTexto,
           modalidad_pago: modalidadPago,
           detalle_pago: modalidadPago === "personalizado" ? detallePago : undefined,
           acepta_condiciones: true,
@@ -915,7 +911,6 @@ function ModalPostular({
           acepta_penalidades: true,
           verifico_pliego: checks.leyo_pliego,
           inspecciono_lugar: checks.inspeccion_fisica,
-          observaciones_inspeccion: observacionesInspeccion || undefined,
         }),
       });
       const data = await r.json();
@@ -924,232 +919,237 @@ function ModalPostular({
     } finally { setSending(false); }
   }
 
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 32, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <div>
-            <p style={{ color: C.blue, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Postular a licitación</p>
-            <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>{lic.titulo}</h2>
-            {lic.propiedades_horizontales && (
-              <p style={{ color: C.muted, fontSize: 13, margin: "4px 0 0" }}>{lic.propiedades_horizontales.nombre} · {lic.propiedades_horizontales.ciudad}</p>
-            )}
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 24, lineHeight: 1 }}>×</button>
+  // ── Render header compartido ─────────────────────────────────────────────
+  const header = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      <div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+          {[1,2,3].map(n => (
+            <div key={n} style={{ width: 24, height: 4, borderRadius: 2, background: fase >= n ? C.gold : C.border, transition: "background .2s" }} />
+          ))}
         </div>
-
-        {lic.presupuesto_minimo && (
-          <div style={{ background: C.blueDim, border: `1px solid ${C.blue}30`, borderRadius: 8, padding: "10px 16px", marginBottom: 20, display: "flex", gap: 16 }}>
-            <span style={{ color: C.muted, fontSize: 13 }}>Presupuesto referencial:</span>
-            <span style={{ color: C.blue, fontSize: 13, fontWeight: 600 }}>{usd(lic.presupuesto_minimo)} – {usd(lic.presupuesto_maximo)} / año</span>
-          </div>
+        <p style={{ color: C.blue, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 3px" }}>
+          {fase === 1 ? "Paso 1 de 3 — Precio" : fase === 2 ? "Paso 2 de 3 — Evaluación técnica" : "Paso 3 de 3 — Compromisos"}
+        </p>
+        <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{lic.titulo}</h2>
+        {lic.propiedades_horizontales && (
+          <p style={{ color: C.muted, fontSize: 12, margin: "3px 0 0" }}>{lic.propiedades_horizontales.nombre} · {lic.propiedades_horizontales.ciudad}</p>
         )}
+      </div>
+      <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 24, lineHeight: 1 }}>×</button>
+    </div>
+  );
 
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Precio anual ofertado (USD) <span style={{ color: C.red }}>*</span></span>
-            <input
-              type="number" min="0" step="100"
-              value={precio} onChange={e => setPrecio(e.target.value)}
-              placeholder="Ej: 36000"
-              style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 15, outline: "none" }}
-            />
-          </label>
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}>
+        {header}
 
-          {/* Modalidad de pago */}
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Modalidad de pago</span>
-            <select
-              value={modalidadPago}
-              onChange={e => setModalidadPago(e.target.value)}
-              style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none" }}
-            >
-              <option value="mensual">Mensual (12 cuotas iguales)</option>
-              <option value="bimestral">Bimestral (6 cuotas)</option>
-              <option value="50_50">50% al inicio, 50% al finalizar</option>
-              <option value="70_30">70% al inicio, 30% al finalizar</option>
-              <option value="adelantado">Pago adelantado completo</option>
-              <option value="personalizado">Personalizado (especificar)</option>
-            </select>
-          </label>
-          {modalidadPago === "personalizado" && (
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Detalla la modalidad de pago</span>
-              <textarea
-                value={detallePago} onChange={e => setDetallePago(e.target.value)} rows={2}
-                placeholder="Describe en detalle la modalidad de pago propuesta..."
-                style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
-              />
-            </label>
-          )}
-
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Descripción de la propuesta</span>
-            <textarea
-              value={desc} onChange={e => setDesc(e.target.value)} rows={3}
-              placeholder="Describe brevemente tu oferta de valor..."
-              style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
-            />
-          </label>
-          {/* Propuesta técnica con asistente IA */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Propuesta técnica</span>
-              <button
-                type="button"
-                onClick={startAIChat}
-                style={{ background: showAIChat ? C.blue + "20" : C.bgPanel, border: `1px solid ${C.blue}40`, color: C.blue, borderRadius: 20, padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}
-              >
-                🤖 {showAIChat ? "Asistente activo" : "Redactar con IA"}
-              </button>
-            </div>
-
-            {/* Chat IA */}
-            {showAIChat && (
-              <div style={{ background: C.bgPanel, border: `1px solid ${C.blue}30`, borderRadius: 10, overflow: "hidden", marginBottom: 4 }}>
-                {/* Mensajes */}
-                <div style={{ maxHeight: 220, overflowY: "auto", padding: "12px 14px" }}>
-                  {aiMessages.map((m, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
-                      {m.role === "assistant" && (
-                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.blue + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 6, marginTop: 2, fontSize: 11 }}>🤖</div>
-                      )}
-                      <div style={{
-                        maxWidth: "80%",
-                        background: m.role === "user" ? C.blue + "20" : C.bgCard,
-                        color: C.text, fontSize: 13, lineHeight: 1.5,
-                        borderRadius: m.role === "user" ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
-                        padding: "8px 12px",
-                      }}>{m.content}</div>
-                    </div>
-                  ))}
-                  {aiLoading && (
-                    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 8 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.blue + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 6, fontSize: 11 }}>🤖</div>
-                      <div style={{ background: C.bgCard, borderRadius: "12px 12px 12px 4px", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
-                        {[0,1,2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: C.muted, animation: `pulse 1.4s ease-in-out ${i*0.2}s infinite` }} />)}
-                      </div>
-                    </div>
-                  )}
-                  <div ref={aiChatEndRef} />
-                </div>
-                {/* Input */}
-                <div style={{ borderTop: `1px solid ${C.border}`, padding: "8px 12px", display: "flex", gap: 8 }}>
-                  <input
-                    type="text" value={aiInput}
-                    onChange={e => setAiInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAIMessage(); } }}
-                    placeholder="Responde aquí..."
-                    disabled={aiLoading}
-                    style={{ flex: 1, background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 13, outline: "none" }}
-                  />
-                  <button type="button" onClick={sendAIMessage} disabled={aiLoading || !aiInput.trim()}
-                    style={{ background: aiInput.trim() ? C.blue : C.bgCard, border: "none", color: aiInput.trim() ? "#fff" : C.muted, borderRadius: 6, padding: "7px 14px", cursor: aiInput.trim() ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700 }}>
-                    →
-                  </button>
-                </div>
-                {tecnica && (
-                  <div style={{ padding: "6px 14px 10px", borderTop: `1px solid ${C.border}` }}>
-                    <button type="button" onClick={() => setShowAIChat(false)} style={{ background: C.green + "15", border: `1px solid ${C.green}30`, color: C.green, borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
-                      ✓ Ver propuesta generada ↓
-                    </button>
-                  </div>
-                )}
+        {/* ══════════════════════════════════════
+            FASE 1 — Precio y modalidad
+        ══════════════════════════════════════ */}
+        {fase === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {(lic as any).precio_referencia && (lic as any).precio_referencia_visible && (
+              <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}20`, borderRadius: 8, padding: "10px 16px", display: "flex", gap: 12, alignItems: "center" }}>
+                <span style={{ color: C.muted, fontSize: 13 }}>Precio referencial del PH:</span>
+                <span style={{ color: C.blue, fontSize: 13, fontWeight: 700 }}>${Number((lic as any).precio_referencia).toLocaleString()} / año</span>
               </div>
             )}
 
-            <textarea
-              value={tecnica} onChange={e => setTecnica(e.target.value)} rows={tecnica ? 6 : 4}
-              placeholder={tecnica ? "" : "Detalla tu metodología, equipo, experiencia relevante... o usa el asistente IA ↑"}
-              style={{ background: C.bgPanel, border: `1px solid ${tecnica ? C.green + "40" : C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
-            />
-            {tecnica && (
-              <p style={{ color: C.green, fontSize: 11, margin: 0 }}>✓ Propuesta técnica lista — puedes editarla directamente arriba</p>
-            )}
-          </div>
-
-          {/* Verificación del pliego — NUEVO */}
-          <div style={{ background: "rgba(201,168,76,0.04)", border: `1px solid rgba(201,168,76,0.2)`, borderRadius: 10, padding: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 16 }}>📋</span>
-              <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: 0 }}>
-                Declaración de verificación del pliego
-              </p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {([
-                { key: "leyo_pliego" as const, label: "He leído el pliego de cargos completo y comprendo todos los requisitos, especificaciones y alcance del servicio solicitado" },
-                { key: "inspeccion_fisica" as const, label: "He realizado una inspección física del lugar o me comprometo formalmente a realizarla antes de firmar el contrato, y la propuesta refleja lo observado" },
-                { key: "cubre_alcance" as const, label: "Mi propuesta cubre el 100% del alcance descrito en el pliego sin omisiones ni exclusiones" },
-                { key: "no_adicionales" as const, label: "No solicitaré costos adicionales por elementos ya especificados en el pliego de cargos" },
-              ]).map(({ key, label }) => (
-                <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={checks[key]}
-                    onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
-                    style={{ marginTop: 2, accentColor: C.gold, width: 15, height: 15, flexShrink: 0 }}
-                  />
-                  <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
-                </label>
-              ))}
-            </div>
-            {/* Observaciones de inspección */}
-            <div style={{ marginTop: 14 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ color: C.sub, fontSize: 12, fontWeight: 500 }}>Observaciones de la inspección <span style={{ color: C.muted, fontWeight: 400 }}>(opcional)</span></span>
-                <textarea
-                  value={observacionesInspeccion}
-                  onChange={e => setObservacionesInspeccion(e.target.value)}
-                  rows={3}
-                  placeholder="Describe lo observado en la inspección del lugar, condiciones actuales, materiales encontrados, aspectos relevantes para tu propuesta..."
-                  style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit" }}
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Precio anual ofertado (USD) <span style={{ color: C.red }}>*</span></span>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 15 }}>$</span>
+                <input
+                  type="number" min="0" step="100"
+                  value={precio} onChange={e => setPrecio(e.target.value)}
+                  placeholder="36000"
+                  style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px 10px 26px", color: C.text, fontSize: 15, outline: "none", width: "100%" }}
                 />
-              </label>
-            </div>
-          </div>
+              </div>
+            </label>
 
-          {/* Compromisos legales */}
-          <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 12px" }}>
-              Compromisos legales — requeridos para enviar
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {([
-                { key: "condiciones" as const, label: "Me comprometo a cumplir íntegramente las condiciones y especificaciones de esta propuesta" },
-                { key: "penalidades" as const, label: "Acepto penalidades por incumplimiento de contrato (mínimo 10% del valor anual)" },
-                { key: "veracidad" as const, label: "Confirmo que toda la información proporcionada es verídica y respondo por daños y perjuicios ante falsedad" },
-              ]).map(({ key, label }) => (
-                <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={checks[key]}
-                    onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
-                    style={{ marginTop: 2, accentColor: C.gold, width: 15, height: 15, flexShrink: 0 }}
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Modalidad de pago</span>
+              <select value={modalidadPago} onChange={e => setModalidadPago(e.target.value)}
+                style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none" }}>
+                <option value="mensual">Mensual (12 cuotas iguales)</option>
+                <option value="bimestral">Bimestral (6 cuotas)</option>
+                <option value="50_50">50% al inicio, 50% al finalizar</option>
+                <option value="70_30">70% al inicio, 30% al finalizar</option>
+                <option value="adelantado">Pago adelantado completo</option>
+                <option value="personalizado">Personalizado (especificar)</option>
+              </select>
+            </label>
+            {modalidadPago === "personalizado" && (
+              <textarea value={detallePago} onChange={e => setDetallePago(e.target.value)} rows={2}
+                placeholder="Describe la modalidad de pago..."
+                style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
+              />
+            )}
+
+            <div style={{ background: C.goldDim, border: `1px solid ${C.gold}30`, borderRadius: 10, padding: "12px 16px" }}>
+              <p style={{ color: C.gold, fontSize: 12, fontWeight: 600, margin: "0 0 4px" }}>Siguiente: evaluación técnica</p>
+              <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>Claude te hará 4-5 preguntas sobre tu empresa para que el administrador pueda evaluar tu propuesta. Responde con datos reales y verificables.</p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => { if (!precio) { setErr("El precio es requerido"); return; } setErr(""); setFase(2); }}
+                style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "11px 28px", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                Siguiente →
+              </button>
+            </div>
+            {err && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{err}</p>}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════
+            FASE 2 — Cuestionario IA obligatorio
+        ══════════════════════════════════════ */}
+        {fase === 2 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: C.bgPanel, border: `1px solid ${C.blue}30`, borderRadius: 12, overflow: "hidden" }}>
+              {/* Header cuestionario */}
+              <div style={{ background: C.blue + "10", borderBottom: `1px solid ${C.blue}20`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>📋</span>
+                <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>EVALUACIÓN TÉCNICA — El administrador verá tus respuestas</span>
+              </div>
+
+              {/* Mensajes del cuestionario */}
+              <div style={{ height: 320, overflowY: "auto", padding: "16px 16px 8px" }}>
+                {qMessages.map((m, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
+                    {m.role === "assistant" && (
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.gold + "20", border: `1px solid ${C.gold}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8, marginTop: 2, fontSize: 12 }}>📋</div>
+                    )}
+                    <div style={{
+                      maxWidth: "80%",
+                      background: m.role === "user" ? C.bgCard : C.bgCard,
+                      border: `1px solid ${m.role === "user" ? C.blue + "30" : C.gold + "30"}`,
+                      color: C.text, fontSize: 13, lineHeight: 1.6,
+                      borderRadius: m.role === "user" ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+                      padding: "10px 14px",
+                    }}>{m.content}</div>
+                  </div>
+                ))}
+                {qLoading && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.gold + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>📋</div>
+                    <div style={{ background: C.bgCard, border: `1px solid ${C.gold}20`, borderRadius: "12px 12px 12px 4px", padding: "10px 14px", display: "flex", gap: 4 }}>
+                      {[0,1,2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: C.muted, animation: `pulse 1.4s ease ${i*0.2}s infinite` }} />)}
+                    </div>
+                  </div>
+                )}
+                <div ref={qEndRef} />
+              </div>
+
+              {/* Input respuesta */}
+              {!qCompletado ? (
+                <div style={{ borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8 }}>
+                  <textarea
+                    value={qInput}
+                    onChange={e => setQInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarRespuesta(); } }}
+                    placeholder="Escribe tu respuesta aquí... (Enter para enviar)"
+                    disabled={qLoading}
+                    rows={2}
+                    style={{ flex: 1, background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text, fontSize: 13, outline: "none", resize: "none", fontFamily: "inherit" }}
                   />
-                  <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
-                </label>
-              ))}
+                  <button type="button" onClick={enviarRespuesta} disabled={qLoading || !qInput.trim()}
+                    style={{ background: qInput.trim() && !qLoading ? C.gold : C.bgPanel, border: `1px solid ${qInput.trim() ? C.gold : C.border}`, color: qInput.trim() ? "#000" : C.muted, borderRadius: 8, padding: "8px 18px", cursor: qInput.trim() ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700, alignSelf: "flex-end" }}>
+                    →
+                  </button>
+                </div>
+              ) : (
+                <div style={{ borderTop: `1px solid ${C.green}30`, padding: "12px 16px", background: C.green + "08", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: C.green, fontSize: 16 }}>✓</span>
+                  <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>Evaluación completada — tus respuestas fueron registradas</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button type="button" onClick={() => setFase(1)} style={{ background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontSize: 13 }}>
+                ← Volver
+              </button>
+              <button type="button" onClick={() => setFase(3)} disabled={!qCompletado}
+                style={{ background: qCompletado ? C.gold : C.bgPanel, border: `1px solid ${qCompletado ? C.gold : C.border}`, color: qCompletado ? "#000" : C.muted, borderRadius: 9, padding: "10px 24px", cursor: qCompletado ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700 }}>
+                {qCompletado ? "Siguiente: compromisos →" : "Completa el cuestionario para continuar"}
+              </button>
             </div>
           </div>
+        )}
 
-          {err && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{err}</p>}
-          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            <button type="button" onClick={onClose} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 14 }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={sending || !todosChecked} style={{
-              background: todosChecked ? C.blue : C.border,
-              border: "none", color: todosChecked ? "#fff" : C.muted,
-              borderRadius: 8, padding: "10px 24px",
-              cursor: sending || !todosChecked ? "not-allowed" : "pointer",
-              fontSize: 14, fontWeight: 600, opacity: sending ? 0.7 : 1,
-              transition: "background .2s",
-            }}>
-              {sending ? "Enviando..." : "Enviar propuesta →"}
-            </button>
+        {/* ══════════════════════════════════════
+            FASE 3 — Compromisos y envío
+        ══════════════════════════════════════ */}
+        {fase === 3 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Verificación del pliego */}
+            <div style={{ background: C.gold + "06", border: `1px solid ${C.gold}20`, borderRadius: 10, padding: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 16 }}>📋</span>
+                <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: 0 }}>
+                  Declaración de verificación del pliego
+                </p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {([
+                  { key: "leyo_pliego" as const, label: "He leído el pliego de cargos completo y comprendo todos los requisitos y alcance del servicio" },
+                  { key: "inspeccion_fisica" as const, label: "He realizado o me comprometo a realizar una inspección física del lugar antes de firmar el contrato" },
+                  { key: "cubre_alcance" as const, label: "Mi propuesta cubre el 100% del alcance descrito sin omisiones" },
+                  { key: "no_adicionales" as const, label: "No solicitaré costos adicionales por elementos ya especificados en el pliego" },
+                ]).map(({ key, label }) => (
+                  <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={checks[key]}
+                      onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
+                      style={{ marginTop: 2, accentColor: C.gold, width: 15, height: 15, flexShrink: 0 }} />
+                    <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Compromisos legales */}
+            <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+              <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 12px" }}>
+                Compromisos legales — requeridos para enviar
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {([
+                  { key: "condiciones" as const, label: "Me comprometo a cumplir íntegramente las condiciones y especificaciones de esta propuesta" },
+                  { key: "penalidades" as const, label: "Acepto penalidades por incumplimiento de contrato (mínimo 10% del valor anual)" },
+                  { key: "veracidad" as const, label: "Confirmo que toda la información proporcionada es verídica y respondo por daños y perjuicios ante falsedad" },
+                ]).map(({ key, label }) => (
+                  <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={checks[key]}
+                      onChange={e => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
+                      style={{ marginTop: 2, accentColor: C.gold, width: 15, height: 15, flexShrink: 0 }} />
+                    <span style={{ color: C.sub, fontSize: 13, lineHeight: 1.5 }}>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {err && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{err}</p>}
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
+              <button type="button" onClick={() => setFase(2)} style={{ background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "10px 18px", cursor: "pointer", fontSize: 13 }}>
+                ← Volver
+              </button>
+              <button type="button" onClick={submit} disabled={sending || !todosChecked} style={{
+                background: todosChecked ? C.blue : C.border,
+                border: "none", color: todosChecked ? "#fff" : C.muted,
+                borderRadius: 9, padding: "10px 26px",
+                cursor: sending || !todosChecked ? "not-allowed" : "pointer",
+                fontSize: 14, fontWeight: 700, opacity: sending ? 0.7 : 1,
+              }}>
+                {sending ? "Enviando..." : "Enviar propuesta →"}
+              </button>
+            </div>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );
