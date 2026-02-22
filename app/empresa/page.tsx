@@ -1085,7 +1085,7 @@ function ModalPostular({
                     style={{ flex: 1, background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text, fontSize: 13, outline: "none", resize: "none", fontFamily: "inherit" }}
                   />
                   <button type="button" onClick={enviarRespuesta} disabled={qLoading || !qInput.trim()}
-                    style={{ background: qInput.trim() && !qLoading ? C.gold : C.bgPanel, border: `1px solid ${qInput.trim() ? C.gold : C.border}`, color: qInput.trim() ? "#000" : C.muted, borderRadius: 8, padding: "8px 18px", cursor: qInput.trim() ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700, alignSelf: "flex-end" }}>
+                    style={{ background: qInput.trim() && !qLoading ? C.gold : C.bgPanel, border: `1px solid ${qInput.trim() ? C.gold : C.border}`, color: qInput.trim() ? "#fff" : C.muted, borderRadius: 8, padding: "8px 18px", cursor: qInput.trim() ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700, alignSelf: "flex-end" }}>
                     →
                   </button>
                 </div>
@@ -1102,7 +1102,7 @@ function ModalPostular({
                 ← Volver
               </button>
               <button type="button" onClick={() => setFase(3)} disabled={!qCompletado}
-                style={{ background: qCompletado ? C.gold : C.bgPanel, border: `1px solid ${qCompletado ? C.gold : C.border}`, color: qCompletado ? "#000" : C.muted, borderRadius: 9, padding: "10px 24px", cursor: qCompletado ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700 }}>
+                style={{ background: qCompletado ? C.gold : C.bgPanel, border: `1px solid ${qCompletado ? C.gold : C.border}`, color: qCompletado ? "#fff" : C.muted, borderRadius: 9, padding: "10px 24px", cursor: qCompletado ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 700 }}>
                 {qCompletado ? "Siguiente: compromisos →" : "Completa el cuestionario para continuar"}
               </button>
             </div>

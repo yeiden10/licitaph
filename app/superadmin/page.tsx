@@ -3,13 +3,14 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const C = {
-  bg: "#07090F", bgCard: "#0D1117", bgPanel: "#111827",
-  border: "#1F2937", gold: "#C9A84C", goldDim: "#2D2310",
-  blue: "#4A9EFF", blueDim: "#1D3557",
-  green: "#4ADE80", greenDim: "#052E16",
-  red: "#F87171", redDim: "#2D0A0A",
-  purple: "#A78BFA", purpleDim: "#2D1B69",
-  text: "#F0F4FF", muted: "#6B7280", sub: "#9CA3AF",
+  bg: "#FFFFFF", bgCard: "#FFFFFF", bgPanel: "#F8FAFC",
+  border: "#E2E8F0", accent: "#1E3A8A", accentSoft: "#EFF6FF",
+  gold: "#1E3A8A", goldDim: "#EFF6FF",   // compat aliases
+  blue: "#3B82F6", blueDim: "#EFF6FF",
+  green: "#10B981", greenDim: "#ECFDF5",
+  red: "#EF4444", redDim: "#FEF2F2",
+  purple: "#7C3AED", purpleDim: "#F5F3FF",
+  text: "#0F172A", muted: "#94A3B8", sub: "#64748B",
 };
 
 type Tab = "dashboard" | "empresas" | "licitaciones" | "ph";
@@ -77,9 +78,9 @@ interface PH {
 
 function badgeVerificacion(estado: string | null) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
-    verificada: { label: "Verificada", bg: "#052E16", color: "#4ADE80" },
-    pendiente: { label: "Pendiente", bg: "#2D2310", color: "#C9A84C" },
-    rechazada: { label: "Rechazada", bg: "#2D0A0A", color: "#F87171" },
+    verificada: { label: "Verificada", bg: "#ECFDF5", color: "#10B981" },
+    pendiente: { label: "Pendiente", bg: "#EFF6FF", color: "#1E3A8A" },
+    rechazada: { label: "Rechazada", bg: "#FEF2F2", color: "#EF4444" },
   };
   const s = map[estado || "pendiente"] || map.pendiente;
   return (
@@ -91,13 +92,13 @@ function badgeVerificacion(estado: string | null) {
 
 function badgeEstado(estado: string) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
-    activa: { label: "Activa", bg: "#052E16", color: "#4ADE80" },
-    borrador: { label: "Borrador", bg: "#1F2937", color: "#9CA3AF" },
-    en_evaluacion: { label: "En evaluación", bg: "#1D3557", color: "#4A9EFF" },
-    adjudicada: { label: "Adjudicada", bg: "#2D2310", color: "#C9A84C" },
-    cancelada: { label: "Cancelada", bg: "#2D0A0A", color: "#F87171" },
+    activa: { label: "Activa", bg: "#ECFDF5", color: "#10B981" },
+    borrador: { label: "Borrador", bg: "#F1F5F9", color: "#64748B" },
+    en_evaluacion: { label: "En evaluación", bg: "#EFF6FF", color: "#3B82F6" },
+    adjudicada: { label: "Adjudicada", bg: "#EFF6FF", color: "#1E3A8A" },
+    cancelada: { label: "Cancelada", bg: "#FEF2F2", color: "#EF4444" },
   };
-  const s = map[estado] || { label: estado, bg: "#1F2937", color: "#9CA3AF" };
+  const s = map[estado] || { label: estado, bg: "#F1F5F9", color: "#64748B" };
   return (
     <span style={{ background: s.bg, color: s.color, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
       {s.label}
@@ -410,7 +411,7 @@ export default function SuperadminDashboard() {
       {notif && (
         <div onClick={() => setNotif(null)} style={{
           position: "fixed", top: 20, right: 20, zIndex: 9999,
-          background: notif.tipo === "ok" ? "#052E16" : "#2D0A0A",
+          background: notif.tipo === "ok" ? "#ECFDF5" : "#FEF2F2",
           border: `1px solid ${notif.tipo === "ok" ? C.green : C.red}`,
           color: notif.tipo === "ok" ? C.green : C.red,
           padding: "14px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -568,7 +569,7 @@ export default function SuperadminDashboard() {
                         <p style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: 0 }}>{emp.nombre}</p>
                         {badgeVerificacion(emp.estado_verificacion)}
                         {emp.empresa_kyc && (
-                          <span style={{ background: emp.empresa_kyc.completado ? "#052E16" : "#2D2310", color: emp.empresa_kyc.completado ? C.green : C.gold, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700 }}>
+                          <span style={{ background: emp.empresa_kyc.completado ? "#ECFDF5" : "#EFF6FF", color: emp.empresa_kyc.completado ? C.green : C.gold, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700 }}>
                             KYC {emp.empresa_kyc.porcentaje_completado}%
                           </span>
                         )}
@@ -600,7 +601,7 @@ export default function SuperadminDashboard() {
                         <button
                           onClick={() => verificarEmpresa(emp.id, "verificada")}
                           disabled={verificando === emp.id}
-                          style={{ background: "#052E16", border: `1px solid ${C.green}`, color: C.green, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, opacity: verificando === emp.id ? 0.6 : 1 }}
+                          style={{ background: "#ECFDF5", border: `1px solid ${C.green}`, color: C.green, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, opacity: verificando === emp.id ? 0.6 : 1 }}
                         >
                           ✓ Verificar
                         </button>
@@ -608,7 +609,7 @@ export default function SuperadminDashboard() {
                       {emp.estado_verificacion !== "rechazada" && (
                         <button
                           onClick={() => setShowRechazo(emp.id)}
-                          style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12 }}
+                          style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12 }}
                         >
                           ✗ Rechazar
                         </button>
@@ -656,7 +657,7 @@ export default function SuperadminDashboard() {
                     <tr key={lic.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: "14px 16px" }}>
                         <p style={{ color: C.text, fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{lic.titulo}</p>
-                        {lic.urgente && <span style={{ background: "#2D0A0A", color: C.red, padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700 }}>URGENTE</span>}
+                        {lic.urgente && <span style={{ background: "#FEF2F2", color: C.red, padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700 }}>URGENTE</span>}
                       </td>
                       <td style={{ padding: "14px 16px", color: C.sub, fontSize: 12 }}>{lic.propiedades_horizontales?.nombre || "—"}</td>
                       <td style={{ padding: "14px 16px", color: C.sub, fontSize: 12 }}>{lic.categoria}</td>
@@ -709,7 +710,7 @@ export default function SuperadminDashboard() {
                       <td style={{ padding: "14px 16px", color: C.text, fontSize: 13 }}>{ph.total_unidades || "—"}</td>
                       <td style={{ padding: "14px 16px", color: C.sub, fontSize: 12 }}>{ph.email_contacto || "—"}</td>
                       <td style={{ padding: "14px 16px" }}>
-                        <span style={{ background: ph.activo ? "#052E16" : "#2D0A0A", color: ph.activo ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                        <span style={{ background: ph.activo ? "#ECFDF5" : "#FEF2F2", color: ph.activo ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                           {ph.activo ? "Activa" : "Inactiva"}
                         </span>
                       </td>
@@ -775,10 +776,10 @@ export default function SuperadminDashboard() {
                       <div style={{ background: empresaDetalle.empresa_kyc.completado ? C.green : C.gold, height: "100%", width: `${empresaDetalle.empresa_kyc.porcentaje_completado}%`, transition: "width .4s" }} />
                     </div>
                     <div style={{ display: "flex", gap: 12 }}>
-                      <span style={{ background: empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? "#052E16" : "#2D0A0A", color: empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                      <span style={{ background: empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? "#ECFDF5" : "#FEF2F2", color: empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                         {empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? "✓" : "✗"} Seguro RC
                       </span>
-                      <span style={{ background: empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? "#052E16" : "#2D0A0A", color: empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                      <span style={{ background: empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? "#ECFDF5" : "#FEF2F2", color: empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                         {empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? "✓" : "✗"} Fianza
                       </span>
                     </div>
@@ -823,7 +824,7 @@ export default function SuperadminDashboard() {
                     {docsEmpresa.map(doc => {
                       const estadoDoc = doc.estado || "pendiente";
                       const estadoColor = estadoDoc === "aprobado" ? C.green : estadoDoc === "rechazado" ? C.red : C.gold;
-                      const estadoBg = estadoDoc === "aprobado" ? "#052E16" : estadoDoc === "rechazado" ? "#2D0A0A" : "#2D2310";
+                      const estadoBg = estadoDoc === "aprobado" ? "#ECFDF5" : estadoDoc === "rechazado" ? "#FEF2F2" : "#EFF6FF";
                       return (
                         <div key={doc.id} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -841,13 +842,13 @@ export default function SuperadminDashboard() {
                             <button
                               onClick={() => revisarDoc(empresaDetalle.id, doc.id, "aprobado")}
                               disabled={revisandoDoc === doc.id}
-                              style={{ background: "#052E16", border: `1px solid ${C.green}`, color: C.green, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
+                              style={{ background: "#ECFDF5", border: `1px solid ${C.green}`, color: C.green, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
                             >✓</button>
                           )}
                           {estadoDoc !== "rechazado" && (
                             <button
                               onClick={() => { setShowMotivoDoc(doc.id); setMotivoDoc(""); }}
-                              style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
+                              style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
                             >✗</button>
                           )}
                         </div>
@@ -866,7 +867,7 @@ export default function SuperadminDashboard() {
                       <p style={{ color: C.red, fontSize: 11, fontWeight: 600, margin: "0 0 6px" }}>Documentos faltantes ({faltantes.length}):</p>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {faltantes.map(t => (
-                          <span key={t} style={{ background: "#2D0A0A", color: C.red, border: `1px solid ${C.red}30`, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600 }}>
+                          <span key={t} style={{ background: "#FEF2F2", color: C.red, border: `1px solid ${C.red}30`, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600 }}>
                             {TIPOS_LABEL[t] || t}
                           </span>
                         ))}
@@ -877,7 +878,7 @@ export default function SuperadminDashboard() {
 
                 {/* Modal motivo rechazo doc */}
                 {showMotivoDoc && (
-                  <div style={{ marginTop: 12, background: "#2D0A0A", border: `1px solid ${C.red}30`, borderRadius: 8, padding: 14 }}>
+                  <div style={{ marginTop: 12, background: "#FEF2F2", border: `1px solid ${C.red}30`, borderRadius: 8, padding: 14 }}>
                     <p style={{ color: C.red, fontSize: 12, fontWeight: 600, margin: "0 0 8px" }}>Motivo del rechazo (opcional)</p>
                     <textarea
                       rows={2}
@@ -890,7 +891,7 @@ export default function SuperadminDashboard() {
                       <button
                         onClick={() => revisarDoc(empresaDetalle.id, showMotivoDoc, "rechazado", motivoDoc)}
                         disabled={revisandoDoc !== null}
-                        style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700 }}
+                        style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700 }}
                       >Confirmar rechazo</button>
                       <button onClick={() => setShowMotivoDoc(null)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.muted, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Cancelar</button>
                     </div>
@@ -904,7 +905,7 @@ export default function SuperadminDashboard() {
                   <button
                     onClick={() => { verificarEmpresa(empresaDetalle.id, "verificada"); }}
                     disabled={verificando === empresaDetalle.id}
-                    style={{ background: "#052E16", border: `1px solid ${C.green}`, color: C.green, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1, opacity: verificando ? 0.6 : 1 }}
+                    style={{ background: "#ECFDF5", border: `1px solid ${C.green}`, color: C.green, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1, opacity: verificando ? 0.6 : 1 }}
                   >
                     ✓ Verificar empresa
                   </button>
@@ -912,7 +913,7 @@ export default function SuperadminDashboard() {
                 {empresaDetalle.estado_verificacion !== "rechazada" && (
                   <button
                     onClick={() => { setEmpresaDetalle(null); setShowRechazo(empresaDetalle.id); }}
-                    style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1 }}
+                    style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1 }}
                   >
                     ✗ Rechazar
                   </button>
@@ -946,7 +947,7 @@ export default function SuperadminDashboard() {
               <button
                 onClick={() => verificarEmpresa(showRechazo, "rechazada", motivoRechazo)}
                 disabled={verificando !== null}
-                style={{ background: "#2D0A0A", border: `1px solid ${C.red}`, color: C.red, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1, opacity: verificando ? 0.6 : 1 }}
+                style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1, opacity: verificando ? 0.6 : 1 }}
               >
                 Confirmar rechazo
               </button>

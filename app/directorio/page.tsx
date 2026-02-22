@@ -23,9 +23,11 @@ export const metadata: Metadata = {
 };
 
 const C = {
-  bg: "#07090F", bgCard: "#0D1117", bgPanel: "#111827", border: "#1F2937",
-  gold: "#C9A84C", goldDim: "#2D2310", blue: "#4A9EFF", green: "#4ADE80",
-  red: "#F87171", text: "#F0F4FF", muted: "#6B7280", sub: "#9CA3AF",
+  bg: "#FFFFFF", bgCard: "#FFFFFF", bgPanel: "#F8FAFC", border: "#E2E8F0",
+  accent: "#1E3A8A", accentSoft: "#EFF6FF",
+  gold: "#1E3A8A", goldDim: "#EFF6FF",   // compat aliases
+  blue: "#3B82F6", green: "#10B981",
+  red: "#EF4444", text: "#0F172A", muted: "#94A3B8", sub: "#64748B",
 };
 
 const CATEGORIAS_LABELS: Record<string, string> = {
@@ -79,16 +81,16 @@ export default async function DirectorioPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600&display=swap');
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#07090F; color:#F0F4FF; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+        body { background:#FFFFFF; color:#0F172A; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        .dir-card { background:#0D1117; border:1px solid #1F2937; border-radius:14px; padding:22px; transition:border-color 0.2s; }
-        .dir-card:hover { border-color:rgba(201,168,76,0.3); }
+        .dir-card { background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:22px; transition:border-color 0.2s; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+        .dir-card:hover { border-color:rgba(30,58,138,0.3); }
 
         /* ── RESPONSIVE ── */
         .dir-nav-links { display:flex; gap:20px; align-items:center; }
         .dir-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:44px; }
         .dir-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
-        .dir-hero-h1 { font-family:'Plus Jakarta Sans',sans-serif; font-size:40px; font-weight:800; color:#F0F4FF; letter-spacing:-0.6px; margin-bottom:14px; line-height:1.15; }
+        .dir-hero-h1 { font-family:'Plus Jakarta Sans',sans-serif; font-size:40px; font-weight:800; color:#0F172A; letter-spacing:-0.6px; margin-bottom:14px; line-height:1.15; }
         .dir-main { max-width:1100px; margin:0 auto; padding:48px 24px; }
 
         @media(max-width:768px){
@@ -107,14 +109,14 @@ export default async function DirectorioPage() {
       `}</style>
 
       {/* Nav */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(7,9,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px 0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px 0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <a href="/" style={{ textDecoration: "none", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 18, fontWeight: 800 }}>
           <span style={{ color: C.gold }}>Licita</span><span style={{ color: C.text }}>PH</span>
         </a>
         <div className="dir-nav-links">
           <a href="/" style={{ color: C.muted, textDecoration: "none", fontSize: 13, fontWeight: 500 }}>Inicio</a>
           <a href="/directorio" style={{ color: C.gold, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Directorio</a>
-          <a href="/" style={{ background: C.gold, color: "#07090F", textDecoration: "none", fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 7 }}>Ingresar</a>
+          <a href="/" style={{ background: C.gold, color: "#fff", textDecoration: "none", fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 7 }}>Ingresar</a>
         </div>
       </nav>
 
@@ -236,7 +238,7 @@ export default async function DirectorioPage() {
           <p style={{ fontSize: 14, color: C.muted, marginBottom: 28, lineHeight: 1.75, maxWidth: 500, margin: "0 auto 28px" }}>
             Únete al directorio verificado y accede a licitaciones de edificios en Panamá. El proceso de verificación es gratuito.
           </p>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.gold, color: "#07090F", borderRadius: 8, padding: "13px 30px", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.gold, color: "#fff", borderRadius: 8, padding: "13px 30px", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
             Registrar mi empresa →
           </a>
         </div>

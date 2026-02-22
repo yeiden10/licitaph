@@ -34,10 +34,10 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>" />
-        <meta name="theme-color" content="#07090F" />
+        <meta name="theme-color" content="#FFFFFF" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body style={{ margin: 0, padding: 0, background: "#07090F" }}>
+      <body style={{ margin: 0, padding: 0, background: "#FFFFFF" }}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

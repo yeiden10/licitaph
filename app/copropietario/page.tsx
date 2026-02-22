@@ -3,18 +3,21 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const C = {
-  bg:      "#07090F",
-  bgCard:  "#0D1117",
-  bgPanel: "#111827",
-  border:  "#1F2937",
-  gold:    "#C9A84C",
-  goldDim: "#2D2310",
-  blue:    "#4A9EFF",
-  green:   "#4ADE80",
-  red:     "#F87171",
-  text:    "#F0F4FF",
-  muted:   "#6B7280",
-  sub:     "#9CA3AF",
+  bg:        "#FFFFFF",
+  bgCard:    "#FFFFFF",
+  bgPanel:   "#F8FAFC",
+  border:    "#E2E8F0",
+  accent:    "#1E3A8A",
+  accentSoft:"#EFF6FF",
+  gold:      "#1E3A8A",   // compat alias
+  goldDim:   "#EFF6FF",   // compat alias
+  blue:      "#3B82F6",
+  green:     "#10B981",
+  red:       "#EF4444",
+  text:      "#0F172A",
+  muted:     "#94A3B8",
+  sub:       "#64748B",
+  text2:     "#475569",
 };
 
 type Tab = "resumen" | "licitaciones" | "contratos";
