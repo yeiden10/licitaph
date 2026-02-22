@@ -50,6 +50,10 @@ export async function POST(request: NextRequest) {
     // Documento adjunto a un requisito de pliego
     bucket = "documentos-licitacion";
     storagePath = `${entidad_id}/${requisito_id}/${timestamp}.${ext}`;
+  } else if (contexto === "licitacion") {
+    // Fotos de licitación (subidas desde el wizard)
+    bucket = "documentos-licitacion";
+    storagePath = `fotos/${entidad_id}/${timestamp}.${ext}`;
   } else {
     return NextResponse.json({ error: "Contexto inválido" }, { status: 400 });
   }
@@ -93,6 +97,21 @@ export async function POST(request: NextRequest) {
         subido_por: user.id,
       }, { onConflict: "entidad_id,tipo" }).then(() => {});
     }
+  }
+
+  // Registrar foto en licitaciones.fotos (array de URLs públicas)
+  if (contexto === "licitacion" && entidad_id) {
+    const { data: lic } = await supabase
+      .from("licitaciones")
+      .select("fotos")
+      .eq("id", entidad_id)
+      .single();
+
+    const fotosActuales: string[] = Array.isArray(lic?.fotos) ? lic.fotos : [];
+    await supabase
+      .from("licitaciones")
+      .update({ fotos: [...fotosActuales, urlData.publicUrl] })
+      .eq("id", entidad_id);
   }
 
   // Registrar en respuestas_requisito (para documentos de pliego)

@@ -108,6 +108,7 @@ interface FormState {
   urgente: boolean;
   precio_referencia: string;
   precio_referencia_visible: boolean;
+  condiciones_especiales: string;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -231,6 +232,7 @@ export default function NuevaLicitacion() {
     urgente: false,
     precio_referencia: "",
     precio_referencia_visible: true,
+    condiciones_especiales: "",
   });
 
   // ── Step 2 state ────────────────────────────────────────────────────────────
@@ -404,6 +406,7 @@ export default function NuevaLicitacion() {
         precio_referencia_visible: form.precio_referencia_visible,
         fechas_inspeccion: fechasInspeccion,
         lugar_inspeccion: lugarInspeccion || null,
+        condiciones_especiales: form.condiciones_especiales || null,
         requisitos: allRequisitos,
         publicar,
       };
@@ -1133,6 +1136,21 @@ export default function NuevaLicitacion() {
                   Las empresas verán estas fechas y el lugar al revisar la licitación. Deben confirmar que asistirán a la inspección antes de enviar su propuesta.
                 </p>
               </div>
+            </div>
+
+            {/* Condiciones especiales */}
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginTop: 16 }}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 6px" }}>Condiciones especiales</h2>
+              <p style={{ color: C.muted, fontSize: 13, margin: "0 0 16px" }}>
+                Información adicional, restricciones o requisitos particulares que apliquen a esta licitación.
+              </p>
+              <textarea
+                value={form.condiciones_especiales}
+                onChange={e => setForm(f => ({ ...f, condiciones_especiales: e.target.value }))}
+                rows={4}
+                placeholder="Ej: El personal debe tener uniforme. No se permite subcontratación. El administrador debe estar disponible los sábados..."
+                style={{ ...inputStyle, resize: "vertical" }}
+              />
             </div>
 
             <div style={{ display: "flex", gap: 12, justifyContent: "space-between", marginTop: 32 }}>
