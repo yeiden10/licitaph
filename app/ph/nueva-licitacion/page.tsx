@@ -214,7 +214,17 @@ export default function NuevaLicitacion() {
   const [chatLoading, setChatLoading] = useState(false);
   const [propuestaIA, setPropuestaIA] = useState<Record<string, unknown> | null>(null);
   const [chatResumen, setChatResumen] = useState("");
+  const [clausulasGeneradas, setClausulasGeneradas] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ── Rango de mercado ────────────────────────────────────────────────────────
+  const [rangoMercado, setRangoMercado] = useState<{
+    tiene_historial: boolean;
+    total_contratos: number;
+    rango: { minimo: number; maximo: number; mediana: number; promedio: number; recomendado_min: number; recomendado_max: number };
+    mensaje: string;
+  } | null>(null);
+  const [loadingRango, setLoadingRango] = useState(false);
 
   // Form fields (pre-filled by AI or manually)
   const [form, setForm] = useState<FormState>({
@@ -272,6 +282,20 @@ export default function NuevaLicitacion() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  // Fetch market price range when category is set
+  useEffect(() => {
+    if (!form.categoria) return;
+    setLoadingRango(true);
+    const unidades = 80; // default; could be extracted from chat context
+    fetch(`/api/ai/precios-mercado?categoria=${form.categoria}&unidades=${unidades}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.rango) setRangoMercado(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingRango(false));
+  }, [form.categoria]);
+
   // ── Chat send ────────────────────────────────────────────────────────────────
   const sendChatMessage = useCallback(async () => {
     const text = chatInput.trim();
@@ -293,6 +317,13 @@ export default function NuevaLicitacion() {
       if (data.tipo === "propuesta" && data.propuesta) {
         // Claude terminó — pre-llenar el formulario
         const p = data.propuesta;
+        // Build condiciones_especiales merging AI text + anti-additional clauses
+        const clausulas: string[] = Array.isArray(p.clausulas_anti_adicionales) ? p.clausulas_anti_adicionales : [];
+        const condBase = p.condiciones_especiales || "";
+        const condFinal = clausulas.length > 0
+          ? (condBase ? condBase + "\n\n" : "") + "CLÁUSULAS DE ALCANCE INCLUIDO:\n" + clausulas.map((c: string) => `• ${c}`).join("\n")
+          : condBase;
+
         setForm(prev => ({
           ...prev,
           titulo: p.titulo || prev.titulo,
@@ -302,10 +333,11 @@ export default function NuevaLicitacion() {
           presupuesto_maximo: p.presupuesto_maximo ? String(p.presupuesto_maximo) : prev.presupuesto_maximo,
           duracion_contrato_meses: p.duracion_contrato_meses ? String(p.duracion_contrato_meses) : prev.duracion_contrato_meses,
           urgente: p.urgente ?? prev.urgente,
-          condiciones_especiales: p.condiciones_especiales || prev.condiciones_especiales,
+          condiciones_especiales: condFinal,
         }));
         setPropuestaIA(p);
         setChatResumen(p.resumen_para_requisitos || "");
+        if (clausulas.length > 0) setClausulasGeneradas(clausulas);
         setChatMessages(prev => [...prev, {
           role: "assistant",
           content: data.mensaje || "¡Listo! Generé los datos de la licitación. Revísalos abajo y ajusta lo que necesites.",
@@ -700,6 +732,62 @@ export default function NuevaLicitacion() {
                 </button>
               </div>
             </div>
+
+            {/* Rango de precios de mercado */}
+            {form.categoria && (loadingRango || rangoMercado) && (
+              <div style={{
+                background: rangoMercado?.tiene_historial ? C.bgCard : C.bgPanel,
+                border: `1px solid ${rangoMercado?.tiene_historial ? C.gold + "40" : C.border}`,
+                borderRadius: 14, padding: "16px 20px", marginBottom: 16,
+                display: "flex", alignItems: "flex-start", gap: 14,
+              }}>
+                <div style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>
+                  {loadingRango ? "⏳" : rangoMercado?.tiene_historial ? "📊" : "💡"}
+                </div>
+                {loadingRango ? (
+                  <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>Consultando precios de mercado...</p>
+                ) : rangoMercado ? (
+                  <div style={{ flex: 1 }}>
+                    <p style={{ color: rangoMercado.tiene_historial ? C.gold : C.sub, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 6px" }}>
+                      {rangoMercado.tiene_historial ? `Rango histórico LicitaPH (${rangoMercado.total_contratos} contratos)` : "Referencia de mercado panameño"}
+                    </p>
+                    <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 6 }}>
+                      <span style={{ color: C.text, fontSize: 14 }}>
+                        Rango: <strong style={{ color: rangoMercado.tiene_historial ? C.gold : C.sub }}>
+                          ${rangoMercado.rango.minimo.toLocaleString()} – ${rangoMercado.rango.maximo.toLocaleString()}
+                        </strong> / año
+                      </span>
+                      <span style={{ color: C.text, fontSize: 14 }}>
+                        Mediana: <strong style={{ color: C.green }}>${rangoMercado.rango.mediana.toLocaleString()}</strong> / año
+                      </span>
+                    </div>
+                    {rangoMercado.tiene_historial && (
+                      <p style={{ color: C.muted, fontSize: 12, margin: "0 0 4px" }}>
+                        Zona competitiva: <strong style={{ color: C.text }}>${rangoMercado.rango.recomendado_min.toLocaleString()} – ${rangoMercado.rango.recomendado_max.toLocaleString()}</strong> / año (p25–p75)
+                      </p>
+                    )}
+                    <p style={{ color: C.muted, fontSize: 11, margin: 0 }}>{rangoMercado.mensaje}</p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Cláusulas anti-adicionales generadas */}
+            {clausulasGeneradas.length > 0 && (
+              <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}30`, borderRadius: 12, padding: "14px 18px", marginBottom: 16 }}>
+                <p style={{ color: C.blue, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}>
+                  🛡️ Cláusulas de alcance incluidas automáticamente
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {clausulasGeneradas.map((c, i) => (
+                    <p key={i} style={{ color: C.text, fontSize: 13, margin: 0 }}>• {c}</p>
+                  ))}
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, margin: "8px 0 0" }}>
+                  Estas cláusulas se agregaron a "Condiciones especiales" para que las empresas sepan exactamente qué está incluido en el precio.
+                </p>
+              </div>
+            )}
 
             {/* Formulario generado por IA */}
             {showFormManual && propuestaIA && (

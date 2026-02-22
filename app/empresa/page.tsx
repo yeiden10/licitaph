@@ -827,6 +827,7 @@ function ModalPostular({
   const [qLoading, setQLoading] = useState(false);
   const [qCompletado, setQCompletado] = useState(false);
   const [evaluacionTexto, setEvaluacionTexto] = useState(""); // resumen estructurado para propuesta_tecnica
+  const [alertasAlcance, setAlertasAlcance] = useState<string[]>([]); // alertas de scope mismatch
   const qEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -845,6 +846,7 @@ function ModalPostular({
         licitacion_titulo: lic.titulo,
         licitacion_descripcion: (lic as any).descripcion,
         licitacion_categoria: lic.categoria,
+        licitacion_condiciones: (lic as any).condiciones_especiales,
       }),
     })
       .then(r => r.json())
@@ -873,11 +875,15 @@ function ModalPostular({
           licitacion_titulo: lic.titulo,
           licitacion_descripcion: (lic as any).descripcion,
           licitacion_categoria: lic.categoria,
+          licitacion_condiciones: (lic as any).condiciones_especiales,
         }),
       });
       const data = await res.json();
       if (data.tipo === "completado" && data.resumen_estructurado) {
         setEvaluacionTexto(data.resumen_estructurado);
+        if (Array.isArray(data.alertas_alcance) && data.alertas_alcance.length > 0) {
+          setAlertasAlcance(data.alertas_alcance);
+        }
         setQCompletado(true);
         setQMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "Cuestionario completado. Puedes continuar con el siguiente paso." }]);
       } else {
@@ -897,13 +903,18 @@ function ModalPostular({
     setSending(true);
     setErr("");
     try {
+      // Append scope alerts to the structured evaluation so PH sees them
+      const propuestaTecnicaFinal = alertasAlcance.length > 0
+        ? evaluacionTexto + "\n\n⚠️ ALERTAS DE ALCANCE:\n" + alertasAlcance.map(a => `• ${a}`).join("\n")
+        : evaluacionTexto;
+
       const r = await fetch("/api/propuestas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           licitacion_id: lic.id,
           precio_anual: Number(precio),
-          propuesta_tecnica: evaluacionTexto,
+          propuesta_tecnica: propuestaTecnicaFinal,
           modalidad_pago: modalidadPago,
           detalle_pago: modalidadPago === "personalizado" ? detallePago : undefined,
           acepta_condiciones: true,

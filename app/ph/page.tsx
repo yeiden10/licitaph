@@ -1189,6 +1189,22 @@ export default function PHDashboard() {
                             {p.descripcion && (
                               <div className="prop-detalle">{p.descripcion}</div>
                             )}
+                            {/* Alertas de alcance — si la empresa contradijo cláusulas del pliego */}
+                            {(p as any).propuesta_tecnica && (p as any).propuesta_tecnica.includes("ALERTAS DE ALCANCE") && (() => {
+                              const partes = ((p as any).propuesta_tecnica as string).split("ALERTAS DE ALCANCE:");
+                              const alertasRaw = partes[1] || "";
+                              const alertas = alertasRaw.split("\n").map((l: string) => l.replace(/^•\s*/, "").trim()).filter((l: string) => l.length > 5);
+                              if (!alertas.length) return null;
+                              return (
+                                <div style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 8, padding: "10px 14px", marginTop: 8 }}>
+                                  <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>⚠️ Alertas de alcance</div>
+                                  {alertas.map((a: string, ai: number) => (
+                                    <div key={ai} style={{ fontSize: 12, color: "#FCA5A5", lineHeight: 1.5, marginBottom: 3 }}>• {a}</div>
+                                  ))}
+                                  <div style={{ fontSize: 11, color: "rgba(248,113,113,0.6)", marginTop: 6 }}>Verifica estos puntos antes de adjudicar. La empresa puede estar cotizando un alcance diferente al pliego.</div>
+                                </div>
+                              );
+                            })()}
                             {/* Análisis Claude */}
                             {(p as any).analisis_ia?.recomendacion && (
                               <div style={{ background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.15)", borderRadius: 8, padding: "10px 12px", marginTop: 8 }}>
