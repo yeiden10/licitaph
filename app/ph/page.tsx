@@ -91,13 +91,14 @@ export default function PHDashboard() {
   const [guardandoQa, setGuardandoQa] = useState<string | null>(null);
 
   const cargarQa = useCallback(async (licId: string) => {
+    if (!ph?.id) { setQaPreguntas([]); setLoadingQa(false); return; }
     setLoadingQa(true);
     try {
       // Cargar preguntas de todas las licitaciones del PH (activas + en_evaluacion)
       const { data: lics } = await supabase
         .from("licitaciones")
         .select("id, titulo")
-        .eq("ph_id", ph?.id || "")
+        .eq("ph_id", ph.id)
         .in("estado", ["activa", "en_evaluacion", "adjudicada"]);
 
       const licsArr = lics || [];

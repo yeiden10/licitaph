@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const { titulo, categoria, descripcion, presupuesto_minimo, presupuesto_maximo,
-          fecha_cierre, urgente, requisitos, duracion_contrato_meses } = body;
+          fecha_cierre, urgente, requisitos, duracion_contrato_meses,
+          precio_referencia, precio_referencia_visible,
+          fechas_inspeccion, lugar_inspeccion, condiciones_especiales } = body;
 
   // Buscar el PH del admin
   const { data: ph } = await supabase
@@ -107,6 +109,12 @@ export async function POST(request: NextRequest) {
       estado: body.publicar ? "activa" : "borrador",
       fecha_publicacion: body.publicar ? new Date().toISOString() : null,
       creado_por: user.id,
+      // Campos de inspección y precio de referencia
+      precio_referencia: precio_referencia || null,
+      precio_referencia_visible: precio_referencia_visible || false,
+      fechas_inspeccion: fechas_inspeccion || null,
+      lugar_inspeccion: lugar_inspeccion || null,
+      condiciones_especiales: condiciones_especiales || null,
     })
     .select()
     .single();
@@ -145,5 +153,5 @@ export async function POST(request: NextRequest) {
     } catch {}
   }
 
-  return NextResponse.json({ success: true, licitacion, slug });
+  return NextResponse.json({ success: true, licitacion, slug, id: licitacion.id });
 }
