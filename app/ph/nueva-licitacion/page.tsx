@@ -282,18 +282,19 @@ export default function NuevaLicitacion() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Fetch market price range when category is set
+  // Fetch market price range when category changes (from chat AI or manual select)
   useEffect(() => {
-    if (!form.categoria) return;
+    if (!form.categoria) { setRangoMercado(null); return; }
+    setRangoMercado(null); // Reset stale data on category change
     setLoadingRango(true);
+    const controller = new AbortController();
     const unidades = 80; // default; could be extracted from chat context
-    fetch(`/api/ai/precios-mercado?categoria=${form.categoria}&unidades=${unidades}`)
+    fetch(`/api/ai/precios-mercado?categoria=${form.categoria}&unidades=${unidades}`, { signal: controller.signal })
       .then(r => r.json())
-      .then(data => {
-        if (data.rango) setRangoMercado(data);
-      })
-      .catch(() => {})
+      .then(data => { if (data.rango) setRangoMercado(data); })
+      .catch(e => { if (e.name !== "AbortError") console.warn("precios-mercado:", e); })
       .finally(() => setLoadingRango(false));
+    return () => controller.abort();
   }, [form.categoria]);
 
   // ── Chat send ────────────────────────────────────────────────────────────────

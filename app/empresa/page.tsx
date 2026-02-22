@@ -837,6 +837,7 @@ function ModalPostular({
   // Arrancar el cuestionario al entrar en fase 2
   useEffect(() => {
     if (fase !== 2 || qMessages.length > 0) return;
+    const controller = new AbortController();
     setQLoading(true);
     fetch("/api/ai/propuesta-tecnica", {
       method: "POST",
@@ -848,15 +849,18 @@ function ModalPostular({
         licitacion_categoria: lic.categoria,
         licitacion_condiciones: (lic as any).condiciones_especiales,
       }),
+      signal: controller.signal,
     })
       .then(r => r.json())
       .then(data => {
         setQMessages([{ role: "assistant", content: data.mensaje || "¿Cuántos años llevan operando y cuántas propiedades horizontales atienden actualmente?" }]);
       })
-      .catch(() => {
+      .catch(e => {
+        if (e.name === "AbortError") return;
         setQMessages([{ role: "assistant", content: "¿Cuántos años llevan operando y cuántas propiedades horizontales atienden actualmente?" }]);
       })
       .finally(() => setQLoading(false));
+    return () => controller.abort();
   }, [fase]);
 
   async function enviarRespuesta() {
@@ -1006,7 +1010,15 @@ function ModalPostular({
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => { if (!precio) { setErr("El precio es requerido"); return; } setErr(""); setFase(2); }}
+              <button onClick={() => {
+                const precioNum = Number(precio);
+                if (!precio || isNaN(precioNum) || precioNum <= 0) {
+                  setErr("El precio anual debe ser un número positivo mayor a 0");
+                  return;
+                }
+                setErr("");
+                setFase(2);
+              }}
                 style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "11px 28px", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
                 Siguiente →
               </button>

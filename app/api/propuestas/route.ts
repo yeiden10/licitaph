@@ -27,8 +27,15 @@ export async function GET(request: NextRequest) {
     if (adminId !== user.id) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
     // Block if licitación is still open (fecha_cierre in the future) and not in evaluation/adjudicada
+    // Use end-of-day comparison: fecha_cierre "2025-02-22" = until 23:59:59 Panama time (UTC-5)
+    const estaAbierta = (fechaCierre: string | null) => {
+      if (!fechaCierre) return false;
+      // If date-only string (YYYY-MM-DD), treat as end of that day in UTC-5 (Panama)
+      const dateStr = fechaCierre.includes("T") ? fechaCierre : `${fechaCierre}T23:59:59-05:00`;
+      return new Date(dateStr) > new Date();
+    };
     const estadosAbiertos = ["activa"];
-    if (estadosAbiertos.includes(lic.estado) && lic.fecha_cierre && new Date(lic.fecha_cierre) > new Date()) {
+    if (estadosAbiertos.includes(lic.estado) && estaAbierta(lic.fecha_cierre)) {
       const fechaCierreISO = lic.fecha_cierre;
       return NextResponse.json({
         bloqueado: true,
@@ -137,6 +144,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Licitación no disponible" }, { status: 400 });
   }
 
+  // Verificar que la empresa no haya enviado propuesta previamente
+  const { data: propuestaExistente } = await supabase
+    .from("propuestas")
+    .select("id, estado")
+    .eq("licitacion_id", licitacion_id)
+    .eq("empresa_id", empresa.id)
+    .single();
+
+  if (propuestaExistente) {
+    return NextResponse.json({
+      error: "Ya enviaste una propuesta para esta licitación. No se puede modificar una propuesta enviada.",
+    }, { status: 409 });
+  }
+
   // Contar documentos subidos por la empresa
   const { count: totalDocs } = await supabase
     .from("documentos")
@@ -155,29 +176,26 @@ export async function POST(request: NextRequest) {
     total_docs: totalDocs ?? 0,
   });
 
-  // Upsert propuesta (borrador → enviada)
+  // Insert propuesta nueva (sin upsert — ya verificamos que no existe)
   const { data: propuesta, error } = await supabase
     .from("propuestas")
-    .upsert(
-      {
-        licitacion_id,
-        empresa_id: empresa.id,
-        precio_anual: precio_anual || null,
-        descripcion,
-        propuesta_tecnica,
-        disponibilidad_inicio: disponibilidad_inicio || null,
-        modalidad_pago: modalidad_pago || null,
-        detalle_pago: detalle_pago || null,
-        acepta_condiciones: acepta_condiciones === true,
-        acepta_inspeccion: acepta_inspeccion === true,
-        acepta_penalidades: acepta_penalidades === true,
-        estado: "enviada",
-        puntaje_ia,
-        analisis_ia,
-        enviada_at: new Date().toISOString(),
-      },
-      { onConflict: "licitacion_id,empresa_id" }
-    )
+    .insert({
+      licitacion_id,
+      empresa_id: empresa.id,
+      precio_anual: precio_anual || null,
+      descripcion,
+      propuesta_tecnica,
+      disponibilidad_inicio: disponibilidad_inicio || null,
+      modalidad_pago: modalidad_pago || null,
+      detalle_pago: detalle_pago || null,
+      acepta_condiciones: acepta_condiciones === true,
+      acepta_inspeccion: acepta_inspeccion === true,
+      acepta_penalidades: acepta_penalidades === true,
+      estado: "enviada",
+      puntaje_ia,
+      analisis_ia,
+      enviada_at: new Date().toISOString(),
+    })
     .select()
     .single();
 
