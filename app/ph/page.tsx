@@ -13,7 +13,7 @@ interface Notificacion {
   creado_en: string;
 }
 
-type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "copropietarios" | "precios";
+type Tab = "dashboard" | "licitaciones" | "propuestas" | "contratos" | "reporte" | "copropietarios" | "precios" | "qa";
 
 // Default fecha_inicio: 7 days from today
 function defaultFechaInicio() {
@@ -81,6 +81,57 @@ export default function PHDashboard() {
   const [historialData, setHistorialData] = useState<any>(null);
   const [historialCat, setHistorialCat] = useState("todos");
   const [loadingHistorial, setLoadingHistorial] = useState(false);
+
+  // ── Q&A moderación ─────────────────────────────────────────
+  interface Pregunta { id: string; pregunta: string; nombre_empresa: string | null; respuesta: string | null; visible: boolean; creado_en: string; respondida_en: string | null; licitacion_id: string; }
+  const [qaPreguntas, setQaPreguntas] = useState<Pregunta[]>([]);
+  const [qaLicId, setQaLicId] = useState<string>("todas");
+  const [loadingQa, setLoadingQa] = useState(false);
+  const [qaRespuesta, setQaRespuesta] = useState<Record<string, string>>({});
+  const [guardandoQa, setGuardandoQa] = useState<string | null>(null);
+
+  const cargarQa = useCallback(async (licId: string) => {
+    setLoadingQa(true);
+    try {
+      // Cargar preguntas de todas las licitaciones del PH (activas + en_evaluacion)
+      const { data: lics } = await supabase
+        .from("licitaciones")
+        .select("id, titulo")
+        .eq("ph_id", ph?.id || "")
+        .in("estado", ["activa", "en_evaluacion", "adjudicada"]);
+
+      const licsArr = lics || [];
+      if (licsArr.length === 0) { setQaPreguntas([]); return; }
+
+      const ids = licId === "todas" ? licsArr.map(l => l.id) : [licId];
+      const { data } = await supabase
+        .from("preguntas_licitacion")
+        .select("*")
+        .in("licitacion_id", ids)
+        .order("creado_en", { ascending: false });
+      setQaPreguntas((data || []) as Pregunta[]);
+    } finally { setLoadingQa(false); }
+  }, [ph?.id, supabase]);
+
+  const responderPregunta = async (preguntaId: string, licitacionId: string, publicar: boolean) => {
+    const texto = qaRespuesta[preguntaId] || "";
+    if (!texto.trim() && publicar) return;
+    setGuardandoQa(preguntaId);
+    try {
+      const r = await fetch(`/api/licitaciones/${licitacionId}/preguntas/${preguntaId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ respuesta: texto.trim() || undefined, visible: publicar }),
+      });
+      if (r.ok) {
+        setQaPreguntas(prev => prev.map(p => p.id === preguntaId
+          ? { ...p, respuesta: texto.trim() || p.respuesta, visible: publicar, respondida_en: new Date().toISOString() }
+          : p
+        ));
+        setQaRespuesta(prev => ({ ...prev, [preguntaId]: "" }));
+      }
+    } finally { setGuardandoQa(null); }
+  };
 
   // ── Mobile sidebar ─────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -714,12 +765,13 @@ export default function PHDashboard() {
               { key: "contratos", icon: "📄", label: "Contratos", pill: contratos.filter(c => c.estado === "vencido").length || null, pillRed: true },
               { key: "reporte", icon: "📊", label: "Reporte" },
               { key: "precios", icon: "📈", label: "Hist. precios" },
+              { key: "qa", icon: "💬", label: "Q&A licitaciones", pill: qaPreguntas.filter(q => !q.respuesta).length || null },
               { key: "copropietarios", icon: "👥", label: "Copropietarios", pill: copropietarios.filter(c => c.activo).length || null },
             ].map(item => (
               <button
                 key={item.key}
                 className={`nav-item ${tab === item.key ? "active" : ""}`}
-                onClick={() => { const k = item.key as Tab; setTab(k); setSidebarOpen(false); if (k === "copropietarios") cargarCopropietarios(); if (k === "precios") cargarHistorial("todos"); }}
+                onClick={() => { const k = item.key as Tab; setTab(k); setSidebarOpen(false); if (k === "copropietarios") cargarCopropietarios(); if (k === "precios") cargarHistorial("todos"); if (k === "qa") cargarQa("todas"); }}
               >
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}
@@ -1462,6 +1514,153 @@ export default function PHDashboard() {
                     ))}
                   </div>
                 </>
+              )}
+            </>
+          )}
+
+          {/* ── Q&A LICITACIONES ── */}
+          {tab === "qa" && (
+            <>
+              <div className="ph-header">
+                <div>
+                  <p style={{ color: "var(--gold)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 4px" }}>Moderación</p>
+                  <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "var(--text)" }}>Q&amp;A de licitaciones</h1>
+                  <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text2)" }}>Revisa y responde preguntas de empresas interesadas. Las respuestas son públicas.</p>
+                </div>
+              </div>
+
+              {/* Filtro por licitación */}
+              {(() => {
+                const licsConQa = Array.from(new Set(qaPreguntas.map(q => q.licitacion_id)));
+                return licsConQa.length > 1 ? (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+                    {[{ id: "todas", titulo: "Todas" }, ...licitaciones.filter(l => licsConQa.includes(l.id)).map(l => ({ id: l.id, titulo: l.titulo }))].map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => { setQaLicId(opt.id); cargarQa(opt.id); }}
+                        style={{
+                          background: qaLicId === opt.id ? "rgba(201,168,76,0.12)" : "var(--bg2)",
+                          border: `1px solid ${qaLicId === opt.id ? "var(--gold)" : "var(--border)"}`,
+                          color: qaLicId === opt.id ? "var(--gold)" : "var(--text2)",
+                          borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        }}
+                      >{opt.titulo}</button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+
+              {loadingQa ? (
+                <div style={{ textAlign: "center", padding: 48, color: "var(--text2)" }}>Cargando preguntas…</div>
+              ) : qaPreguntas.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "64px 0" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)" }}>Sin preguntas por ahora</div>
+                  <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 6 }}>Las preguntas de empresas sobre tus licitaciones aparecerán aquí.</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {["pendiente", "respondida"].map(seccion => {
+                    const items = qaPreguntas.filter(q => seccion === "pendiente" ? !q.respuesta : !!q.respuesta);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={seccion}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: seccion === "pendiente" ? "var(--gold)" : "var(--green)" }}>
+                            {seccion === "pendiente" ? `⏳ Sin responder (${items.length})` : `✓ Respondidas (${items.length})`}
+                          </span>
+                          <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                        </div>
+                        {items.map(p => {
+                          const lic = licitaciones.find(l => l.id === p.licitacion_id);
+                          const sinRespuesta = !p.respuesta;
+                          return (
+                            <div key={p.id} style={{
+                              background: "var(--bg2)",
+                              border: `1px solid ${sinRespuesta ? "rgba(201,168,76,0.25)" : "var(--border)"}`,
+                              borderRadius: 12, padding: 20,
+                              boxShadow: sinRespuesta ? "0 0 0 1px rgba(201,168,76,0.08)" : "none",
+                            }}>
+                              {/* Header */}
+                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                    {sinRespuesta ? (
+                                      <span style={{ background: "rgba(201,168,76,0.12)", color: "var(--gold)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>PENDIENTE</span>
+                                    ) : (
+                                      <span style={{ background: "rgba(74,222,128,0.10)", color: "var(--green)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>RESPONDIDA</span>
+                                    )}
+                                    {!p.visible && !sinRespuesta && (
+                                      <span style={{ background: "rgba(107,114,128,0.12)", color: "var(--text2)", border: "1px solid rgba(107,114,128,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 600 }}>OCULTA</span>
+                                    )}
+                                    {p.visible && (
+                                      <span style={{ background: "rgba(74,158,255,0.10)", color: "var(--blue)", border: "1px solid rgba(74,158,255,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 600 }}>PÚBLICA</span>
+                                    )}
+                                  </div>
+                                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)", lineHeight: 1.5 }}>{p.pregunta}</p>
+                                </div>
+                              </div>
+
+                              {/* Meta info */}
+                              <div style={{ display: "flex", gap: 16, marginBottom: sinRespuesta ? 14 : 0, fontSize: 11, color: "var(--text2)" }}>
+                                {p.nombre_empresa && <span>🏢 {p.nombre_empresa}</span>}
+                                {lic && <span>📋 {lic.titulo}</span>}
+                                <span>🕐 {new Date(p.creado_en).toLocaleDateString("es-PA", { day: "numeric", month: "short", year: "numeric" })}</span>
+                              </div>
+
+                              {/* Respuesta existente */}
+                              {p.respuesta && (
+                                <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 8, padding: "12px 14px", marginTop: 12 }}>
+                                  <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 600, color: "var(--green)", textTransform: "uppercase", letterSpacing: 0.8 }}>Respuesta del administrador</p>
+                                  <p style={{ margin: 0, fontSize: 13, color: "var(--text2)", lineHeight: 1.65 }}>{p.respuesta}</p>
+                                </div>
+                              )}
+
+                              {/* Área de respuesta / edición */}
+                              <div style={{ marginTop: 12 }}>
+                                <textarea
+                                  rows={sinRespuesta ? 3 : 2}
+                                  value={qaRespuesta[p.id] ?? ""}
+                                  onChange={e => setQaRespuesta(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                  placeholder={p.respuesta ? "Editar respuesta…" : "Escribe tu respuesta aquí…"}
+                                  style={{
+                                    width: "100%", background: "var(--bg3)", border: "1px solid var(--border)",
+                                    borderRadius: 8, padding: "10px 12px", color: "var(--text)", fontSize: 13,
+                                    resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.6,
+                                    boxSizing: "border-box",
+                                  }}
+                                />
+                                <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
+                                  {p.respuesta && (
+                                    <button
+                                      onClick={() => responderPregunta(p.id, p.licitacion_id, !p.visible)}
+                                      disabled={guardandoQa === p.id}
+                                      style={{
+                                        background: "none", border: "1px solid var(--border)",
+                                        color: "var(--text2)", borderRadius: 7, padding: "7px 14px",
+                                        fontSize: 12, fontWeight: 600, cursor: "pointer",
+                                      }}
+                                    >{p.visible ? "Ocultar" : "Publicar"}</button>
+                                  )}
+                                  <button
+                                    onClick={() => responderPregunta(p.id, p.licitacion_id, true)}
+                                    disabled={guardandoQa === p.id || !(qaRespuesta[p.id] || "").trim()}
+                                    style={{
+                                      background: (qaRespuesta[p.id] || "").trim() ? "var(--gold)" : "var(--border)",
+                                      color: (qaRespuesta[p.id] || "").trim() ? "#07090F" : "var(--text2)",
+                                      border: "none", borderRadius: 7, padding: "7px 18px",
+                                      fontSize: 12, fontWeight: 700, cursor: (qaRespuesta[p.id] || "").trim() ? "pointer" : "not-allowed",
+                                    }}
+                                  >{guardandoQa === p.id ? "Guardando…" : p.respuesta ? "Actualizar y publicar" : "Responder y publicar"}</button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </>
           )}
