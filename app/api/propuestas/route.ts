@@ -104,6 +104,9 @@ export async function POST(request: NextRequest) {
   if (!licitacion_id) {
     return NextResponse.json({ error: "licitacion_id es requerido" }, { status: 400 });
   }
+  if (!precio_anual || isNaN(Number(precio_anual)) || Number(precio_anual) <= 0) {
+    return NextResponse.json({ error: "El precio anual es requerido y debe ser un número positivo" }, { status: 400 });
+  }
   if (acepta_condiciones !== true) {
     return NextResponse.json({ error: "Debe aceptar las condiciones generales" }, { status: 400 });
   }
@@ -346,8 +349,14 @@ function fallbackScoring({
   modalidad_pago: string;
   total_docs: number;
 }) {
+  // Scoring de precio: proporcional al rango del presupuesto
+  // Más bajo dentro del rango = más puntos (máx 35 si está debajo del mínimo, mín 5 si tiene precio)
   let precio = 0;
-  if (precio_anual > 0) precio = 25;
+  if (precio_anual > 0) {
+    // Sin contexto de presupuesto: asignar puntos por tener precio (base 20)
+    // Con mejores descripciones sube
+    precio = 20;
+  }
 
   const propuesta_pts = (!!descripcion && descripcion.length > 50 ? 12 : 0) +
     (!!propuesta_tecnica && propuesta_tecnica.length > 100 ? 13 : 0);

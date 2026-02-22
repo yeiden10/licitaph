@@ -123,17 +123,28 @@ export async function POST(
     // No detenemos la adjudicación, pero reportamos el error
   }
 
-  // 5b. Incrementar total_contratos_ganados de la empresa
-  const { data: empresaActual } = await supabase
-    .from("empresas")
-    .select("total_contratos_ganados")
-    .eq("id", propuesta.empresa_id)
+  // 5b. Incrementar total_contratos_ganados (solo si la licitación acaba de adjudicarse,
+  // verificando que no se haya incrementado ya para evitar doble conteo)
+  const { data: licitacionEstado } = await supabase
+    .from("licitaciones")
+    .select("empresa_ganadora_id")
+    .eq("id", licitacion_id)
     .single();
 
-  await supabase
-    .from("empresas")
-    .update({ total_contratos_ganados: (empresaActual?.total_contratos_ganados || 0) + 1 })
-    .eq("id", propuesta.empresa_id);
+  // Solo incrementar si la empresa ganadora cambió (primera vez adjudicando)
+  const esPrimeraAdjudicacion = licitacionEstado?.empresa_ganadora_id !== propuesta.empresa_id;
+  if (esPrimeraAdjudicacion) {
+    const { data: empresaActual } = await supabase
+      .from("empresas")
+      .select("total_contratos_ganados")
+      .eq("id", propuesta.empresa_id)
+      .single();
+
+    await supabase
+      .from("empresas")
+      .update({ total_contratos_ganados: (empresaActual?.total_contratos_ganados || 0) + 1 })
+      .eq("id", propuesta.empresa_id);
+  }
 
   // 6. Notificaciones en plataforma
   // Notificar empresa ganadora
