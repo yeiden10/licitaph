@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { CATEGORIAS_SERVICIO } from "@/lib/supabase/types";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -21,34 +22,7 @@ const C = {
 
 type Step = 1 | 2 | 3 | 4;
 
-// ── 25 categorías hardcoded ────────────────────────────────────────────────────
-const CATEGORIAS_SERVICIO = [
-  { value: "seguridad",            label: "Seguridad 24/7" },
-  { value: "limpieza",             label: "Limpieza y mantenimiento" },
-  { value: "hvac",                 label: "Mantenimiento HVAC / Aire acondicionado" },
-  { value: "jardineria",           label: "Jardinería y áreas verdes" },
-  { value: "ascensores",           label: "Mantenimiento de ascensores" },
-  { value: "electricidad",         label: "Electricidad y plomería" },
-  { value: "pintura",              label: "Pintura y reparaciones generales" },
-  { value: "plagas",               label: "Control de plagas" },
-  { value: "piscinas",             label: "Mantenimiento de piscinas" },
-  { value: "impermeabilizacion",   label: "Impermeabilización y techos" },
-  { value: "portones",             label: "Portones y automatismos" },
-  { value: "cctv",                 label: "CCTV y sistemas de vigilancia" },
-  { value: "incendio",             label: "Sistemas contra incendios" },
-  { value: "generadores",          label: "Generadores y UPS" },
-  { value: "fumigacion",           label: "Fumigación y desinfección" },
-  { value: "mudanzas",             label: "Mudanzas y logística" },
-  { value: "valet",                label: "Valet parking y estacionamiento" },
-  { value: "conserje",             label: "Conserjería y recepción" },
-  { value: "obras_civiles",        label: "Obras civiles y remodelaciones" },
-  { value: "tecnologia",           label: "Tecnología / IT y redes" },
-  { value: "gestion_residuos",     label: "Gestión de residuos y reciclaje" },
-  { value: "energia_solar",        label: "Energía solar y eficiencia energética" },
-  { value: "administracion",       label: "Administración de propiedades" },
-  { value: "legal_contable",       label: "Servicios legales y contables" },
-  { value: "otros",                label: "Otros servicios" },
-] as const;
+// Categorías importadas de @/lib/supabase/types (sincronizadas con DB constraint)
 
 const DURACIONES = [
   { value: "3",  label: "3 meses" },

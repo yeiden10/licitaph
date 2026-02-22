@@ -57,7 +57,7 @@ CUANDO GENERES LA PROPUESTA, responde SOLO con este JSON (sin texto adicional, s
   "listo": true,
   "propuesta": {
     "titulo": "Título profesional de la licitación",
-    "categoria": "uno_de: seguridad|limpieza|hvac|jardineria|ascensores|electricidad|pintura|plagas|piscinas|impermeabilizacion|portones|cctv|incendio|generadores|fumigacion|mudanzas|valet|conserje|obras_civiles|tecnologia|gestion_residuos|energia_solar|administracion|legal_contable|otros",
+    "categoria": "uno_de: administracion|auditoria|legal|seguros|seguridad|control_acceso|cctv|limpieza|mantenimiento|pintura|remodelacion|reparaciones|hvac|ascensores|electricidad|plomeria|sistemas_pluviales|filtraciones|generadores|areas_verdes|piscina|fumigacion|telecomunicaciones|domotica|otros",
     "descripcion": "Descripción técnica detallada del servicio requerido, incluyendo características del edificio y necesidades específicas. 3-5 oraciones.",
     "presupuesto_minimo": 0,
     "presupuesto_maximo": 0,
