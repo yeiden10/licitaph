@@ -61,7 +61,9 @@ const CATEGORIAS: Record<string, string> = {
   pintura: "Pintura", administracion: "Administración", auditoria: "Auditoría",
   legal: "Legal", seguros: "Seguros", control_acceso: "Control de Acceso",
   cctv: "CCTV", remodelacion: "Remodelación", generadores: "Generadores",
-  telecomunicaciones: "Telecomunicaciones", otros: "Otros",
+  telecomunicaciones: "Telecomunicaciones", sistemas_pluviales: "Sistemas Pluviales",
+  filtraciones: "Impermeabilizante y Filtraciones", domotica: "Domótica y Automatización",
+  reparaciones: "Reparaciones Menores", otros: "Otros",
 };
 
 export default function CopropietarioPage() {

@@ -1140,7 +1140,7 @@ export default function EmpresaDashboard() {
         const r = await fetch("/api/empresa/kyc");
         if (r.ok) {
           const kycData = await r.json();
-          const completado = kycData?.completado === true;
+          const completado = kycData?.kyc?.completado === true;
           setKycCompletado(completado);
           if (!completado) {
             setTimeout(() => setShowKyc(true), 1000);
@@ -1312,7 +1312,7 @@ export default function EmpresaDashboard() {
             // Refrescar estado KYC
             fetch("/api/empresa/kyc")
               .then(r => r.ok ? r.json() : null)
-              .then(data => { if (data?.completado) setKycCompletado(true); })
+              .then(data => { if (data?.kyc?.completado) setKycCompletado(true); })
               .catch(() => null);
           }}
         />
