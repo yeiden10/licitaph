@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -57,36 +57,19 @@ const DURACIONES = [
   { value: "24", label: "24 meses (2 años)" },
 ];
 
-// ── Requisitos estándar recomendados ──────────────────────────────────────────
-const REQUISITOS_ESTANDAR: StandardReq[] = [
-  { titulo: "Registro Público vigente", desc: "Emitido en los últimos 3 meses", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
-  { titulo: "Aviso de operación vigente", desc: "Del municipio correspondiente", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
-  { titulo: "Paz y Salvo CSS", desc: "Caja de Seguro Social al día", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Paz y Salvo DGI", desc: "Dirección General de Ingresos al día", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Cédula o pasaporte del representante legal", desc: "Vigente", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
-  { titulo: "Estados financieros últimos 2 años", desc: "Auditados o certificados por CPA", obligatorio: false, subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Referencias bancarias (mín. 1)", desc: "Carta de banco que certifique relación comercial", obligatorio: false, subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Carta de referencias comerciales (mín. 3)", desc: "Con datos de contacto verificables", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "CV del equipo que participará", desc: "Experiencia y cargos relevantes al servicio", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Certificados de idoneidad del personal", desc: "Según tipo de servicio (si aplica)", obligatorio: false, subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Experiencia comprobable (mín. 3 años)", desc: "En servicios de similar naturaleza y escala", obligatorio: true,  subsanable: false, tipo_respuesta: "texto" },
-  { titulo: "Póliza de seguro de responsabilidad civil", desc: "Vigente, monto mínimo según contrato", obligatorio: true,  subsanable: true,  tipo_respuesta: "documento" },
-  { titulo: "Fianza de cumplimiento (mín. 50% del valor anual)", desc: "Emitida por compañía de seguros autorizada en Panamá", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
-  { titulo: "Compromiso de inspección previa al inicio", desc: "La empresa debe inspeccionar el lugar antes de firmar", obligatorio: true,  subsanable: false, tipo_respuesta: "documento" },
-  { titulo: "Metodología detallada de trabajo", desc: "Cómo se ejecutará el servicio, frecuencias, equipo", obligatorio: true,  subsanable: false, tipo_respuesta: "texto" },
-];
-
 // ── Interfaces ────────────────────────────────────────────────────────────────
-interface StandardReq {
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface AISuggestedReq {
   titulo: string;
-  desc: string;
+  descripcion: string;
   obligatorio: boolean;
   subsanable: boolean;
   tipo_respuesta: "documento" | "texto";
-}
-
-interface StandardReqState extends StandardReq {
-  enabled: boolean;
+  aceptado?: boolean; // undefined = pendiente, true = aceptado, false = rechazado
 }
 
 interface CustomReq {
@@ -132,7 +115,7 @@ function Toast({ msg, tipo, onClose }: { msg: string; tipo: "ok" | "err"; onClos
 // ── Step indicator ────────────────────────────────────────────────────────────
 function StepBar({ step }: { step: Step }) {
   const steps = [
-    { n: 1, label: "Detalles básicos" },
+    { n: 1, label: "Chat con IA" },
     { n: 2, label: "Pliego" },
     { n: 3, label: "Fotos e inspección" },
     { n: 4, label: "Revisar y publicar" },
@@ -220,7 +203,20 @@ export default function NuevaLicitacion() {
   const [copied, setCopied] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ── Step 1 state ────────────────────────────────────────────────────────────
+  // ── Step 1 — Chat AI state ───────────────────────────────────────────────────
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: "¡Hola! Soy tu asistente para crear la licitación. Cuéntame: ¿qué servicio necesitas contratar para tu edificio?",
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [propuestaIA, setPropuestaIA] = useState<Record<string, unknown> | null>(null);
+  const [chatResumen, setChatResumen] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Form fields (pre-filled by AI or manually)
   const [form, setForm] = useState<FormState>({
     titulo: "",
     categoria: "",
@@ -234,18 +230,12 @@ export default function NuevaLicitacion() {
     precio_referencia_visible: true,
     condiciones_especiales: "",
   });
+  const [showFormManual, setShowFormManual] = useState(false);
 
-  // ── Step 2 state ────────────────────────────────────────────────────────────
-  // Standard reqs with enabled toggle
-  const [stdReqs, setStdReqs] = useState<StandardReqState[]>(
-    REQUISITOS_ESTANDAR.map(r => ({ ...r, enabled: r.obligatorio }))
-  );
-  // Custom reqs added by user
+  // ── Step 2 — Pliego state ───────────────────────────────────────────────────
+  const [aiSuggestedReqs, setAiSuggestedReqs] = useState<AISuggestedReq[]>([]);
+  const [loadingReqs, setLoadingReqs] = useState(false);
   const [customReqs, setCustomReqs] = useState<CustomReq[]>([]);
-  // AI pliego generation
-  const [generandoPliego, setGenerandoPliego] = useState(false);
-  const [sugerenciasIA, setSugerenciasIA] = useState<Record<string, unknown> | null>(null);
-  const [showSugerencias, setShowSugerencias] = useState(false);
 
   // ── Step 3 state ────────────────────────────────────────────────────────────
   const [fotosFiles, setFotosFiles] = useState<File[]>([]);
@@ -257,11 +247,11 @@ export default function NuevaLicitacion() {
 
   // ── Derived: all active requisitos ─────────────────────────────────────────
   const allRequisitos = [
-    ...stdReqs
-      .filter(r => r.enabled)
+    ...aiSuggestedReqs
+      .filter(r => r.aceptado === true)
       .map(r => ({
         titulo: r.titulo,
-        descripcion: r.desc,
+        descripcion: r.descripcion,
         obligatorio: r.obligatorio,
         subsanable: r.subsanable,
         tipo_respuesta: r.tipo_respuesta,
@@ -276,6 +266,88 @@ export default function NuevaLicitacion() {
   ];
 
   const catLabel = CATEGORIAS_SERVICIO.find(c => c.value === form.categoria)?.label ?? form.categoria;
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  // ── Chat send ────────────────────────────────────────────────────────────────
+  const sendChatMessage = useCallback(async () => {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+
+    const newMessages: ChatMessage[] = [...chatMessages, { role: "user", content: text }];
+    setChatMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/ai/wizard-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages, step: "chat" }),
+      });
+      const data = await res.json();
+
+      if (data.tipo === "propuesta" && data.propuesta) {
+        // Claude terminó — pre-llenar el formulario
+        const p = data.propuesta;
+        setForm(prev => ({
+          ...prev,
+          titulo: p.titulo || prev.titulo,
+          categoria: p.categoria || prev.categoria,
+          descripcion: p.descripcion || prev.descripcion,
+          presupuesto_minimo: p.presupuesto_minimo ? String(p.presupuesto_minimo) : prev.presupuesto_minimo,
+          presupuesto_maximo: p.presupuesto_maximo ? String(p.presupuesto_maximo) : prev.presupuesto_maximo,
+          duracion_contrato_meses: p.duracion_contrato_meses ? String(p.duracion_contrato_meses) : prev.duracion_contrato_meses,
+          urgente: p.urgente ?? prev.urgente,
+          condiciones_especiales: p.condiciones_especiales || prev.condiciones_especiales,
+        }));
+        setPropuestaIA(p);
+        setChatResumen(p.resumen_para_requisitos || "");
+        setChatMessages(prev => [...prev, {
+          role: "assistant",
+          content: data.mensaje || "¡Listo! Generé los datos de la licitación. Revísalos abajo y ajusta lo que necesites.",
+        }]);
+        setShowFormManual(true);
+      } else {
+        // Respuesta de texto normal
+        setChatMessages(prev => [...prev, { role: "assistant", content: data.mensaje || "..." }]);
+      }
+    } catch {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Hubo un error. Por favor intenta de nuevo." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }, [chatInput, chatLoading, chatMessages]);
+
+  // ── Load AI suggested requisitos ──────────────────────────────────────────
+  const loadAISuggestedReqs = useCallback(async () => {
+    setLoadingReqs(true);
+    try {
+      const res = await fetch("/api/ai/wizard-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [],
+          step: "requisitos",
+          contextoChatResumen: chatResumen,
+          categoria: form.categoria,
+          titulo: form.titulo,
+          descripcion: form.descripcion,
+        }),
+      });
+      const data = await res.json();
+      if (data.tipo === "requisitos" && Array.isArray(data.requisitos)) {
+        setAiSuggestedReqs(data.requisitos.map((r: AISuggestedReq) => ({ ...r, aceptado: undefined })));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingReqs(false);
+    }
+  }, [chatResumen, form.categoria, form.titulo, form.descripcion]);
 
   // ── Validation ──────────────────────────────────────────────────────────────
   function validateStep1(): boolean {
@@ -299,7 +371,7 @@ export default function NuevaLicitacion() {
 
   function validateStep2(): boolean {
     const errs: Record<string, string> = {};
-    if (allRequisitos.length === 0) errs.requisitos = "Activa al menos un requisito en el pliego";
+    if (allRequisitos.length === 0) errs.requisitos = "Acepta al menos un requisito del pliego";
     customReqs.forEach((r, i) => {
       if (!r.titulo.trim()) errs[`custom_${i}_titulo`] = "El título es requerido";
     });
@@ -308,12 +380,16 @@ export default function NuevaLicitacion() {
   }
 
   // ── Step 2 handlers ─────────────────────────────────────────────────────────
-  function toggleStdReq(i: number) {
-    setStdReqs(prev => prev.map((r, idx) => idx === i ? { ...r, enabled: !r.enabled } : r));
+  function acceptReq(i: number) {
+    setAiSuggestedReqs(prev => prev.map((r, idx) => idx === i ? { ...r, aceptado: true } : r));
   }
 
-  function updateStdReq(i: number, field: "obligatorio" | "subsanable", value: boolean) {
-    setStdReqs(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+  function rejectReq(i: number) {
+    setAiSuggestedReqs(prev => prev.map((r, idx) => idx === i ? { ...r, aceptado: false } : r));
+  }
+
+  function updateSuggestedReq(i: number, field: "obligatorio" | "subsanable", value: boolean) {
+    setAiSuggestedReqs(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
   }
 
   function addCustomReq() {
@@ -340,7 +416,6 @@ export default function NuevaLicitacion() {
     });
     setFotosFiles(newFiles);
     setFotosPreview(newPreviews);
-    // reset input so same file can be re-added if removed
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -361,33 +436,15 @@ export default function NuevaLicitacion() {
     setFechasInspeccion(prev => prev.filter((_, idx) => idx !== i));
   }
 
-  // ── AI pliego generation ─────────────────────────────────────────────────────
-  const generarPliegoConIA = async () => {
-    if (!form.categoria) return;
-    setGenerandoPliego(true);
-    setSugerenciasIA(null);
-    setShowSugerencias(false);
-    try {
-      const res = await fetch("/api/ai/pliego-sugerido", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categoria: form.categoria,
-          titulo: form.titulo,
-          descripcion: form.descripcion,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.sugerencias) {
-        setSugerenciasIA(data.sugerencias);
-        setShowSugerencias(true);
-      }
-    } catch (e) {
-      console.error("Error generando pliego:", e);
-    } finally {
-      setGenerandoPliego(false);
+  // ── Go to step 2 ─────────────────────────────────────────────────────────────
+  function goToStep2() {
+    if (!validateStep1()) return;
+    setStep(2);
+    // Load AI requirements when entering step 2
+    if (aiSuggestedReqs.length === 0) {
+      loadAISuggestedReqs();
     }
-  };
+  }
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   async function handlePublish(publicar: boolean) {
@@ -433,7 +490,7 @@ export default function NuevaLicitacion() {
             fd.append("entidad_id", data.id);
             await fetch("/api/documentos/upload", { method: "POST", body: fd });
           } catch {
-            // non-fatal: photos are best-effort
+            // non-fatal
           }
         }
       }
@@ -500,6 +557,8 @@ export default function NuevaLicitacion() {
         * { box-sizing: border-box; }
         body { margin: 0; background: ${C.bg}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         input:focus, textarea:focus, select:focus { border-color: ${C.gold} !important; }
         input[type="checkbox"] { accent-color: ${C.gold}; }
 
@@ -507,6 +566,8 @@ export default function NuevaLicitacion() {
         .wiz-cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
         .wiz-main { padding: 48px 24px 80px; }
         .wiz-header { padding: 16px 32px; }
+        .chat-bubble-user { animation: fadeIn 0.2s ease; }
+        .chat-bubble-ai { animation: fadeIn 0.3s ease; }
 
         @media (max-width: 768px) {
           .wiz-grid-2 { grid-template-columns: 1fr; }
@@ -539,155 +600,336 @@ export default function NuevaLicitacion() {
         <StepBar step={step} />
 
         {/* ═══════════════════════════════════════════════════════════
-            PASO 1: Detalles básicos
+            PASO 1: Chat con IA
         ═══════════════════════════════════════════════════════════ */}
         {step === 1 && (
           <div>
-            <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Detalles básicos</h1>
-            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 36px" }}>Describe el servicio que necesitas y los parámetros generales de la licitación.</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+              <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: 0 }}>Cuéntame qué necesitas</h1>
+              <span style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
+                🤖 Asistente IA
+              </span>
+            </div>
+            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 24px" }}>
+              Conversa con Claude para definir tu licitación. Él te hará las preguntas necesarias y llenará los campos automáticamente.
+            </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+            {/* Chat container */}
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+              {/* Messages */}
+              <div style={{ height: 360, overflowY: "auto", padding: "20px 20px 12px" }}>
+                {chatMessages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={msg.role === "user" ? "chat-bubble-user" : "chat-bubble-ai"}
+                    style={{
+                      display: "flex",
+                      justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                      marginBottom: 12,
+                    }}
+                  >
+                    {msg.role === "assistant" && (
+                      <div style={{
+                        width: 28, height: 28, borderRadius: "50%",
+                        background: `linear-gradient(135deg, ${C.blue}40, ${C.blue}20)`,
+                        border: `1px solid ${C.blue}40`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0, marginRight: 8, marginTop: 2,
+                      }}>
+                        <span style={{ fontSize: 13 }}>🤖</span>
+                      </div>
+                    )}
+                    <div style={{
+                      maxWidth: "75%",
+                      background: msg.role === "user" ? C.gold : C.bgPanel,
+                      color: msg.role === "user" ? "#000" : C.text,
+                      borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                      padding: "10px 14px",
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                    }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
 
-              {/* Título */}
-              <Field label="Título de la licitación" required error={errors.titulo}
-                hint="Ej: Servicio de seguridad 24/7 para PH Costa del Este">
+                {/* Typing indicator */}
+                {chatLoading && (
+                  <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${C.blue}40, ${C.blue}20)`, border: `1px solid ${C.blue}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8, marginTop: 2 }}>
+                      <span style={{ fontSize: 13 }}>🤖</span>
+                    </div>
+                    <div style={{ background: C.bgPanel, borderRadius: "16px 16px 16px 4px", padding: "12px 16px", display: "flex", gap: 4, alignItems: "center" }}>
+                      {[0, 1, 2].map(i => (
+                        <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.muted, animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input */}
+              <div style={{ borderTop: `1px solid ${C.border}`, padding: "12px 16px", display: "flex", gap: 10 }}>
                 <input
                   type="text"
-                  value={form.titulo}
-                  onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
-                  placeholder="Ej: Servicio de seguridad 24/7 para PH Costa del Este"
-                  style={{ ...inputStyle, borderColor: errors.titulo ? C.red : C.border }}
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                  placeholder="Escribe aquí tu respuesta..."
+                  disabled={chatLoading || !!propuestaIA}
+                  style={{
+                    flex: 1, background: C.bgPanel, border: `1px solid ${C.border}`,
+                    borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none",
+                    opacity: propuestaIA ? 0.5 : 1,
+                  }}
                 />
-              </Field>
-
-              {/* Categoría */}
-              <Field label="Categoría de servicio" required error={errors.categoria}>
-                <select
-                  value={form.categoria}
-                  onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
-                  style={{ ...inputStyle, borderColor: errors.categoria ? C.red : C.border, cursor: "pointer" }}
+                <button
+                  onClick={sendChatMessage}
+                  disabled={chatLoading || !chatInput.trim() || !!propuestaIA}
+                  style={{
+                    background: chatLoading || !chatInput.trim() || propuestaIA ? C.bgPanel : C.gold,
+                    border: `1px solid ${chatLoading || !chatInput.trim() || propuestaIA ? C.border : C.gold}`,
+                    color: chatLoading || !chatInput.trim() || propuestaIA ? C.muted : "#000",
+                    borderRadius: 8, padding: "10px 18px",
+                    cursor: chatLoading || !chatInput.trim() || propuestaIA ? "not-allowed" : "pointer",
+                    fontSize: 14, fontWeight: 700, transition: "all .2s",
+                  }}
                 >
-                  <option value="">Selecciona una categoría...</option>
-                  {CATEGORIAS_SERVICIO.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-              </Field>
-
-              {/* Descripción */}
-              <Field label="Descripción" required error={errors.descripcion}
-                hint="Describe las características específicas de tu propiedad, necesidades especiales, horarios, etc.">
-                <textarea
-                  value={form.descripcion}
-                  onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-                  rows={5}
-                  placeholder="Describe el servicio requerido, características del edificio, requisitos especiales..."
-                  style={{ ...inputStyle, borderColor: errors.descripcion ? C.red : C.border, resize: "vertical" }}
-                />
-              </Field>
-
-              {/* Presupuesto */}
-              <div className="wiz-grid-2">
-                <Field label="Presupuesto mínimo anual (USD)" hint="Opcional">
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
-                    <input
-                      type="number" min="0" step="100"
-                      value={form.presupuesto_minimo}
-                      onChange={e => setForm(f => ({ ...f, presupuesto_minimo: e.target.value }))}
-                      placeholder="0"
-                      style={{ ...inputStyle, paddingLeft: 24 }}
-                    />
-                  </div>
-                </Field>
-                <Field label="Presupuesto máximo anual (USD)" hint="Opcional" error={errors.presupuesto_maximo}>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
-                    <input
-                      type="number" min="0" step="100"
-                      value={form.presupuesto_maximo}
-                      onChange={e => setForm(f => ({ ...f, presupuesto_maximo: e.target.value }))}
-                      placeholder="0"
-                      style={{ ...inputStyle, paddingLeft: 24, borderColor: errors.presupuesto_maximo ? C.red : C.border }}
-                    />
-                  </div>
-                </Field>
+                  Enviar →
+                </button>
               </div>
-
-              {/* Precio referencia */}
-              <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18 }}>
-                <p style={{ color: C.sub, fontSize: 13, fontWeight: 600, margin: "0 0 14px" }}>Precio de referencia (opcional)</p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
-                    <input
-                      type="number" min="0" step="100"
-                      value={form.precio_referencia}
-                      onChange={e => setForm(f => ({ ...f, precio_referencia: e.target.value }))}
-                      placeholder="Precio orientativo anual"
-                      style={{ ...inputStyle, paddingLeft: 24 }}
-                    />
-                  </div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", whiteSpace: "nowrap" }}>
-                    <Toggle
-                      value={form.precio_referencia_visible}
-                      onChange={v => setForm(f => ({ ...f, precio_referencia_visible: v }))}
-                    />
-                    <span style={{ color: form.precio_referencia_visible ? C.gold : C.muted, fontSize: 13 }}>
-                      {form.precio_referencia_visible ? "Visible para empresas" : "Oculto"}
-                    </span>
-                  </label>
-                </div>
-                <p style={{ color: C.muted, fontSize: 12, margin: "10px 0 0" }}>
-                  Si está visible, las empresas lo verán como referencia al cotizar. Si está oculto, solo lo ves tú.
-                </p>
-              </div>
-
-              {/* Fecha y duración */}
-              <div className="wiz-grid-2">
-                <Field label="Fecha de cierre de recepción" required error={errors.fecha_cierre}>
-                  <input
-                    type="date"
-                    value={form.fecha_cierre}
-                    onChange={e => setForm(f => ({ ...f, fecha_cierre: e.target.value }))}
-                    min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
-                    style={{ ...inputStyle, borderColor: errors.fecha_cierre ? C.red : C.border, colorScheme: "dark" }}
-                  />
-                </Field>
-                <Field label="Duración del contrato" required>
-                  <select
-                    value={form.duracion_contrato_meses}
-                    onChange={e => setForm(f => ({ ...f, duracion_contrato_meses: e.target.value }))}
-                    style={{ ...inputStyle, cursor: "pointer" }}
-                  >
-                    {DURACIONES.map(d => (
-                      <option key={d.value} value={d.value}>{d.label}</option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-
-              {/* Urgente */}
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "14px 18px", background: form.urgente ? C.red + "10" : C.bgPanel, border: `1px solid ${form.urgente ? C.red + "40" : C.border}`, borderRadius: 10, transition: "all .2s" }}>
-                <input
-                  type="checkbox"
-                  checked={form.urgente}
-                  onChange={e => setForm(f => ({ ...f, urgente: e.target.checked }))}
-                  style={{ width: 18, height: 18 }}
-                />
-                <div>
-                  <p style={{ color: form.urgente ? C.red : C.text, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>
-                    Marcar como URGENTE
-                  </p>
-                  <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>Se destacará con etiqueta roja en el listado de empresas</p>
-                </div>
-              </label>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 32 }}>
+            {/* Formulario generado por IA */}
+            {showFormManual && propuestaIA && (
+              <div style={{ background: C.bgCard, border: `1px solid ${C.green}30`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                  <span style={{ color: C.green, fontSize: 20 }}>✓</span>
+                  <div>
+                    <p style={{ color: C.green, fontSize: 14, fontWeight: 700, margin: 0 }}>Datos generados por IA</p>
+                    <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>Revisa y ajusta los campos según necesites</p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                  {/* Título */}
+                  <Field label="Título de la licitación" required error={errors.titulo}>
+                    <input
+                      type="text"
+                      value={form.titulo}
+                      onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
+                      style={{ ...inputStyle, borderColor: errors.titulo ? C.red : C.border }}
+                    />
+                  </Field>
+
+                  {/* Categoría */}
+                  <Field label="Categoría de servicio" required error={errors.categoria}>
+                    <select
+                      value={form.categoria}
+                      onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                      style={{ ...inputStyle, borderColor: errors.categoria ? C.red : C.border, cursor: "pointer" }}
+                    >
+                      <option value="">Selecciona una categoría...</option>
+                      {CATEGORIAS_SERVICIO.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  {/* Descripción */}
+                  <Field label="Descripción" required error={errors.descripcion}>
+                    <textarea
+                      value={form.descripcion}
+                      onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+                      rows={5}
+                      style={{ ...inputStyle, borderColor: errors.descripcion ? C.red : C.border, resize: "vertical" }}
+                    />
+                  </Field>
+
+                  {/* Presupuesto */}
+                  <div className="wiz-grid-2">
+                    <Field label="Presupuesto mínimo anual (USD)" hint="Opcional">
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                        <input type="number" min="0" step="100" value={form.presupuesto_minimo}
+                          onChange={e => setForm(f => ({ ...f, presupuesto_minimo: e.target.value }))}
+                          placeholder="0" style={{ ...inputStyle, paddingLeft: 24 }} />
+                      </div>
+                    </Field>
+                    <Field label="Presupuesto máximo anual (USD)" hint="Opcional" error={errors.presupuesto_maximo}>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                        <input type="number" min="0" step="100" value={form.presupuesto_maximo}
+                          onChange={e => setForm(f => ({ ...f, presupuesto_maximo: e.target.value }))}
+                          placeholder="0" style={{ ...inputStyle, paddingLeft: 24, borderColor: errors.presupuesto_maximo ? C.red : C.border }} />
+                      </div>
+                    </Field>
+                  </div>
+
+                  {/* Precio referencia */}
+                  <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18 }}>
+                    <p style={{ color: C.sub, fontSize: 13, fontWeight: 600, margin: "0 0 14px" }}>Precio de referencia (opcional)</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                        <input type="number" min="0" step="100" value={form.precio_referencia}
+                          onChange={e => setForm(f => ({ ...f, precio_referencia: e.target.value }))}
+                          placeholder="Precio orientativo anual" style={{ ...inputStyle, paddingLeft: 24 }} />
+                      </div>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", whiteSpace: "nowrap" }}>
+                        <Toggle value={form.precio_referencia_visible} onChange={v => setForm(f => ({ ...f, precio_referencia_visible: v }))} />
+                        <span style={{ color: form.precio_referencia_visible ? C.gold : C.muted, fontSize: 13 }}>
+                          {form.precio_referencia_visible ? "Visible" : "Oculto"}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Fecha y duración */}
+                  <div className="wiz-grid-2">
+                    <Field label="Fecha de cierre de recepción" required error={errors.fecha_cierre}>
+                      <input type="date" value={form.fecha_cierre}
+                        onChange={e => setForm(f => ({ ...f, fecha_cierre: e.target.value }))}
+                        min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                        style={{ ...inputStyle, borderColor: errors.fecha_cierre ? C.red : C.border, colorScheme: "dark" }} />
+                    </Field>
+                    <Field label="Duración del contrato" required>
+                      <select value={form.duracion_contrato_meses}
+                        onChange={e => setForm(f => ({ ...f, duracion_contrato_meses: e.target.value }))}
+                        style={{ ...inputStyle, cursor: "pointer" }}>
+                        {DURACIONES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+
+                  {/* Urgente */}
+                  <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "14px 18px", background: form.urgente ? C.red + "10" : C.bgPanel, border: `1px solid ${form.urgente ? C.red + "40" : C.border}`, borderRadius: 10, transition: "all .2s" }}>
+                    <input type="checkbox" checked={form.urgente} onChange={e => setForm(f => ({ ...f, urgente: e.target.checked }))} style={{ width: 18, height: 18 }} />
+                    <div>
+                      <p style={{ color: form.urgente ? C.red : C.text, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>Marcar como URGENTE</p>
+                      <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>Se destacará con etiqueta roja en el listado</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Saltar chat — llenar manualmente */}
+            {!showFormManual && (
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <button
+                  onClick={() => setShowFormManual(true)}
+                  style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, textDecoration: "underline" }}
+                >
+                  Prefiero llenar el formulario manualmente
+                </button>
+              </div>
+            )}
+
+            {/* Formulario manual (si omitieron el chat) */}
+            {showFormManual && !propuestaIA && (
+              <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                  <Field label="Título de la licitación" required error={errors.titulo}
+                    hint="Ej: Servicio de seguridad 24/7 para PH Costa del Este">
+                    <input type="text" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
+                      placeholder="Ej: Servicio de seguridad 24/7 para PH Costa del Este"
+                      style={{ ...inputStyle, borderColor: errors.titulo ? C.red : C.border }} />
+                  </Field>
+
+                  <Field label="Categoría de servicio" required error={errors.categoria}>
+                    <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                      style={{ ...inputStyle, borderColor: errors.categoria ? C.red : C.border, cursor: "pointer" }}>
+                      <option value="">Selecciona una categoría...</option>
+                      {CATEGORIAS_SERVICIO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </Field>
+
+                  <Field label="Descripción" required error={errors.descripcion}
+                    hint="Describe las características específicas de tu propiedad, necesidades especiales, horarios, etc.">
+                    <textarea value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+                      rows={5} placeholder="Describe el servicio requerido..."
+                      style={{ ...inputStyle, borderColor: errors.descripcion ? C.red : C.border, resize: "vertical" }} />
+                  </Field>
+
+                  <div className="wiz-grid-2">
+                    <Field label="Presupuesto mínimo anual (USD)" hint="Opcional">
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                        <input type="number" min="0" step="100" value={form.presupuesto_minimo}
+                          onChange={e => setForm(f => ({ ...f, presupuesto_minimo: e.target.value }))}
+                          placeholder="0" style={{ ...inputStyle, paddingLeft: 24 }} />
+                      </div>
+                    </Field>
+                    <Field label="Presupuesto máximo anual (USD)" hint="Opcional" error={errors.presupuesto_maximo}>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                        <input type="number" min="0" step="100" value={form.presupuesto_maximo}
+                          onChange={e => setForm(f => ({ ...f, presupuesto_maximo: e.target.value }))}
+                          placeholder="0" style={{ ...inputStyle, paddingLeft: 24, borderColor: errors.presupuesto_maximo ? C.red : C.border }} />
+                      </div>
+                    </Field>
+                  </div>
+
+                  <div style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18 }}>
+                    <p style={{ color: C.sub, fontSize: 13, fontWeight: 600, margin: "0 0 14px" }}>Precio de referencia (opcional)</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 14 }}>$</span>
+                        <input type="number" min="0" step="100" value={form.precio_referencia}
+                          onChange={e => setForm(f => ({ ...f, precio_referencia: e.target.value }))}
+                          placeholder="Precio orientativo anual" style={{ ...inputStyle, paddingLeft: 24 }} />
+                      </div>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", whiteSpace: "nowrap" }}>
+                        <Toggle value={form.precio_referencia_visible} onChange={v => setForm(f => ({ ...f, precio_referencia_visible: v }))} />
+                        <span style={{ color: form.precio_referencia_visible ? C.gold : C.muted, fontSize: 13 }}>
+                          {form.precio_referencia_visible ? "Visible para empresas" : "Oculto"}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="wiz-grid-2">
+                    <Field label="Fecha de cierre de recepción" required error={errors.fecha_cierre}>
+                      <input type="date" value={form.fecha_cierre}
+                        onChange={e => setForm(f => ({ ...f, fecha_cierre: e.target.value }))}
+                        min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                        style={{ ...inputStyle, borderColor: errors.fecha_cierre ? C.red : C.border, colorScheme: "dark" }} />
+                    </Field>
+                    <Field label="Duración del contrato" required>
+                      <select value={form.duracion_contrato_meses}
+                        onChange={e => setForm(f => ({ ...f, duracion_contrato_meses: e.target.value }))}
+                        style={{ ...inputStyle, cursor: "pointer" }}>
+                        {DURACIONES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "14px 18px", background: form.urgente ? C.red + "10" : C.bgPanel, border: `1px solid ${form.urgente ? C.red + "40" : C.border}`, borderRadius: 10, transition: "all .2s" }}>
+                    <input type="checkbox" checked={form.urgente} onChange={e => setForm(f => ({ ...f, urgente: e.target.checked }))} style={{ width: 18, height: 18 }} />
+                    <div>
+                      <p style={{ color: form.urgente ? C.red : C.text, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>Marcar como URGENTE</p>
+                      <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>Se destacará con etiqueta roja en el listado</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
-                onClick={() => { if (validateStep1()) setStep(2); }}
-                style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "12px 28px", cursor: "pointer", fontSize: 15, fontWeight: 700 }}
+                onClick={goToStep2}
+                disabled={!showFormManual}
+                style={{
+                  background: showFormManual ? C.gold : C.bgPanel,
+                  border: `1px solid ${showFormManual ? C.gold : C.border}`,
+                  color: showFormManual ? "#000" : C.muted,
+                  borderRadius: 9, padding: "12px 28px",
+                  cursor: showFormManual ? "pointer" : "not-allowed",
+                  fontSize: 15, fontWeight: 700,
+                  opacity: showFormManual ? 1 : 0.6,
+                }}
               >
                 Siguiente: Pliego de requisitos →
               </button>
@@ -700,205 +942,179 @@ export default function NuevaLicitacion() {
         ═══════════════════════════════════════════════════════════ */}
         {step === 2 && (
           <div>
-            <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Pliego de requisitos</h1>
-            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 20px" }}>
-              Activa los requisitos recomendados y agrega los personalizados que necesites.
-              Las empresas deberán cumplir con los marcados como obligatorios.
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+              <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: 0 }}>Pliego de requisitos</h1>
+              <span style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
+                🤖 Sugeridos por IA
+              </span>
+            </div>
+            <p style={{ color: C.sub, fontSize: 14, margin: "0 0 24px" }}>
+              Claude sugirió estos requisitos para tu licitación. Acepta los que apliquen y agrega los propios sin límite.
             </p>
 
-            {/* Botón generar pliego con IA */}
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-              <button
-                type="button"
-                onClick={generarPliegoConIA}
-                disabled={generandoPliego || !form.categoria}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: generandoPliego ? "rgba(74,158,255,0.08)" : "rgba(74,158,255,0.12)",
-                  border: "1px solid rgba(74,158,255,0.3)",
-                  borderRadius: 8, padding: "9px 18px",
-                  color: generandoPliego ? C.muted : C.blue,
-                  fontSize: 13, fontWeight: 600, cursor: generandoPliego ? "not-allowed" : "pointer",
-                  transition: "all 0.2s", fontFamily: "inherit",
-                }}
-              >
-                <span style={{ fontSize: 15 }}>{generandoPliego ? "⏳" : "🤖"}</span>
-                {generandoPliego ? "Generando especificaciones..." : "Generar especificaciones con IA"}
-              </button>
-              {sugerenciasIA && (
-                <span style={{ fontSize: 12, color: C.green }}>✓ Sugerencias listas</span>
-              )}
-            </div>
-
-            {/* Panel de sugerencias IA */}
-            {sugerenciasIA && showSugerencias && (
-              <div style={{ background: "rgba(74,158,255,0.04)", border: "1px solid rgba(74,158,255,0.2)", borderRadius: 12, padding: 20, marginBottom: 20 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: C.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>🤖 Sugerencias IA — Pliego de Cargos</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>Revisa y ajusta según tu criterio. Puedes copiar estos textos a los campos de la licitación.</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowSugerencias(false)}
-                    style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}
-                  >×</button>
-                </div>
-
-                {/* Descripción técnica */}
-                {typeof sugerenciasIA.descripcion_tecnica === "string" && sugerenciasIA.descripcion_tecnica && (() => {
-                  const descTecnica = sugerenciasIA.descripcion_tecnica as string;
-                  return (
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Descripción técnica sugerida</div>
-                      <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.sub, lineHeight: 1.6 }}>
-                        {descTecnica}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForm(prev => ({ ...prev, descripcion: prev.descripcion ? prev.descripcion + "\n\n" + descTecnica : descTecnica }));
-                        }}
-                        style={{ marginTop: 6, fontSize: 11, color: C.blue, background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
-                      >
-                        ← Copiar a descripción
-                      </button>
-                    </div>
-                  );
-                })()}
-
-                {/* Especificaciones técnicas */}
-                {Array.isArray(sugerenciasIA.especificaciones_tecnicas) && (sugerenciasIA.especificaciones_tecnicas as string[]).length > 0 && (
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Especificaciones técnicas sugeridas</div>
-                    <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 14px" }}>
-                      {(sugerenciasIA.especificaciones_tecnicas as string[]).map((esp, i) => (
-                        <div key={i} style={{ fontSize: 13, color: C.sub, lineHeight: 1.6, paddingLeft: 12, borderLeft: "2px solid rgba(74,158,255,0.2)", marginBottom: 6 }}>
-                          {esp}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Garantías, Personal, Frecuencia, Penalidades */}
-                {[
-                  { key: "frecuencia_servicio", label: "Frecuencia del servicio" },
-                  { key: "garantias_requeridas", label: "Garantías requeridas" },
-                  { key: "personal_requerido", label: "Personal requerido" },
-                  { key: "penalidades_especificas", label: "Penalidades específicas sugeridas" },
-                ].map(({ key, label }) => {
-                  const val = sugerenciasIA[key];
-                  if (!val || typeof val !== "string") return null;
-                  return (
-                    <div key={key} style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
-                      <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
-                        {val}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Requisitos adicionales */}
-                {Array.isArray(sugerenciasIA.requisitos_adicionales) && (sugerenciasIA.requisitos_adicionales as string[]).length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Requisitos adicionales sugeridos</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {(sugerenciasIA.requisitos_adicionales as string[]).map((req, i) => (
-                        <span key={i} style={{ background: "rgba(74,158,255,0.08)", border: "1px solid rgba(74,158,255,0.2)", borderRadius: 20, padding: "4px 12px", fontSize: 12, color: C.blue }}>
-                          {req}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {errors.requisitos && (
+              <div style={{ background: C.red + "15", border: `1px solid ${C.red}40`, borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+                <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{errors.requisitos}</p>
               </div>
             )}
 
-            {errors.requisitos && <p style={{ color: C.red, fontSize: 13, marginBottom: 16 }}>{errors.requisitos}</p>}
-
-            {/* Requisitos recomendados */}
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: 0 }}>Requisitos recomendados</h2>
-                <span style={{ background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}40`, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
-                  {stdReqs.filter(r => r.enabled).length} / {stdReqs.length} activos
-                </span>
+            {/* Loading requisitos */}
+            {loadingReqs && (
+              <div style={{ background: C.bgCard, border: `1px solid ${C.blue}30`, borderRadius: 16, padding: 32, textAlign: "center", marginBottom: 20 }}>
+                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 12 }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: C.blue, animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }} />
+                  ))}
+                </div>
+                <p style={{ color: C.blue, fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>Claude está analizando tu licitación...</p>
+                <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>Generando requisitos específicos para {catLabel || "tu servicio"}</p>
               </div>
+            )}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {stdReqs.map((r, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      background: r.enabled ? C.bgCard : C.bgPanel,
-                      border: `1px solid ${r.enabled ? C.border : C.border + "60"}`,
-                      borderRadius: 12, padding: 16,
-                      opacity: r.enabled ? 1 : 0.55,
-                      transition: "all .2s",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                      {/* Enable toggle */}
-                      <Toggle value={r.enabled} onChange={() => toggleStdReq(i)} activeColor={C.green} />
-
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                          <span style={{ color: r.enabled ? C.text : C.muted, fontSize: 14, fontWeight: 600 }}>{r.titulo}</span>
-                          <span style={{ background: C.gold + "20", color: C.gold, border: `1px solid ${C.gold}30`, borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
-                            RECOMENDADO
-                          </span>
-                          <span style={{ background: r.tipo_respuesta === "documento" ? C.blue + "20" : C.muted + "20", color: r.tipo_respuesta === "documento" ? C.blue : C.muted, borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 600 }}>
-                            {r.tipo_respuesta === "documento" ? "DOC" : "TEXTO"}
-                          </span>
-                        </div>
-                        <p style={{ color: C.muted, fontSize: 12, margin: "0 0 10px" }}>{r.desc}</p>
-
-                        {r.enabled && (
-                          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                              <Toggle value={r.obligatorio} onChange={v => updateStdReq(i, "obligatorio", v)} activeColor={C.red} />
-                              <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 12, fontWeight: r.obligatorio ? 600 : 400 }}>
-                                {r.obligatorio ? "Obligatorio" : "Opcional"}
-                              </span>
-                            </label>
-                            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                              <Toggle value={r.subsanable} onChange={v => updateStdReq(i, "subsanable", v)} activeColor={C.gold} />
-                              <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 12, fontWeight: r.subsanable ? 600 : 400 }}>
-                                {r.subsanable ? "Subsanable" : "No subsanable"}
-                              </span>
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+            {/* Sugerencias IA */}
+            {!loadingReqs && aiSuggestedReqs.length > 0 && (
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: 0 }}>Requisitos sugeridos por IA</h2>
+                    <span style={{ background: C.green + "20", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                      {aiSuggestedReqs.filter(r => r.aceptado === true).length} aceptados
+                    </span>
                   </div>
-                ))}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => setAiSuggestedReqs(prev => prev.map(r => ({ ...r, aceptado: true })))}
+                      style={{ background: C.green + "15", border: `1px solid ${C.green}40`, color: C.green, borderRadius: 7, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+                    >
+                      ✓ Aceptar todos
+                    </button>
+                    <button
+                      onClick={() => loadAISuggestedReqs()}
+                      style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 7, padding: "6px 14px", cursor: "pointer", fontSize: 12 }}
+                    >
+                      ↻ Regenerar
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {aiSuggestedReqs.map((r, i) => {
+                    const isAccepted = r.aceptado === true;
+                    const isRejected = r.aceptado === false;
+                    const isPending  = r.aceptado === undefined;
+
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          background: isAccepted ? C.bgCard : isRejected ? C.bgPanel : C.bgCard,
+                          border: `1px solid ${isAccepted ? C.green + "50" : isRejected ? C.border + "40" : C.border}`,
+                          borderRadius: 12, padding: 16,
+                          opacity: isRejected ? 0.45 : 1,
+                          transition: "all .2s",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                          {/* Badges */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "center", flexShrink: 0, marginTop: 2 }}>
+                            <span style={{
+                              background: r.tipo_respuesta === "documento" ? C.blue + "20" : C.gold + "20",
+                              color: r.tipo_respuesta === "documento" ? C.blue : C.gold,
+                              borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 600,
+                            }}>
+                              {r.tipo_respuesta === "documento" ? "DOC" : "TEXTO"}
+                            </span>
+                          </div>
+
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                              <span style={{ color: isRejected ? C.muted : C.text, fontSize: 14, fontWeight: 600 }}>{r.titulo}</span>
+                              {r.obligatorio && (
+                                <span style={{ background: C.red + "15", color: C.red, borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>OBLIGATORIO</span>
+                              )}
+                            </div>
+                            <p style={{ color: C.muted, fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>{r.descripcion}</p>
+
+                            {/* Toggles si está aceptado */}
+                            {isAccepted && (
+                              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                  <Toggle value={r.obligatorio} onChange={v => updateSuggestedReq(i, "obligatorio", v)} activeColor={C.red} />
+                                  <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 12 }}>{r.obligatorio ? "Obligatorio" : "Opcional"}</span>
+                                </label>
+                                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                  <Toggle value={r.subsanable} onChange={v => updateSuggestedReq(i, "subsanable", v)} activeColor={C.gold} />
+                                  <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 12 }}>{r.subsanable ? "Subsanable" : "No subsanable"}</span>
+                                </label>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action buttons */}
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            {!isAccepted && (
+                              <button
+                                onClick={() => acceptReq(i)}
+                                style={{
+                                  background: C.green + "20", border: `1px solid ${C.green}40`,
+                                  color: C.green, borderRadius: 7, padding: "6px 12px",
+                                  cursor: "pointer", fontSize: 12, fontWeight: 700,
+                                }}
+                              >
+                                ✓ Aceptar
+                              </button>
+                            )}
+                            {isAccepted && (
+                              <button
+                                onClick={() => rejectReq(i)}
+                                style={{
+                                  background: "none", border: `1px solid ${C.border}`,
+                                  color: C.muted, borderRadius: 7, padding: "6px 12px",
+                                  cursor: "pointer", fontSize: 12,
+                                }}
+                              >
+                                Quitar
+                              </button>
+                            )}
+                            {(isPending || isRejected) && (
+                              <button
+                                onClick={() => rejectReq(i)}
+                                style={{
+                                  background: "none", border: "none",
+                                  color: C.muted, cursor: "pointer", fontSize: 16, padding: "4px 8px",
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Requisitos personalizados */}
             {customReqs.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>Requisitos personalizados</h2>
+                <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>Mis requisitos adicionales</h2>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {customReqs.map((r, i) => (
                     <div
                       key={i}
-                      style={{ background: C.bgCard, border: `1px solid ${errors[`custom_${i}_titulo`] ? C.red : C.border}`, borderRadius: 12, padding: 20 }}
+                      style={{ background: C.bgCard, border: `1px solid ${errors[`custom_${i}_titulo`] ? C.red : C.gold + "30"}`, borderRadius: 12, padding: 20 }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.blue + "20", border: `1.5px solid ${C.blue}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>+</span>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.gold + "20", border: `1.5px solid ${C.gold}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>+</span>
                         </div>
-                        <span style={{ color: C.muted, fontSize: 12, flex: 1 }}>Requisito personalizado</span>
+                        <span style={{ color: C.gold, fontSize: 12, flex: 1, fontWeight: 600 }}>Requisito personalizado</span>
                         <button
                           onClick={() => removeCustomReq(i)}
                           style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "2px 6px", borderRadius: 4 }}
-                        >
-                          ×
-                        </button>
+                        >×</button>
                       </div>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -919,15 +1135,11 @@ export default function NuevaLicitacion() {
                         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                             <Toggle value={r.obligatorio} onChange={v => updateCustomReq(i, "obligatorio", v)} activeColor={C.red} />
-                            <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 13, fontWeight: r.obligatorio ? 600 : 400 }}>
-                              {r.obligatorio ? "Obligatorio" : "Opcional"}
-                            </span>
+                            <span style={{ color: r.obligatorio ? C.red : C.muted, fontSize: 13 }}>{r.obligatorio ? "Obligatorio" : "Opcional"}</span>
                           </label>
                           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                             <Toggle value={r.subsanable} onChange={v => updateCustomReq(i, "subsanable", v)} activeColor={C.gold} />
-                            <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 13, fontWeight: r.subsanable ? 600 : 400 }}>
-                              {r.subsanable ? "Subsanable" : "No subsanable"}
-                            </span>
+                            <span style={{ color: r.subsanable ? C.gold : C.muted, fontSize: 13 }}>{r.subsanable ? "Subsanable" : "No subsanable"}</span>
                           </label>
                           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                             <span style={{ color: C.sub, fontSize: 13 }}>Tipo:</span>
@@ -948,6 +1160,7 @@ export default function NuevaLicitacion() {
               </div>
             )}
 
+            {/* Botón agregar — sin límite */}
             <button
               onClick={addCustomReq}
               style={{ width: "100%", background: "none", border: `2px dashed ${C.border}`, color: C.sub, borderRadius: 10, padding: "14px 0", cursor: "pointer", fontSize: 14, transition: "all .2s", marginBottom: 20 }}
@@ -957,14 +1170,16 @@ export default function NuevaLicitacion() {
               + Agregar requisito personalizado
             </button>
 
-            {/* Legend */}
-            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", display: "flex", gap: 24, flexWrap: "wrap" }}>
-              <span style={{ color: C.muted, fontSize: 12 }}>Leyenda:</span>
-              <span style={{ color: C.red, fontSize: 12 }}>Obligatorio = La empresa debe cumplirlo sí o sí</span>
-              <span style={{ color: C.gold, fontSize: 12 }}>Subsanable = Puede presentarlo después con plazo</span>
+            {/* Resumen */}
+            <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 8 }}>
+              <span style={{ color: C.sub, fontSize: 13, fontWeight: 600 }}>
+                Total: <span style={{ color: C.text }}>{allRequisitos.length} requisito{allRequisitos.length !== 1 ? "s" : ""}</span>
+              </span>
+              <span style={{ color: C.red, fontSize: 12 }}>Obligatorio = debe cumplirse sí o sí</span>
+              <span style={{ color: C.gold, fontSize: 12 }}>Subsanable = puede presentarse después</span>
             </div>
 
-            <div style={{ display: "flex", gap: 12, justifyContent: "space-between", marginTop: 32 }}>
+            <div style={{ display: "flex", gap: 12, justifyContent: "space-between", marginTop: 24 }}>
               <button onClick={() => setStep(1)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 9, padding: "12px 22px", cursor: "pointer", fontSize: 14 }}>
                 ← Anterior
               </button>
@@ -995,7 +1210,6 @@ export default function NuevaLicitacion() {
                 Máximo 5 fotos. Las empresas las verán al revisar el pliego.
               </p>
 
-              {/* Preview grid */}
               {fotosPreview.length > 0 && (
                 <div className="wiz-cat-grid">
                   {fotosPreview.map((src, i) => (
@@ -1003,58 +1217,33 @@ export default function NuevaLicitacion() {
                       <img src={src} alt={`Foto ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       <button
                         onClick={() => removeFoto(i)}
-                        style={{
-                          position: "absolute", top: 4, right: 4,
-                          background: "rgba(0,0,0,0.7)", border: "none",
-                          color: "#fff", borderRadius: "50%", width: 22, height: 22,
-                          cursor: "pointer", fontSize: 14, lineHeight: 1,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}
-                      >
-                        ×
-                      </button>
+                        style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.7)", border: "none", color: "#fff", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      >×</button>
                     </div>
                   ))}
-                  {/* Empty slots */}
                   {Array.from({ length: 5 - fotosPreview.length }).map((_, i) => (
-                    <div
-                      key={`empty-${i}`}
-                      style={{ aspectRatio: "1", borderRadius: 8, border: `2px dashed ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
+                    <div key={`empty-${i}`} style={{ aspectRatio: "1", borderRadius: 8, border: `2px dashed ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: C.border, fontSize: 20 }}>+</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Drop zone / button */}
               {fotosFiles.length < 5 && (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    border: `2px dashed ${C.border}`, borderRadius: 10, padding: "28px 20px",
-                    textAlign: "center", cursor: "pointer", transition: "all .2s",
-                  }}
+                  style={{ border: `2px dashed ${C.border}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", transition: "all .2s" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = C.gold)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
                 >
-                  <p style={{ color: C.sub, fontSize: 14, margin: "0 0 6px", fontWeight: 500 }}>
-                    Haz clic para agregar fotos
-                  </p>
+                  <p style={{ color: C.sub, fontSize: 14, margin: "0 0 6px", fontWeight: 500 }}>Haz clic para agregar fotos</p>
                   <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>
                     JPG, PNG o WEBP — {5 - fotosFiles.length} foto{5 - fotosFiles.length !== 1 ? "s" : ""} restante{5 - fotosFiles.length !== 1 ? "s" : ""}
                   </p>
                 </div>
               )}
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                style={{ display: "none" }}
-                onChange={handleFotosChange}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleFotosChange} />
             </div>
 
             {/* Inspecciones */}
@@ -1064,76 +1253,45 @@ export default function NuevaLicitacion() {
                 Las empresas deben inspeccionar el lugar antes de enviar su propuesta.
               </p>
 
-              {/* Agregar fecha */}
               <Field label="Fechas disponibles para inspección del lugar">
                 <div style={{ display: "flex", gap: 10 }}>
-                  <input
-                    type="date"
-                    value={fechaInspeccionInput}
+                  <input type="date" value={fechaInspeccionInput}
                     onChange={e => setFechaInspeccionInput(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
-                    style={{ ...inputStyle, flex: 1, colorScheme: "dark" }}
-                  />
+                    style={{ ...inputStyle, flex: 1, colorScheme: "dark" }} />
                   <button
-                    onClick={addFechaInspeccion}
-                    disabled={!fechaInspeccionInput}
-                    style={{
-                      background: fechaInspeccionInput ? C.gold : C.bgPanel,
-                      border: `1px solid ${fechaInspeccionInput ? C.gold : C.border}`,
-                      color: fechaInspeccionInput ? "#000" : C.muted,
-                      borderRadius: 8, padding: "10px 18px",
-                      cursor: fechaInspeccionInput ? "pointer" : "not-allowed",
-                      fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
-                    }}
+                    onClick={addFechaInspeccion} disabled={!fechaInspeccionInput}
+                    style={{ background: fechaInspeccionInput ? C.gold : C.bgPanel, border: `1px solid ${fechaInspeccionInput ? C.gold : C.border}`, color: fechaInspeccionInput ? "#000" : C.muted, borderRadius: 8, padding: "10px 18px", cursor: fechaInspeccionInput ? "pointer" : "not-allowed", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap" }}
                   >
                     Agregar fecha
                   </button>
                 </div>
               </Field>
 
-              {/* Fechas agregadas */}
               {fechasInspeccion.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                   {fechasInspeccion.map((f, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        background: C.blue + "15", border: `1px solid ${C.blue}40`,
-                        borderRadius: 20, padding: "5px 12px",
-                        display: "flex", alignItems: "center", gap: 8,
-                      }}
-                    >
+                    <div key={i} style={{ background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "5px 12px", display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ color: C.blue, fontSize: 13 }}>
                         {new Date(f + "T12:00:00").toLocaleDateString("es-PA", { weekday: "short", month: "short", day: "numeric" })}
                       </span>
-                      <button
-                        onClick={() => removeFechaInspeccion(i)}
-                        style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}
-                      >
-                        ×
-                      </button>
+                      <button onClick={() => removeFechaInspeccion(i)} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Lugar */}
               <div style={{ marginTop: 20 }}>
                 <Field label="Lugar de inspección" hint="Ej: Torre Pacific, lobby principal">
-                  <input
-                    type="text"
-                    value={lugarInspeccion}
+                  <input type="text" value={lugarInspeccion}
                     onChange={e => setLugarInspeccion(e.target.value)}
-                    placeholder="Ej: Torre Pacific, lobby principal"
-                    style={inputStyle}
-                  />
+                    placeholder="Ej: Torre Pacific, lobby principal" style={inputStyle} />
                 </Field>
               </div>
 
-              {/* Info box */}
               <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}30`, borderRadius: 8, padding: "12px 16px", marginTop: 18 }}>
                 <p style={{ color: C.blue, fontSize: 13, margin: 0 }}>
-                  Las empresas verán estas fechas y el lugar al revisar la licitación. Deben confirmar que asistirán a la inspección antes de enviar su propuesta.
+                  Las empresas verán estas fechas y el lugar al revisar la licitación. Deben confirmar que asistirán antes de enviar su propuesta.
                 </p>
               </div>
             </div>
@@ -1142,13 +1300,13 @@ export default function NuevaLicitacion() {
             <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginTop: 16 }}>
               <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 6px" }}>Condiciones especiales</h2>
               <p style={{ color: C.muted, fontSize: 13, margin: "0 0 16px" }}>
-                Información adicional, restricciones o requisitos particulares que apliquen a esta licitación.
+                Información adicional, restricciones o requisitos particulares que apliquen.
               </p>
               <textarea
                 value={form.condiciones_especiales}
                 onChange={e => setForm(f => ({ ...f, condiciones_especiales: e.target.value }))}
                 rows={4}
-                placeholder="Ej: El personal debe tener uniforme. No se permite subcontratación. El administrador debe estar disponible los sábados..."
+                placeholder="Ej: El personal debe tener uniforme. No se permite subcontratación..."
                 style={{ ...inputStyle, resize: "vertical" }}
               />
             </div>
@@ -1157,10 +1315,7 @@ export default function NuevaLicitacion() {
               <button onClick={() => setStep(2)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.sub, borderRadius: 9, padding: "12px 22px", cursor: "pointer", fontSize: 14 }}>
                 ← Anterior
               </button>
-              <button
-                onClick={() => setStep(4)}
-                style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "12px 28px", cursor: "pointer", fontSize: 15, fontWeight: 700 }}
-              >
+              <button onClick={() => setStep(4)} style={{ background: C.gold, border: "none", color: "#000", borderRadius: 9, padding: "12px 28px", cursor: "pointer", fontSize: 15, fontWeight: 700 }}>
                 Siguiente: Revisar →
               </button>
             </div>
@@ -1175,7 +1330,6 @@ export default function NuevaLicitacion() {
             <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 6px" }}>Revisar y publicar</h1>
             <p style={{ color: C.sub, fontSize: 14, margin: "0 0 32px" }}>Verifica los datos antes de publicar. Puedes guardar como borrador o publicar de inmediato.</p>
 
-            {/* Preview card */}
             <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
                 {form.urgente && (
@@ -1188,34 +1342,12 @@ export default function NuevaLicitacion() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
                 {[
-                  {
-                    label: "Presupuesto anual",
-                    val: form.presupuesto_minimo || form.presupuesto_maximo
-                      ? `$${Number(form.presupuesto_minimo || 0).toLocaleString()} – $${Number(form.presupuesto_maximo || 0).toLocaleString()}`
-                      : "No especificado",
-                  },
-                  {
-                    label: "Fecha de cierre",
-                    val: form.fecha_cierre
-                      ? new Date(form.fecha_cierre).toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" })
-                      : "—",
-                  },
-                  {
-                    label: "Duración contrato",
-                    val: DURACIONES.find(d => d.value === form.duracion_contrato_meses)?.label ?? "—",
-                  },
-                  ...(form.precio_referencia && form.precio_referencia_visible ? [{
-                    label: "Precio referencia",
-                    val: `$${Number(form.precio_referencia).toLocaleString()} / año`,
-                  }] : []),
-                  ...(fotosFiles.length > 0 ? [{
-                    label: "Fotos del lugar",
-                    val: `${fotosFiles.length} foto${fotosFiles.length !== 1 ? "s" : ""}`,
-                  }] : []),
-                  ...(fechasInspeccion.length > 0 ? [{
-                    label: "Fechas inspección",
-                    val: `${fechasInspeccion.length} fecha${fechasInspeccion.length !== 1 ? "s" : ""} definida${fechasInspeccion.length !== 1 ? "s" : ""}`,
-                  }] : []),
+                  { label: "Presupuesto anual", val: form.presupuesto_minimo || form.presupuesto_maximo ? `$${Number(form.presupuesto_minimo || 0).toLocaleString()} – $${Number(form.presupuesto_maximo || 0).toLocaleString()}` : "No especificado" },
+                  { label: "Fecha de cierre", val: form.fecha_cierre ? new Date(form.fecha_cierre).toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" }) : "—" },
+                  { label: "Duración contrato", val: DURACIONES.find(d => d.value === form.duracion_contrato_meses)?.label ?? "—" },
+                  ...(form.precio_referencia && form.precio_referencia_visible ? [{ label: "Precio referencia", val: `$${Number(form.precio_referencia).toLocaleString()} / año` }] : []),
+                  ...(fotosFiles.length > 0 ? [{ label: "Fotos del lugar", val: `${fotosFiles.length} foto${fotosFiles.length !== 1 ? "s" : ""}` }] : []),
+                  ...(fechasInspeccion.length > 0 ? [{ label: "Fechas inspección", val: `${fechasInspeccion.length} fecha${fechasInspeccion.length !== 1 ? "s" : ""} definida${fechasInspeccion.length !== 1 ? "s" : ""}` }] : []),
                 ].map(item => (
                   <div key={item.label} style={{ background: C.bgPanel, borderRadius: 8, padding: "12px 16px" }}>
                     <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>{item.label}</p>
@@ -1224,7 +1356,6 @@ export default function NuevaLicitacion() {
                 ))}
               </div>
 
-              {/* Fechas inspección detalle */}
               {fechasInspeccion.length > 0 && (
                 <div style={{ marginTop: 16 }}>
                   <p style={{ color: C.sub, fontSize: 12, margin: "0 0 8px", fontWeight: 600 }}>FECHAS DE INSPECCIÓN</p>
@@ -1274,7 +1405,6 @@ export default function NuevaLicitacion() {
               )}
             </div>
 
-            {/* CTA info */}
             <div style={{ background: C.goldDim, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "18px 24px", marginBottom: 24 }}>
               <p style={{ color: C.gold, fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>Listo para publicar</p>
               <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>
