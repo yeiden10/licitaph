@@ -275,12 +275,11 @@ export default async function LicitacionPublicaPage({
       `}</style>
 
       {/* ── Header ── */}
-      <header className="portal-header" style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <div style={{ width: 32, height: 32, background: C.accent, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#fff", fontSize: 16, fontWeight: 900 }}>L</span>
-          </div>
-          <span style={{ color: C.text, fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}><span style={{ color: C.accent }}>Licita</span>PH</span>
+      <header className="portal-header" style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800 }}>
+            <span style={{ color: C.accent }}>Licita</span><span style={{ color: C.text }}>PH</span>
+          </span>
         </a>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <a
@@ -290,10 +289,10 @@ export default async function LicitacionPublicaPage({
             title="Compartir en WhatsApp"
             style={{ display: "flex", alignItems: "center", gap: 6, background: "#25D366", border: "none", color: "#fff", borderRadius: 8, padding: "7px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}
           >
-            <span style={{ fontSize: 16 }}>📤</span>
-            <span style={{ display: "none" }} className="share-label">Compartir</span>
+            <span style={{ fontSize: 15 }}>📤</span>
+            <span className="share-label" style={{ display: "none" }}>Compartir</span>
           </a>
-          <span style={{ color: C.sub, fontSize: 13 }}>Portal público</span>
+          <span style={{ background: C.greenSoft, color: C.green, border: `1px solid rgba(16,185,129,.25)`, borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700 }}>🌐 Portal público</span>
         </div>
       </header>
 
@@ -342,39 +341,55 @@ export default async function LicitacionPublicaPage({
           )}
 
           {/* Stats row */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
+          <div className="portal-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 12 }}>
             {(lic.presupuesto_minimo || lic.presupuesto_maximo) && (
-              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
-                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Presupuesto referencial</p>
-                <p style={{ color: C.green, fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  {usd(lic.presupuesto_minimo)} – {usd(lic.presupuesto_maximo)}
-                </p>
-                <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>por año</p>
+              <div style={{ background: C.greenSoft, border: `1px solid rgba(16,185,129,.2)`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>💰</span>
+                <div>
+                  <p style={{ color: "#047857", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Presupuesto</p>
+                  <p style={{ color: C.green, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {usd(lic.presupuesto_minimo)} – {usd(lic.presupuesto_maximo)}
+                  </p>
+                  <p style={{ color: "#047857", fontSize: 11, margin: "2px 0 0" }}>por año</p>
+                </div>
               </div>
             )}
             {lic.fecha_cierre && (
-              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
-                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Cierre de recepción</p>
-                <CountdownIsland fechaCierre={lic.fecha_cierre} />
+              <div style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>📅</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: C.accent, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Cierre de recepción</p>
+                  <CountdownIsland fechaCierre={lic.fecha_cierre} />
+                </div>
               </div>
             )}
             {lic.duracion_contrato_meses && (
-              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
-                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Duración del contrato</p>
-                <p style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{lic.duracion_contrato_meses} meses</p>
+              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>📋</span>
+                <div>
+                  <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Duración</p>
+                  <p style={{ color: C.text, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{lic.duracion_contrato_meses} meses</p>
+                  <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>contrato</p>
+                </div>
               </div>
             )}
             {lic.precio_referencia_visible && lic.precio_referencia && (
-              <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
-                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Precio de referencia</p>
-                <p style={{ color: C.accent, fontSize: 18, fontWeight: 700, margin: 0 }}>{usd(lic.precio_referencia)}</p>
-                <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>USD</p>
+              <div style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>🎯</span>
+                <div>
+                  <p style={{ color: C.accent, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Precio referencia</p>
+                  <p style={{ color: C.accent, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{usd(lic.precio_referencia)}</p>
+                  <p style={{ color: C.accent, fontSize: 11, margin: "2px 0 0", opacity: 0.7 }}>USD anuales</p>
+                </div>
               </div>
             )}
-            <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px" }}>
-              <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Requisitos del pliego</p>
-              <p style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>{requisitos.length}</p>
-              <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>{obligatorios.length} obligatorios</p>
+            <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+              <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>📝</span>
+              <div>
+                <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Requisitos</p>
+                <p style={{ color: C.text, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{requisitos.length}</p>
+                <p style={{ color: C.muted, fontSize: 11, margin: "2px 0 0" }}>{obligatorios.length} obligatorios</p>
+              </div>
             </div>
           </div>
         </div>

@@ -154,10 +154,31 @@ export default async function DirectorioPage() {
 
         {/* Grid */}
         {lista.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontSize: 44, marginBottom: 16 }}>🔍</div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: C.sub }}>No hay empresas verificadas todavía</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>Las empresas aparecen aquí después de completar el proceso de verificación.</div>
+          <div style={{ textAlign: "center", padding: "20px 0 80px" }}>
+            {/* Placeholder cards ilustrativas */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, maxWidth: 700, margin: "0 auto 44px", opacity: 0.35, pointerEvents: "none" }}>
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 14, padding: "20px 18px", textAlign: "left" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "#E2E8F0" }} />
+                    <div>
+                      <div style={{ width: 70 + (i % 3) * 22, height: 9, background: "#E2E8F0", borderRadius: 4, marginBottom: 5 }} />
+                      <div style={{ width: 48, height: 7, background: "#E2E8F0", borderRadius: 4 }} />
+                    </div>
+                  </div>
+                  <div style={{ width: "100%", height: 7, background: "#E2E8F0", borderRadius: 4, marginBottom: 6 }} />
+                  <div style={{ width: "75%", height: 7, background: "#E2E8F0", borderRadius: 4 }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#EFF6FF", border: "2px solid rgba(30,58,138,.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px", fontSize: 26 }}>🏢</div>
+            <div style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Sé el primero en aparecer aquí</div>
+            <div style={{ fontSize: 14, color: C.muted, maxWidth: 400, margin: "0 auto 28px", lineHeight: 1.75 }}>
+              Las empresas verificadas aparecen en este directorio y reciben alertas de licitaciones activas en su categoría.
+            </div>
+            <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.accent, color: "#fff", borderRadius: 9, padding: "12px 28px", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+              Registrar mi empresa →
+            </a>
           </div>
         ) : (
           <div className="dir-grid">
@@ -231,16 +252,26 @@ export default async function DirectorioPage() {
         )}
 
         {/* CTA para empresas */}
-        <div style={{ marginTop: 72, textAlign: "center", background: "rgba(201,168,76,0.04)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 18, padding: "48px 36px" }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 24, fontWeight: 800, color: C.text, marginBottom: 10 }}>
-            ¿Tu empresa ofrece servicios para PHs?
-          </h2>
-          <p style={{ fontSize: 14, color: C.muted, marginBottom: 28, lineHeight: 1.75, maxWidth: 500, margin: "0 auto 28px" }}>
-            Únete al directorio verificado y accede a licitaciones de edificios en Panamá. El proceso de verificación es gratuito.
-          </p>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.gold, color: "#fff", borderRadius: 8, padding: "13px 30px", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
-            Registrar mi empresa →
-          </a>
+        <div style={{ marginTop: 72, textAlign: "center", background: "linear-gradient(135deg, #EFF6FF 0%, #F8FAFC 100%)", border: "1px solid rgba(30,58,138,.12)", borderRadius: 20, padding: "52px 40px", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(30,58,138,.04)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: -30, left: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(59,130,246,.04)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ fontSize: 32, marginBottom: 14 }}>🏢</div>
+            <h2 style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 10, letterSpacing: -0.4 }}>
+              ¿Tu empresa ofrece servicios para PHs?
+            </h2>
+            <p style={{ fontSize: 15, color: C.sub, lineHeight: 1.75, maxWidth: 480, margin: "0 auto 32px" }}>
+              Únete al directorio verificado y accede a licitaciones activas de edificios en toda Panamá. El proceso de verificación es <strong style={{ color: C.text }}>completamente gratuito</strong>.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.accent, color: "#fff", borderRadius: 9, padding: "13px 28px", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+                Registrar mi empresa →
+              </a>
+              <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", color: C.accent, border: `1.5px solid rgba(30,58,138,.25)`, borderRadius: 9, padding: "13px 28px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+                Conocer más
+              </a>
+            </div>
+          </div>
         </div>
       </main>
 

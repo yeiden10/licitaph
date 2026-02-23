@@ -223,8 +223,8 @@ export default function Home() {
         .btn-primary:hover { background:${C.accentMid}; transform:translateY(-1px); box-shadow:0 4px 16px rgba(30,58,138,.22); }
 
         /* ── HERO ── */
-        .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
-          padding:100px clamp(18px,5vw,80px) 60px; position:relative; z-index:1; text-align:center; }
+        .hero { min-height:86vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+          padding:100px clamp(18px,5vw,80px) 52px; position:relative; z-index:1; text-align:center; }
         .hero-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 16px 6px 8px;
           border-radius:100px; border:1px solid ${C.border2}; background:${C.bg2};
           font-size:12px; font-weight:600; color:${C.accent}; margin-bottom:28px; animation:fadeUp .5s ease both; }
@@ -251,20 +251,20 @@ export default function Home() {
         /* ── METRICS ── */
         .metrics { display:flex; border:1px solid ${C.border}; border-radius:16px;
           background:${C.bg}; overflow:hidden; animation:fadeUp .5s ease .26s both;
-          box-shadow:0 1px 4px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); }
-        .metric { flex:1; padding:20px 28px; text-align:center; position:relative; }
+          box-shadow:0 2px 8px rgba(0,0,0,.06),0 8px 28px rgba(30,58,138,.06); }
+        .metric { flex:1; padding:22px 28px; text-align:center; position:relative; }
         .metric:not(:last-child)::after { content:''; position:absolute; right:0; top:20%; bottom:20%; width:1px; background:${C.border}; }
-        .metric-n { font-family:'Plus Jakarta Sans',sans-serif; font-size:27px; font-weight:800; color:${C.accent}; line-height:1; }
-        .metric-l { font-size:11px; color:${C.text3}; text-transform:uppercase; letter-spacing:1.5px; margin-top:5px; }
+        .metric-n { font-family:'Plus Jakarta Sans',sans-serif; font-size:28px; font-weight:800; color:${C.accent}; line-height:1; }
+        .metric-l { font-size:11px; color:${C.text3}; text-transform:uppercase; letter-spacing:1.5px; margin-top:6px; }
 
         /* ── TICKER ── */
-        .ticker-wrap { overflow:hidden; background:${C.bg3};
+        .ticker-wrap { overflow:hidden; background:${C.bg2};
           border-top:1px solid ${C.border}; border-bottom:1px solid ${C.border};
-          padding:11px 0; position:relative; z-index:1; }
+          padding:12px 0; position:relative; z-index:1; }
         .ticker-inner { display:flex; width:max-content; animation:ticker 32s linear infinite; }
         .ticker-item { display:flex; align-items:center; gap:10px; padding:0 28px; font-size:12px;
-          font-weight:600; color:${C.text3}; text-transform:uppercase; letter-spacing:1.5px; white-space:nowrap; }
-        .ticker-sep { width:4px; height:4px; border-radius:50%; background:${C.accent}; opacity:.35; }
+          font-weight:600; color:${C.text2}; text-transform:uppercase; letter-spacing:1.5px; white-space:nowrap; }
+        .ticker-sep { width:5px; height:5px; border-radius:50%; background:${C.accent}; opacity:.4; }
 
         /* ── SECTIONS ── */
         .section { position:relative; z-index:1; padding:88px clamp(18px,5vw,80px); max-width:1160px; margin:0 auto; }
@@ -289,29 +289,9 @@ export default function Home() {
         .prob-text { font-size:13.5px; line-height:1.65; color:${C.text2}; }
         .prob-text strong { color:${C.text}; display:block; margin-bottom:2px; font-size:13.5px; font-weight:600; }
 
-        /* ── VIDEO ── */
+        /* ── VIDEO / MOCKUP ── */
         .video-wrap { position:relative; z-index:1; padding:0 clamp(18px,5vw,80px) 88px; }
-        .video-inner-wrap { max-width:1160px; margin:0 auto; }
-        .video-box { position:relative; border-radius:20px; overflow:hidden; background:${C.bg3};
-          border:1px solid ${C.border}; aspect-ratio:16/9;
-          display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .25s;
-          box-shadow:0 4px 24px rgba(0,0,0,.06); }
-        .video-box:hover { border-color:${C.accentMid}; box-shadow:0 8px 40px rgba(30,58,138,.12); }
-        .vbg { position:absolute; inset:0;
-          background:radial-gradient(ellipse 60% 50% at 50% 50%, rgba(30,58,138,.04) 0%, transparent 65%); }
-        .vgrid { position:absolute; inset:0;
-          background-image:linear-gradient(${C.border} 1px, transparent 1px),
-                           linear-gradient(90deg, ${C.border} 1px, transparent 1px);
-          background-size:48px 48px; opacity:.5; }
-        .play-btn { position:relative; z-index:2; width:80px; height:80px; border-radius:50%;
-          background:${C.accent}; border:none; display:flex; align-items:center; justify-content:center;
-          cursor:pointer; transition:all .22s; animation:float 3.5s ease-in-out infinite;
-          box-shadow:0 8px 32px rgba(30,58,138,.3); }
-        .play-btn:hover { transform:scale(1.1); box-shadow:0 12px 48px rgba(30,58,138,.4); animation:none; }
-        .video-label { position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
-          background:rgba(255,255,255,.92); backdrop-filter:blur(12px);
-          border:1px solid ${C.border}; border-radius:100px; padding:8px 20px;
-          white-space:nowrap; font-size:13px; font-weight:500; color:${C.text2}; z-index:2; }
+        .video-inner-wrap { max-width:1100px; margin:0 auto; }
 
         /* ── STEPS ── */
         .steps-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:52px; }
@@ -330,12 +310,14 @@ export default function Home() {
 
         /* ── SERVICES GRID ── */
         .svc-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:44px; }
-        .svc-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:12px;
-          padding:18px 12px; display:flex; flex-direction:column; align-items:center; gap:9px;
-          text-align:center; transition:all .18s; }
-        .svc-card:hover { border-color:rgba(30,58,138,.2); background:${C.accentSoft}; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.06); }
+        .svc-card { background:${C.bg}; border:1px solid ${C.border}; border-radius:14px;
+          padding:20px 12px; display:flex; flex-direction:column; align-items:center; gap:10px;
+          text-align:center; transition:all .2s; box-shadow:0 1px 3px rgba(0,0,0,.04); cursor:default; }
+        .svc-card:hover { border-color:rgba(30,58,138,.25); background:${C.accentSoft}; transform:translateY(-3px); box-shadow:0 6px 18px rgba(30,58,138,.1); }
+        .svc-icon-wrap { width:44px; height:44px; border-radius:12px; background:${C.bg2}; border:1px solid ${C.border}; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+        .svc-card:hover .svc-icon-wrap { background:rgba(30,58,138,.08); border-color:rgba(30,58,138,.2); }
         .svc-icon  { font-size:22px; }
-        .svc-label { font-size:11.5px; font-weight:500; color:${C.text2}; line-height:1.4; }
+        .svc-label { font-size:11.5px; font-weight:600; color:${C.text2}; line-height:1.4; }
 
         /* ── PROFILES ── */
         .profiles-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:52px; }
@@ -622,22 +604,90 @@ export default function Home() {
                   <span style={{ color: C.accent }}>en menos de 3 minutos</span>
                 </h2>
               </div>
-              <div className="video-box" ref={videoRef}>
-                <div className="vbg" />
-                <div className="vgrid" />
-                {/* ─── Reemplazar con <iframe> o <video> cuando el video esté listo ─── */}
-                <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-                  <button className="play-btn" onClick={() => scrollTo("contacto")}>
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill={C.accent}>
-                      <polygon points="5,3 19,12 5,21" />
-                    </svg>
-                  </button>
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ color: C.text, fontSize: 16, fontWeight: 600, margin: 0 }}>Video demo — próximamente</p>
-                    <p style={{ color: C.text2, fontSize: 13, margin: "6px 0 0" }}>Estamos grabando el demo completo. Mientras tanto, <span style={{ color: C.accent, cursor: "pointer" }} onClick={() => scrollTo("contacto")}>solicita una presentación en vivo →</span></p>
+              {/* ── App Mockup visual ── */}
+              <div style={{ borderRadius: 20, overflow: "hidden", border: `1px solid ${C.border}`, boxShadow: "0 8px 40px rgba(0,0,0,.1)", background: C.bg2 }}>
+                {/* Browser chrome */}
+                <div style={{ background: C.bg3, borderBottom: `1px solid ${C.border}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#FF5F57" }} />
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#FEBC2E" }} />
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28C840" }} />
+                  </div>
+                  <div style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 12px", fontSize: 11, color: C.text3, fontFamily: "'DM Mono',monospace", textAlign: "center" }}>
+                    licitaph.vercel.app/ph
                   </div>
                 </div>
-                <div className="video-label">🎬 LicitaPH para administradores de PH · Demo completo · ~3 min</div>
+                {/* App content mockup */}
+                <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", minHeight: 420 }}>
+                  {/* Sidebar */}
+                  <div style={{ background: C.bg, borderRight: `1px solid ${C.border}`, padding: "20px 0" }}>
+                    <div style={{ padding: "0 16px 16px", borderBottom: `1px solid ${C.border}`, marginBottom: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Plus Jakarta Sans',sans-serif", color: C.text }}>
+                        <span style={{ color: C.accent }}>Licita</span>PH
+                      </div>
+                      <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>PH Torre Pacífica</div>
+                    </div>
+                    {[
+                      { icon: "📊", label: "Dashboard", active: true },
+                      { icon: "📋", label: "Licitaciones", active: false },
+                      { icon: "🏢", label: "Empresas", active: false },
+                      { icon: "📄", label: "Contratos", active: false },
+                      { icon: "🔔", label: "Notificaciones", active: false },
+                    ].map(item => (
+                      <div key={item.label} style={{
+                        padding: "9px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: 13,
+                        background: item.active ? C.accentSoft : "transparent",
+                        color: item.active ? C.accent : C.text2,
+                        fontWeight: item.active ? 600 : 400,
+                        borderRight: item.active ? `2px solid ${C.accent}` : "2px solid transparent",
+                      }}>
+                        <span>{item.icon}</span><span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Main content */}
+                  <div style={{ padding: "20px 24px", background: C.bg2 }}>
+                    {/* Stats row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+                      {[
+                        { label: "Licitaciones activas", val: "3", color: C.accent, bg: C.accentSoft },
+                        { label: "Propuestas recibidas", val: "12", color: C.blue, bg: C.blueSoft },
+                        { label: "Contratos vigentes", val: "5", color: C.green, bg: C.greenSoft },
+                      ].map(s => (
+                        <div key={s.label} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: s.color, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{s.val}</div>
+                          <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Table mockup */}
+                    <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+                      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Licitaciones recientes</span>
+                        <span style={{ fontSize: 11, background: C.accent, color: "#fff", borderRadius: 5, padding: "3px 10px", fontWeight: 600 }}>+ Nueva</span>
+                      </div>
+                      {[
+                        { titulo: "Seguridad y vigilancia", estado: "Activa", propuestas: 5, color: C.green, estadoBg: C.greenSoft },
+                        { titulo: "Limpieza de áreas comunes", estado: "En evaluación", propuestas: 8, color: C.warning, estadoBg: C.warningSoft },
+                        { titulo: "Mantenimiento HVAC", estado: "Activa", propuestas: 3, color: C.green, estadoBg: C.greenSoft },
+                      ].map((row, i) => (
+                        <div key={i} style={{ padding: "11px 16px", borderBottom: i < 2 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{row.titulo}</div>
+                            <div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{row.propuestas} propuestas recibidas</div>
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: row.color, background: row.estadoBg, border: `1px solid ${row.color}30`, borderRadius: 5, padding: "3px 9px" }}>{row.estado}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: "center", marginTop: 18 }}>
+                <p style={{ fontSize: 13, color: C.text2, margin: 0 }}>
+                  ¿Quieres verlo en tu PH?{" "}
+                  <span style={{ color: C.accent, cursor: "pointer", fontWeight: 600 }} onClick={() => scrollTo("contacto")}>Solicita una demo en vivo →</span>
+                </p>
               </div>
             </div>
           </div>
@@ -675,7 +725,7 @@ export default function Home() {
             <div className="svc-grid">
               {SERVICIOS_PH.map(s => (
                 <div className="svc-card" key={s.label}>
-                  <span className="svc-icon">{s.icon}</span>
+                  <div className="svc-icon-wrap"><span className="svc-icon">{s.icon}</span></div>
                   <span className="svc-label">{s.label}</span>
                 </div>
               ))}
