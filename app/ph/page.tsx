@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Licitacion, Propuesta, Contrato, PropiedadHorizontal } from "@/lib/supabase/types";
+import { Lightning, Clipboard, Download, DocumentIcon, Chart, TrendUp, Chat, Users, Bell, CheckSimple, CrossSimple, Calendar, Hourglass, Robot, Eye, Building, Clock, Money, Lock, Edit as EditIcon, Rocket, LinkIcon, Warning, RedCircle, Star, Trash, Save, SearchIcon, Globe, Menu as MenuIcon } from "@/lib/icons";
 
 interface Notificacion {
   id: string;
@@ -398,7 +399,7 @@ export default function PHDashboard() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 
-      setNotif({ msg: "✅ ¡Adjudicación confirmada! El contrato está activo.", tipo: "ok" });
+      setNotif({ msg: "Adjudicación confirmada! El contrato está activo.", tipo: "ok" });
       setShowAdjudicar(null);
 
       // Recargar datos
@@ -407,7 +408,7 @@ export default function PHDashboard() {
         await cargarPropuestas(licitacion_id);
       }
     } catch (e: any) {
-      setNotif({ msg: "❌ Error: " + e.message, tipo: "err" });
+      setNotif({ msg: "Error: " + e.message, tipo: "err" });
     } finally {
       setAdjudicando(false);
     }
@@ -422,7 +423,7 @@ export default function PHDashboard() {
     });
     if (res.ok && ph) {
       await cargarLicitaciones(ph.id);
-      setNotif({ msg: "✅ ¡Licitación publicada! Las empresas ya pueden aplicar.", tipo: "ok" });
+      setNotif({ msg: "Licitación publicada! Las empresas ya pueden aplicar.", tipo: "ok" });
     }
   };
 
@@ -452,11 +453,11 @@ export default function PHDashboard() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Error al guardar");
-      setNotif({ msg: "✅ Licitación actualizada correctamente.", tipo: "ok" });
+      setNotif({ msg: "Licitación actualizada correctamente.", tipo: "ok" });
       setEditandoLic(null);
       if (ph) await cargarLicitaciones(ph.id);
     } catch (e: any) {
-      setNotif({ msg: "❌ Error: " + e.message, tipo: "err" });
+      setNotif({ msg: "Error: " + e.message, tipo: "err" });
     } finally {
       setGuardandoEdicion(false);
     }
@@ -626,7 +627,7 @@ export default function PHDashboard() {
         .prop-card { background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:18px; position:relative; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,.04); }
         .prop-card:hover { border-color:var(--border2); transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.08); }
         .prop-card.recomendada { border-color:rgba(30,58,138,0.3); background:var(--accent-soft); }
-        .prop-card.recomendada::before { content:'⭐ IA RECOMIENDA'; position:absolute; top:-1px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; font-size:9px; font-weight:700; padding:3px 10px; border-radius:0 0 6px 6px; letter-spacing:1px; font-family:'DM Mono',monospace; white-space:nowrap; }
+        .prop-card.recomendada::before { content:'IA RECOMIENDA'; position:absolute; top:-1px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; font-size:9px; font-weight:700; padding:3px 10px; border-radius:0 0 6px 6px; letter-spacing:1px; font-family:'DM Mono',monospace; white-space:nowrap; }
         .prop-empresa { font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; margin-bottom:4px; margin-top:8px; }
         .prop-monto { font-family:'DM Mono',monospace; font-size:18px; font-weight:700; color:var(--accent); margin-bottom:12px; }
         .prop-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }
@@ -737,7 +738,7 @@ export default function PHDashboard() {
 
       {/* Hamburger button — mobile only */}
       <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Menú">
-        {sidebarOpen ? "✕" : "☰"}
+        {sidebarOpen ? <CrossSimple size={18} /> : <MenuIcon size={18} />}
       </button>
 
       <div className="layout">
@@ -763,21 +764,21 @@ export default function PHDashboard() {
           </div>
           <nav className="sb-nav">
             {[
-              { key: "dashboard", icon: "⚡", label: "Dashboard" },
-              { key: "licitaciones", icon: "📋", label: "Mis licitaciones", pill: licsActivas.length || null },
-              { key: "propuestas", icon: "📥", label: "Propuestas" },
-              { key: "contratos", icon: "📄", label: "Contratos", pill: contratos.filter(c => c.estado === "vencido").length || null, pillRed: true },
-              { key: "reporte", icon: "📊", label: "Reporte" },
-              { key: "precios", icon: "📈", label: "Hist. precios" },
-              { key: "qa", icon: "💬", label: "Q&A licitaciones", pill: qaPreguntas.filter(q => !q.respuesta).length || null },
-              { key: "copropietarios", icon: "👥", label: "Copropietarios", pill: copropietarios.filter(c => c.activo).length || null },
+              { key: "dashboard", Icon: Lightning, label: "Dashboard" },
+              { key: "licitaciones", Icon: Clipboard, label: "Mis licitaciones", pill: licsActivas.length || null },
+              { key: "propuestas", Icon: Download, label: "Propuestas" },
+              { key: "contratos", Icon: DocumentIcon, label: "Contratos", pill: contratos.filter(c => c.estado === "vencido").length || null, pillRed: true },
+              { key: "reporte", Icon: Chart, label: "Reporte" },
+              { key: "precios", Icon: TrendUp, label: "Hist. precios" },
+              { key: "qa", Icon: Chat, label: "Q&A licitaciones", pill: qaPreguntas.filter(q => !q.respuesta).length || null },
+              { key: "copropietarios", Icon: Users, label: "Copropietarios", pill: copropietarios.filter(c => c.activo).length || null },
             ].map(item => (
               <button
                 key={item.key}
                 className={`nav-item ${tab === item.key ? "active" : ""}`}
                 onClick={() => { const k = item.key as Tab; setTab(k); setSidebarOpen(false); if (k === "copropietarios") cargarCopropietarios(); if (k === "precios") cargarHistorial("todos"); if (k === "qa") cargarQa("todas"); }}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon"><item.Icon size={16} color="currentColor" /></span>
                 {item.label}
                 {item.pill ? (
                   <span className={`nav-pill ${(item as any).pillRed ? "nav-pill-red" : ""}`}>{item.pill}</span>
@@ -792,7 +793,7 @@ export default function PHDashboard() {
               className="notif-bell-btn"
               onClick={() => setNotifPanelOpen(o => !o)}
             >
-              <span className="nav-icon">🔔</span>
+              <span className="nav-icon"><Bell size={16} color="currentColor" /></span>
               Notificaciones
               {notifNoLeidas > 0 && (
                 <span className="notif-badge">{notifNoLeidas > 9 ? "9+" : notifNoLeidas}</span>
@@ -802,7 +803,7 @@ export default function PHDashboard() {
             {notifPanelOpen && (
               <div className="notif-panel">
                 <div className="notif-panel-head">
-                  <span className="notif-panel-title">🔔 Notificaciones</span>
+                  <span className="notif-panel-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Bell size={14} /> Notificaciones</span>
                   {notifNoLeidas > 0 && (
                     <button
                       onClick={marcarTodasLeidas}
@@ -840,10 +841,10 @@ export default function PHDashboard() {
 
           <div className="sb-bottom">
             <a href="/ph/nueva-licitacion" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff", background: "var(--accent)", textDecoration: "none", marginBottom: 6 }}>
-              <span>➕</span> Nueva licitación
+              + Nueva licitación
             </a>
             <button className="nav-item" onClick={() => { supabase.auth.signOut(); window.location.href = "/"; }}>
-              <span className="nav-icon">↩️</span> Cerrar sesión
+              <span className="nav-icon" style={{ display: "flex" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Cerrar sesión
             </button>
           </div>
         </aside>
@@ -854,13 +855,13 @@ export default function PHDashboard() {
           {tab === "dashboard" && (
             <>
               <div className="ph-header">
-                <h1 className="ph-title">Bienvenido, {nombrePH} 👋</h1>
+                <h1 className="ph-title">Bienvenido, {nombrePH}</h1>
                 <p className="ph-sub">Gestión de contrataciones de tu PH</p>
               </div>
 
               {contratos.some(c => c.estado === "vencido") && (
                 <div className="alert-banner">
-                  <span style={{ fontSize: 20 }}>⚠️</span>
+                  <Warning size={20} color="var(--red)" />
                   <div style={{ flex: 1 }}>
                     <strong style={{ color: "var(--red)" }}>Contratos vencidos — acción requerida</strong>
                     <div style={{ color: "var(--text2)", fontSize: 12, marginTop: 2 }}>
@@ -896,7 +897,7 @@ export default function PHDashboard() {
                 </div>
                 {licsActivas.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">📋</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Clipboard size={32} color="var(--muted)" /></div>
                     <div className="empty-title">No hay licitaciones activas</div>
                     <div className="empty-sub">Publica tu primera licitación para recibir propuestas de empresas verificadas.</div>
                   </div>
@@ -910,8 +911,8 @@ export default function PHDashboard() {
                       let cierreColor = "var(--text2)";
                       let cierreLabel = formatFecha(l.fecha_cierre);
                       if (diasRestantes !== null && abierta) {
-                        if (diasRestantes <= 3) { cierreColor = "var(--red)"; cierreLabel = `🔴 Cierra en ${diasRestantes}d`; }
-                        else if (diasRestantes <= 7) { cierreColor = "#F59E0B"; cierreLabel = `⚠ ${diasRestantes} días restantes`; }
+                        if (diasRestantes <= 3) { cierreColor = "var(--red)"; cierreLabel = `Cierra en ${diasRestantes}d`; }
+                        else if (diasRestantes <= 7) { cierreColor = "#F59E0B"; cierreLabel = `${diasRestantes} días restantes`; }
                         else { cierreLabel = `${diasRestantes} días restantes`; }
                       }
                       return (
@@ -924,16 +925,16 @@ export default function PHDashboard() {
                             </div>
                             <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                               <span style={{ color: cierreColor, fontSize: 12, fontWeight: diasRestantes !== null && diasRestantes <= 7 ? 600 : 400 }}>
-                                🕐 {cierreLabel}
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={11} /> {cierreLabel}</span>
                               </span>
                               {l.presupuesto_minimo && (
                                 <span style={{ color: "var(--text2)", fontSize: 12 }}>
-                                  💰 ${Number(l.presupuesto_minimo).toLocaleString()} – ${Number(l.presupuesto_maximo || l.presupuesto_minimo).toLocaleString()}/año
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Money size={11} /> ${Number(l.presupuesto_minimo).toLocaleString()} – ${Number(l.presupuesto_maximo || l.presupuesto_minimo).toLocaleString()}/año</span>
                                 </span>
                               )}
                               {(l as any).visitas > 0 && (
                                 <span style={{ color: "var(--text2)", fontSize: 12 }}>
-                                  👁 {(l as any).visitas} vista{(l as any).visitas !== 1 ? "s" : ""}
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Eye size={11} /> {(l as any).visitas} vista{(l as any).visitas !== 1 ? "s" : ""}</span>
                                 </span>
                               )}
                             </div>
@@ -945,7 +946,7 @@ export default function PHDashboard() {
                           </div>
                           {/* Acción */}
                           <button className="btn btn-gold" onClick={() => { setLicSeleccionada(l.id); setTab("propuestas"); }} style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                            {abierta ? "🔒 Ver propuestas" : "Ver propuestas →"}
+                            {abierta ? "Ver propuestas" : "Ver propuestas →"}
                           </button>
                         </div>
                       );
@@ -971,9 +972,9 @@ export default function PHDashboard() {
                             <td className="td-mono">{formatMonto(c.monto_mensual)}</td>
                             <td>{formatFecha(c.fecha_fin)}</td>
                             <td>
-                              {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span>
+                              {c.estado === "vencido" ? <span className="badge b-red">Vencido</span>
                                 : dias !== null && dias < 90 ? <span className="badge b-yellow">Vence en {dias}d</span>
-                                : <span className="badge b-green">● Activo</span>}
+                                : <span className="badge b-green">Activo</span>}
                             </td>
                           </tr>
                         );
@@ -998,7 +999,7 @@ export default function PHDashboard() {
               <div className="sec">
                 {licitaciones.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">📋</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Clipboard size={32} color="var(--muted)" /></div>
                     <div className="empty-title">Aún no tienes licitaciones</div>
                     <div className="empty-sub">Crea tu primera licitación para empezar a recibir propuestas.</div>
                   </div>
@@ -1015,9 +1016,9 @@ export default function PHDashboard() {
                             {l.urgente && <span className="badge b-urgent">URGENTE</span>}
                           </td>
                           <td>
-                            {l.estado === "activa" && <span className="badge b-green">● Activa</span>}
+                            {l.estado === "activa" && <span className="badge b-green">Activa</span>}
                             {l.estado === "borrador" && <span className="badge b-gray">Borrador</span>}
-                            {l.estado === "adjudicada" && <span className="badge b-gold">✓ Adjudicada</span>}
+                            {l.estado === "adjudicada" && <span className="badge b-gold">Adjudicada</span>}
                             {l.estado === "en_evaluacion" && <span className="badge b-blue">En evaluación</span>}
                             {l.estado === "cancelada" && <span className="badge b-red">Cancelada</span>}
                           </td>
@@ -1031,15 +1032,15 @@ export default function PHDashboard() {
                             )}
                             {l.estado === "activa" && (
                               <button className="btn btn-ghost" onClick={() => abrirModalEditar(l)}>
-                                ✏️ Editar
+                                Editar
                               </button>
                             )}
                             {l.estado === "borrador" && (
                               <button className="btn btn-ghost" onClick={() => publicarLicitacion(l.id)}>
-                                🚀 Publicar
+                                Publicar
                               </button>
                             )}
-                            {l.estado === "adjudicada" && <span className="badge b-gold">✓ Completada</span>}
+                            {l.estado === "adjudicada" && <span className="badge b-gold">Completada</span>}
                             {l.url_slug && (
                               <a
                                 href={`/licitacion/${l.url_slug}`}
@@ -1048,7 +1049,7 @@ export default function PHDashboard() {
                                 className="btn btn-ghost"
                                 style={{ textDecoration: "none", fontSize: 11 }}
                               >
-                                🔗 Ver pública
+                                Ver publica
                               </a>
                             )}
                           </td>
@@ -1089,20 +1090,20 @@ export default function PHDashboard() {
 
                 {!licSeleccionada ? (
                   <div className="empty">
-                    <div className="empty-icon">📥</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Download size={32} color="var(--muted)" /></div>
                     <div className="empty-title">Selecciona una licitación</div>
                     <div className="empty-sub">Elige una licitación activa para ver las propuestas recibidas.</div>
                   </div>
                 ) : propuestasBloqueadas ? (
                   <div className="empty">
-                    <div className="empty-icon">🔒</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Lock size={32} color="var(--muted)" /></div>
                     <div className="empty-title">Propuestas bloqueadas hasta el cierre</div>
                     <div className="empty-sub" style={{ maxWidth: 420, margin: "0 auto" }}>
                       Las propuestas solo son visibles luego de que cierre el período de recepción.
                       Esto garantiza un proceso justo y transparente.
                     </div>
                     <div style={{ marginTop: 20, display: "inline-flex", alignItems: "center", gap: 10, background: "var(--accent-soft)", border: "1px solid rgba(30,58,138,0.2)", borderRadius: 10, padding: "12px 20px" }}>
-                      <span style={{ fontSize: 18 }}>📅</span>
+                      <Calendar size={18} color="var(--accent)" />
                       <div>
                         <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 2 }}>FECHA DE CIERRE</div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: "var(--accent)", fontFamily: "'DM Mono',monospace" }}>
@@ -1116,14 +1117,14 @@ export default function PHDashboard() {
                   </div>
                 ) : propuestas.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">⏳</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Hourglass size={32} color="var(--muted)" /></div>
                     <div className="empty-title">Sin propuestas aún</div>
                     <div className="empty-sub">Las empresas verificadas recibirán notificación y podrán aplicar.</div>
                   </div>
                 ) : (
                   <>
                     <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: "var(--bg2)", fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>🤖</span>
+                      <Robot size={14} color="var(--blue)" />
                       La IA evalúa: <strong style={{ color: "var(--text)" }}>precio (35)</strong> · <strong style={{ color: "var(--text)" }}>experiencia (25)</strong> · <strong style={{ color: "var(--text)" }}>propuesta técnica (25)</strong> · <strong style={{ color: "var(--text)" }}>documentación (10)</strong> · <strong style={{ color: "var(--text)" }}>reputación (5)</strong>
                     </div>
                     {comparando.length > 0 && (
@@ -1200,7 +1201,7 @@ export default function PHDashboard() {
                               if (!alertas.length) return null;
                               return (
                                 <div style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 8, padding: "10px 14px", marginTop: 8 }}>
-                                  <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>⚠️ Alertas de alcance</div>
+                                  <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Alertas de alcance</div>
                                   {alertas.map((a: string, ai: number) => (
                                     <div key={ai} style={{ fontSize: 12, color: "#FCA5A5", lineHeight: 1.5, marginBottom: 3 }}>• {a}</div>
                                   ))}
@@ -1211,13 +1212,13 @@ export default function PHDashboard() {
                             {/* Análisis Claude */}
                             {(p as any).analisis_ia?.recomendacion && (
                               <div style={{ background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.15)", borderRadius: 8, padding: "10px 12px", marginTop: 8 }}>
-                                <div style={{ fontSize: 10, color: "var(--blue)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>🤖 Análisis IA</div>
+                                <div style={{ fontSize: 10, color: "var(--blue)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Análisis IA</div>
                                 <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.5 }}>{(p as any).analisis_ia.recomendacion}</div>
                                 {((p as any).analisis_ia?.fortalezas?.length > 0 || (p as any).analisis_ia?.debilidades?.length > 0) && (
                                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8 }}>
                                     {(p as any).analisis_ia?.fortalezas?.length > 0 && (
                                       <div>
-                                        <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 600, marginBottom: 2 }}>✓ Fortalezas</div>
+                                        <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 600, marginBottom: 2 }}>Fortalezas</div>
                                         {((p as any).analisis_ia.fortalezas as string[]).map((f: string, fi: number) => (
                                           <div key={fi} style={{ fontSize: 11, color: "var(--text2)", lineHeight: 1.4 }}>• {f}</div>
                                         ))}
@@ -1225,7 +1226,7 @@ export default function PHDashboard() {
                                     )}
                                     {(p as any).analisis_ia?.debilidades?.length > 0 && (
                                       <div>
-                                        <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 600, marginBottom: 2 }}>✗ Debilidades</div>
+                                        <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 600, marginBottom: 2 }}>Debilidades</div>
                                         {((p as any).analisis_ia.debilidades as string[]).map((d: string, di: number) => (
                                           <div key={di} style={{ fontSize: 11, color: "var(--text2)", lineHeight: 1.4 }}>• {d}</div>
                                         ))}
@@ -1237,7 +1238,7 @@ export default function PHDashboard() {
                             )}
                             <div className="prop-actions">
                               {esGanada ? (
-                                <span className="badge b-green">✓ Adjudicada</span>
+                                <span className="badge b-green">Adjudicada</span>
                               ) : esNoSel ? (
                                 <span className="badge b-gray">No seleccionada</span>
                               ) : (
@@ -1246,7 +1247,7 @@ export default function PHDashboard() {
                                     className={`btn ${esRecomendada ? "btn-gold" : "btn-ghost"}`}
                                     onClick={() => abrirModalAdjudicar(p.id)}
                                   >
-                                    {esRecomendada ? "⭐ Adjudicar" : "Adjudicar"}
+                                    Adjudicar
                                   </button>
                                   <a
                                     href={`/licitacion/${licitaciones.find(l => l.id === licSeleccionada)?.url_slug || ""}`}
@@ -1280,7 +1281,7 @@ export default function PHDashboard() {
 
               {contratos.filter(c => c.estado === "vencido").map(c => (
                 <div key={c.id} className="alert-banner">
-                  <span style={{ fontSize: 20 }}>🚨</span>
+                  <Warning size={20} color="var(--red)" />
                   <div style={{ flex: 1 }}>
                     <strong style={{ color: "var(--red)" }}>Contrato vencido</strong>
                     <div style={{ color: "var(--text2)", fontSize: 12, marginTop: 2 }}>
@@ -1307,7 +1308,7 @@ export default function PHDashboard() {
               <div className="sec">
                 {contratos.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">📄</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><DocumentIcon size={32} color="var(--muted)" /></div>
                     <div className="empty-title">Sin contratos aún</div>
                     <div className="empty-sub">Los contratos aparecen aquí cuando adjudicas una licitación.</div>
                   </div>
@@ -1340,30 +1341,30 @@ export default function PHDashboard() {
                             <td style={{ color: c.estado === "vencido" ? "var(--red)" : "inherit" }}>{formatFecha(c.fecha_fin)}</td>
                             <td>
                               {estadoFirma === "pendiente" ? (
-                                <span className="badge b-orange">⏳ Pendiente empresa</span>
+                                <span className="badge b-orange">Pendiente empresa</span>
                               ) : estadoFirma === "empresa_acepto" ? (
-                                <span className="badge b-green">✅ Aceptado</span>
+                                <span className="badge b-green">Aceptado</span>
                               ) : (
                                 <span className="badge b-gray">—</span>
                               )}
                             </td>
                             <td>
-                              {c.estado === "vencido" ? <span className="badge b-red">⚠ Vencido</span>
-                                : c.estado === "completado" ? <span className="badge b-gray">✓ Completado</span>
+                              {c.estado === "vencido" ? <span className="badge b-red">Vencido</span>
+                                : c.estado === "completado" ? <span className="badge b-gray">Completado</span>
                                 : dias !== null && dias < 90 ? <span className="badge b-yellow">Vence en {dias}d</span>
-                                : <span className="badge b-green">● Activo</span>}
+                                : <span className="badge b-green">Activo</span>}
                             </td>
                             <td>
                               {(c.estado === "completado" || c.estado === "activo") && (
                                 yaReseno ? (
-                                  <span className="badge b-green">⭐ Enviada</span>
+                                  <span className="badge b-green">Enviada</span>
                                 ) : (
                                   <button
                                     className="btn btn-ghost"
                                     style={{ padding: "4px 10px", fontSize: 12 }}
                                     onClick={() => { setShowReview(c.id); setReviewPuntaje(5); setReviewComentario(""); }}
                                   >
-                                    ⭐ Reseñar
+                                    Resenar
                                   </button>
                                 )
                               )}
@@ -1376,7 +1377,7 @@ export default function PHDashboard() {
                                 style={{ padding: "4px 10px", fontSize: 12, textDecoration: "none", display: "inline-block" }}
                                 title="Descargar contrato Word"
                               >
-                                📄 Word
+                                Word
                               </a>
                             </td>
                           </tr>
@@ -1440,7 +1441,7 @@ export default function PHDashboard() {
               )}
 
               <div style={{ background: "rgba(74,222,128,0.04)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 12, padding: "16px 20px", fontSize: 13, color: "var(--text2)", lineHeight: 1.7 }}>
-                ✅ <strong style={{ color: "var(--text)" }}>Certificación de transparencia LicitaPH:</strong> Todas las contrataciones de este período fueron realizadas mediante proceso competitivo y documentado en la plataforma. Los expedientes están disponibles para consulta de cualquier copropietario.
+                <strong style={{ color: "var(--text)" }}>Certificación de transparencia LicitaPH:</strong> Todas las contrataciones de este período fueron realizadas mediante proceso competitivo y documentado en la plataforma. Los expedientes están disponibles para consulta de cualquier copropietario.
               </div>
 
               {/* Botón reporte ejecutivo para Junta */}
@@ -1452,7 +1453,7 @@ export default function PHDashboard() {
                   className="btn btn-gold"
                   style={{ textDecoration: "none", fontSize: 14, padding: "12px 28px", display: "inline-flex", alignItems: "center", gap: 8 }}
                 >
-                  <span>📄</span> Generar reporte ejecutivo para la Junta
+                  <DocumentIcon size={14} color="currentColor" /> Generar reporte ejecutivo para la Junta
                 </a>
               </div>
             </>
@@ -1462,7 +1463,7 @@ export default function PHDashboard() {
           {tab === "precios" && (
             <>
               <div className="ph-header">
-                <h1 className="ph-title">📈 Historial de precios</h1>
+                <h1 className="ph-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><TrendUp size={22} color="var(--accent)" /> Historial de precios</h1>
                 <p className="ph-sub">Precios reales adjudicados en la plataforma — referencia de mercado panameño</p>
               </div>
 
@@ -1480,7 +1481,7 @@ export default function PHDashboard() {
                       cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all 0.15s",
                     }}
                   >
-                    {cat === "todos" ? "🌐 Todos" : cat}
+                    {cat === "todos" ? "Todos" : cat}
                   </button>
                 ))}
               </div>
@@ -1489,20 +1490,20 @@ export default function PHDashboard() {
                 <div style={{ padding: "60px 0", textAlign: "center", color: "var(--text3)", fontSize: 13 }}>Cargando datos...</div>
               ) : !historialData ? (
                 <div className="empty">
-                  <div className="empty-icon">📈</div>
+                  <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><TrendUp size={32} color="var(--muted)" /></div>
                   <div className="empty-title">Cargando historial</div>
                   <div className="empty-sub">Los datos de precios se cargan automáticamente.</div>
                 </div>
               ) : historialData.total_adjudicaciones === 0 ? (
                 <div className="empty">
-                  <div className="empty-icon">🔍</div>
+                  <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><SearchIcon size={32} color="var(--muted)" /></div>
                   <div className="empty-title">Sin datos disponibles aún</div>
                   <div className="empty-sub">A medida que se adjudiquen licitaciones en la plataforma, verás los precios de referencia aquí.</div>
                 </div>
               ) : (
                 <>
                   <div style={{ background: "var(--accent-soft)", border: "1px solid rgba(30,58,138,0.15)", borderRadius: 12, padding: "14px 20px", marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
-                    <span style={{ fontSize: 26 }}>📊</span>
+                    <Chart size={26} color="var(--accent)" />
                     <div>
                       <div style={{ fontSize: 13, color: "var(--text2)" }}>
                         Basado en <strong style={{ color: "var(--accent)" }}>{historialData.total_adjudicaciones}</strong> adjudicaciones reales en la plataforma
@@ -1599,7 +1600,7 @@ export default function PHDashboard() {
                 <div style={{ textAlign: "center", padding: 48, color: "var(--text2)" }}>Cargando preguntas…</div>
               ) : qaPreguntas.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "64px 0" }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
+                  <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><Chat size={40} color="var(--muted)" /></div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text2)" }}>Sin preguntas por ahora</div>
                   <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 6 }}>Las preguntas de empresas sobre tus licitaciones aparecerán aquí.</div>
                 </div>
@@ -1612,7 +1613,7 @@ export default function PHDashboard() {
                       <div key={seccion}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                           <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: seccion === "pendiente" ? "var(--accent)" : "var(--green)" }}>
-                            {seccion === "pendiente" ? `⏳ Sin responder (${items.length})` : `✓ Respondidas (${items.length})`}
+                            {seccion === "pendiente" ? `Sin responder (${items.length})` : `Respondidas (${items.length})`}
                           </span>
                           <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
                         </div>
@@ -1648,9 +1649,9 @@ export default function PHDashboard() {
 
                               {/* Meta info */}
                               <div style={{ display: "flex", gap: 16, marginBottom: sinRespuesta ? 14 : 0, fontSize: 11, color: "var(--text2)" }}>
-                                {p.nombre_empresa && <span>🏢 {p.nombre_empresa}</span>}
-                                {lic && <span>📋 {lic.titulo}</span>}
-                                <span>🕐 {new Date(p.creado_en).toLocaleDateString("es-PA", { day: "numeric", month: "short", year: "numeric" })}</span>
+                                {p.nombre_empresa && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Building size={11} /> {p.nombre_empresa}</span>}
+                                {lic && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clipboard size={11} /> {lic.titulo}</span>}
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={11} /> {new Date(p.creado_en).toLocaleDateString("es-PA", { day: "numeric", month: "short", year: "numeric" })}</span>
                               </div>
 
                               {/* Respuesta existente */}
@@ -1723,7 +1724,7 @@ export default function PHDashboard() {
 
               {/* Info banner */}
               <div style={{ background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.15)", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "var(--blue)", display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>👁</span>
+                <Eye size={16} color="var(--accent)" />
                 <div>
                   Los copropietarios tienen acceso <strong>solo lectura</strong> a las licitaciones y contratos de tu PH. Cada copropietario debe registrarse en LicitaPH con el mismo email que ingreses aquí, seleccionando el tipo <strong>"Copropietario"</strong>.
                 </div>
@@ -1734,7 +1735,7 @@ export default function PHDashboard() {
               ) : copropietarios.length === 0 ? (
                 <div className="sec">
                   <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                    <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+                    <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><Users size={40} color="var(--muted)" /></div>
                     <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Sin copropietarios registrados</div>
                     <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 20 }}>Agrega a los copropietarios de tu PH para que puedan ver las licitaciones y contratos.</div>
                     <button className="btn btn-gold" onClick={() => setShowAddCoprop(true)}>+ Agregar primer copropietario</button>
@@ -1763,7 +1764,7 @@ export default function PHDashboard() {
                           <td>{c.unidad ?? <span style={{ color: "var(--text3)" }}>—</span>}</td>
                           <td>
                             {c.activo
-                              ? <span className="badge b-green">✓ Activo</span>
+                              ? <span className="badge b-green">Activo</span>
                               : <span className="badge b-gray">Inactivo</span>}
                           </td>
                           <td>
@@ -1774,7 +1775,7 @@ export default function PHDashboard() {
                                 onClick={() => toggleActivoCoprop(c.id, c.activo)}
                                 title={c.activo ? "Desactivar acceso" : "Activar acceso"}
                               >
-                                {c.activo ? "⏸ Pausar" : "▶ Activar"}
+                                {c.activo ? "Pausar" : "Activar"}
                               </button>
                               <button
                                 className="btn btn-ghost"
@@ -1782,7 +1783,7 @@ export default function PHDashboard() {
                                 onClick={() => eliminarCopropietario(c.id)}
                                 title="Eliminar copropietario"
                               >
-                                🗑
+                                <Trash size={14} />
                               </button>
                             </div>
                           </td>
@@ -1816,10 +1817,10 @@ export default function PHDashboard() {
                     )}
                   </p>
                   <div style={{ background: "var(--accent-soft)", border: "1px solid rgba(30,58,138,0.15)", borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "var(--text2)", marginBottom: 4 }}>
-                    📄 Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
+                    Esta acción notifica al ganador, marca las demás propuestas como no seleccionadas y genera el contrato automáticamente.
                   </div>
                   <div style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "var(--red)", marginTop: 8, display: "flex", alignItems: "flex-start", gap: 8 }}>
-                    <span style={{ fontSize: 15, flexShrink: 0 }}>⚠️</span>
+                    <Warning size={15} color="var(--red)" />
                     <span><strong>Acción irreversible.</strong> Una vez confirmada, no podrás adjudicar a otra empresa ni reabrir la licitación.</span>
                   </div>
                 </>
@@ -1924,7 +1925,7 @@ export default function PHDashboard() {
                     <span style={{ width: 12, height: 12, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                     Procesando...
                   </span>
-                ) : "✓ Confirmar adjudicación"}
+                ) : "Confirmar adjudicación"}
               </button>
             </div>
           </div>
@@ -2014,7 +2015,7 @@ export default function PHDashboard() {
                     <span style={{ width: 12, height: 12, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                     Guardando...
                   </span>
-                ) : "💾 Guardar cambios"}
+                ) : "Guardar cambios"}
               </button>
             </div>
           </div>
@@ -2041,9 +2042,9 @@ export default function PHDashboard() {
                   <button
                     key={n}
                     onClick={() => setReviewPuntaje(n)}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 32, opacity: n <= reviewPuntaje ? 1 : 0.25, transition: "opacity .15s" }}
+                    style={{ background: "none", border: "none", cursor: "pointer", opacity: n <= reviewPuntaje ? 1 : 0.25, transition: "opacity .15s", display: "flex" }}
                   >
-                    ⭐
+                    <Star size={32} color="var(--accent)" />
                   </button>
                 ))}
                 <span style={{ color: "#0F172A", fontSize: 14, fontWeight: 700, alignSelf: "center", marginLeft: 4 }}>{reviewPuntaje}/5</span>
@@ -2075,17 +2076,17 @@ export default function PHDashboard() {
                     });
                     if (!r.ok) { const j = await r.json(); throw new Error(j.error); }
                     setReviewsEnviadas(prev => new Set(prev).add(showReview!));
-                    setNotif({ msg: "⭐ ¡Reseña enviada correctamente!", tipo: "ok" });
+                    setNotif({ msg: "Resena enviada correctamente!", tipo: "ok" });
                     setShowReview(null);
                   } catch (e: any) {
-                    setNotif({ msg: "❌ Error: " + e.message, tipo: "err" });
+                    setNotif({ msg: "Error: " + e.message, tipo: "err" });
                   } finally {
                     setEnviandoReview(false);
                   }
                 }}
                 style={{ background: "#1E3A8A", border: "none", color: "#fff", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
               >
-                {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
+                {enviandoReview ? "Enviando..." : "Enviar resena"}
               </button>
               <button onClick={() => setShowReview(null)} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
                 Cancelar
@@ -2124,10 +2125,10 @@ export default function PHDashboard() {
                   <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 5 }}>Verificando email...</p>
                 )}
                 {copropEmailAviso === "ok" && (
-                  <p style={{ fontSize: 11, color: "var(--green)", marginTop: 5 }}>✓ Email registrado en LicitaPH — el acceso se vinculará automáticamente</p>
+                  <p style={{ fontSize: 11, color: "var(--green)", marginTop: 5 }}>Email registrado en LicitaPH — el acceso se vinculará automáticamente</p>
                 )}
                 {copropEmailAviso === "warn" && (
-                  <p style={{ fontSize: 11, color: "var(--gold)", marginTop: 5 }}>⚠️ Este email no está registrado aún. El copropietario deberá registrarse en LicitaPH con este email para acceder a su portal.</p>
+                  <p style={{ fontSize: 11, color: "var(--gold)", marginTop: 5 }}>Este email no está registrado aún. El copropietario deberá registrarse en LicitaPH con este email para acceder a su portal.</p>
                 )}
               </div>
               <div>

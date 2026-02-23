@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Building, Clipboard, Monument, Lightning, CheckSimple, CrossSimple, Check, Cross, Hourglass, Calendar, EmailIcon, UserIcon, Users, Menu as MenuIcon, Chart } from "@/lib/icons";
 
 const C = {
   bg: "#FFFFFF", bgCard: "#FFFFFF", bgPanel: "#F8FAFC",
@@ -170,7 +171,7 @@ export default function SuperadminDashboard() {
       });
       const json = await r.json();
       if (!r.ok) throw new Error(json.error);
-      notify(estado === "aprobado" ? "✅ Documento aprobado" : "❌ Documento rechazado", "ok");
+      notify(estado === "aprobado" ? "Documento aprobado" : "Documento rechazado", "ok");
       setShowMotivoDoc(null); setMotivoDoc("");
       await cargarDocs(empresa_id);
     } catch (e: any) {
@@ -242,7 +243,7 @@ export default function SuperadminDashboard() {
       });
       const json = await r.json();
       if (!r.ok) throw new Error(json.error);
-      notify(estado === "verificada" ? "✅ Empresa verificada y notificada." : "❌ Empresa rechazada y notificada.", "ok");
+      notify(estado === "verificada" ? "Empresa verificada y notificada." : "Empresa rechazada y notificada.", "ok");
       setShowRechazo(null);
       setMotivoRechazo("");
       setEmpresaDetalle(null);
@@ -396,11 +397,11 @@ export default function SuperadminDashboard() {
     }
   `;
 
-  const navItems: { id: Tab; label: string; icon: string }[] = [
-    { id: "dashboard", label: "Dashboard", icon: "▦" },
-    { id: "empresas", label: "Empresas", icon: "🏢" },
-    { id: "licitaciones", label: "Licitaciones", icon: "📋" },
-    { id: "ph", label: "Propiedades H.", icon: "🏛️" },
+  const navItems: { id: Tab; label: string; Icon: React.FC<{size?: number; color?: string}> }[] = [
+    { id: "dashboard", label: "Dashboard", Icon: Chart },
+    { id: "empresas", label: "Empresas", Icon: Building },
+    { id: "licitaciones", label: "Licitaciones", Icon: Clipboard },
+    { id: "ph", label: "Propiedades H.", Icon: Monument },
   ];
 
   return (
@@ -423,9 +424,9 @@ export default function SuperadminDashboard() {
 
       {/* Mobile topbar */}
       <div className="sa-topbar">
-        <button className="sa-hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
+        <button className="sa-hamburger" onClick={() => setSidebarOpen(true)}><MenuIcon size={18} /></button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 6, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
+          <div style={{ width: 26, height: 26, borderRadius: 6, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center" }}><Lightning size={14} color={C.purple} /></div>
           <span style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>LicitaPH</span>
           <span style={{ color: C.purple, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Superadmin</span>
         </div>
@@ -441,7 +442,7 @@ export default function SuperadminDashboard() {
         <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚡</div>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: C.purpleDim, border: `1px solid ${C.purple}`, display: "flex", alignItems: "center", justifyContent: "center" }}><Lightning size={16} color={C.purple} /></div>
               <div>
                 <p style={{ color: C.text, fontSize: 14, fontWeight: 700, margin: 0 }}>LicitaPH</p>
                 <p style={{ color: C.purple, fontSize: 10, fontWeight: 600, margin: 0, textTransform: "uppercase", letterSpacing: 1 }}>Superadmin</p>
@@ -466,7 +467,7 @@ export default function SuperadminDashboard() {
                 transition: "all .15s",
               }}
             >
-              <span style={{ fontSize: 15 }}>{item.icon}</span>
+              <item.Icon size={15} color="currentColor" />
               {item.label}
             </button>
           ))}
@@ -575,10 +576,10 @@ export default function SuperadminDashboard() {
                         )}
                       </div>
                       <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                        {emp.email && <span style={{ color: C.sub, fontSize: 12 }}>✉ {emp.email}</span>}
-                        {emp.empresa_kyc?.representante_nombre && <span style={{ color: C.sub, fontSize: 12 }}>👤 {emp.empresa_kyc.representante_nombre}</span>}
-                        {emp.empresa_kyc?.num_empleados && <span style={{ color: C.sub, fontSize: 12 }}>👥 {emp.empresa_kyc.num_empleados} empleados</span>}
-                        <span style={{ color: C.sub, fontSize: 12 }}>📅 {formatFecha(emp.creado_en)}</span>
+                        {emp.email && <span style={{ color: C.sub, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}><EmailIcon size={12} /> {emp.email}</span>}
+                        {emp.empresa_kyc?.representante_nombre && <span style={{ color: C.sub, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}><UserIcon size={12} /> {emp.empresa_kyc.representante_nombre}</span>}
+                        {emp.empresa_kyc?.num_empleados && <span style={{ color: C.sub, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}><Users size={12} /> {emp.empresa_kyc.num_empleados} empleados</span>}
+                        <span style={{ color: C.sub, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}><Calendar size={12} /> {formatFecha(emp.creado_en)}</span>
                       </div>
                       {emp.categorias?.length > 0 && (
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
@@ -603,7 +604,7 @@ export default function SuperadminDashboard() {
                           disabled={verificando === emp.id}
                           style={{ background: "#ECFDF5", border: `1px solid ${C.green}`, color: C.green, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, opacity: verificando === emp.id ? 0.6 : 1 }}
                         >
-                          ✓ Verificar
+                          Verificar
                         </button>
                       )}
                       {emp.estado_verificacion !== "rechazada" && (
@@ -611,7 +612,7 @@ export default function SuperadminDashboard() {
                           onClick={() => setShowRechazo(emp.id)}
                           style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12 }}
                         >
-                          ✗ Rechazar
+                          Rechazar
                         </button>
                       )}
                     </div>
@@ -777,10 +778,10 @@ export default function SuperadminDashboard() {
                     </div>
                     <div style={{ display: "flex", gap: 12 }}>
                       <span style={{ background: empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? "#ECFDF5" : "#FEF2F2", color: empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
-                        {empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? "✓" : "✗"} Seguro RC
+                        {empresaDetalle.empresa_kyc.tiene_seguro_responsabilidad ? "Si" : "No"} Seguro RC
                       </span>
                       <span style={{ background: empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? "#ECFDF5" : "#FEF2F2", color: empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
-                        {empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? "✓" : "✗"} Fianza
+                        {empresaDetalle.empresa_kyc.tiene_fianza_cumplimiento ? "Si" : "No"} Fianza
                       </span>
                     </div>
                     {empresaDetalle.empresa_kyc.referencias_comerciales && (
@@ -835,7 +836,7 @@ export default function SuperadminDashboard() {
                             {doc.motivo_rechazo && <p style={{ color: C.red, fontSize: 11, margin: "4px 0 0", fontStyle: "italic" }}>Motivo: {doc.motivo_rechazo}</p>}
                           </div>
                           <span style={{ background: estadoBg, color: estadoColor, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>
-                            {estadoDoc === "aprobado" ? "✓ Aprobado" : estadoDoc === "rechazado" ? "✗ Rechazado" : "⏳ Pendiente"}
+                            {estadoDoc === "aprobado" ? "Aprobado" : estadoDoc === "rechazado" ? "Rechazado" : "Pendiente"}
                           </span>
                           <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, fontSize: 12, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>Ver →</a>
                           {estadoDoc !== "aprobado" && (
@@ -843,13 +844,13 @@ export default function SuperadminDashboard() {
                               onClick={() => revisarDoc(empresaDetalle.id, doc.id, "aprobado")}
                               disabled={revisandoDoc === doc.id}
                               style={{ background: "#ECFDF5", border: `1px solid ${C.green}`, color: C.green, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
-                            >✓</button>
+                            ><CheckSimple size={12} /></button>
                           )}
                           {estadoDoc !== "rechazado" && (
                             <button
                               onClick={() => { setShowMotivoDoc(doc.id); setMotivoDoc(""); }}
                               style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0 }}
-                            >✗</button>
+                            ><CrossSimple size={12} /></button>
                           )}
                         </div>
                       );
@@ -907,7 +908,7 @@ export default function SuperadminDashboard() {
                     disabled={verificando === empresaDetalle.id}
                     style={{ background: "#ECFDF5", border: `1px solid ${C.green}`, color: C.green, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1, opacity: verificando ? 0.6 : 1 }}
                   >
-                    ✓ Verificar empresa
+                    Verificar empresa
                   </button>
                 )}
                 {empresaDetalle.estado_verificacion !== "rechazada" && (
@@ -915,7 +916,7 @@ export default function SuperadminDashboard() {
                     onClick={() => { setEmpresaDetalle(null); setShowRechazo(empresaDetalle.id); }}
                     style={{ background: "#FEF2F2", border: `1px solid ${C.red}`, color: C.red, padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1 }}
                   >
-                    ✗ Rechazar
+                    Rechazar
                   </button>
                 )}
                 <button

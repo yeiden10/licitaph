@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Chart, Clipboard, DocumentIcon, Building, House, Eye, Lightning, Handshake, SearchIcon, CheckSimple, CrossSimple, CalendarSchedule, Pin, Warning, Star, StarEmpty } from "@/lib/icons";
 
 const C = {
   bg:        "#FFFFFF",
@@ -193,7 +194,7 @@ export default function CopropietarioPage() {
   if (error) return (
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 40, maxWidth: 480, textAlign: "center" }}>
-        <div style={{ fontSize: 40, marginBottom: 16 }}>🏢</div>
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><Building size={40} color={C.accent} /></div>
         <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: "0 0 12px" }}>No vinculado a un PH</h2>
         <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.6, margin: "0 0 24px" }}>{error}</p>
         <button
@@ -211,10 +212,10 @@ export default function CopropietarioPage() {
   const contratosActivos = contratos.filter(c => c.estado === "activo");
   const gastoAnual = contratosActivos.reduce((s, c) => s + (c.valor_anual ?? 0), 0);
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "resumen", label: "Resumen", icon: "📊" },
-    { id: "licitaciones", label: "Licitaciones", icon: "📋" },
-    { id: "contratos", label: "Contratos", icon: "📄" },
+  const tabs: { id: Tab; label: string; Icon: React.FC<{size?: number; color?: string}> }[] = [
+    { id: "resumen", label: "Resumen", Icon: Chart },
+    { id: "licitaciones", label: "Licitaciones", Icon: Clipboard },
+    { id: "contratos", label: "Contratos", Icon: DocumentIcon },
   ];
 
   return (
@@ -295,7 +296,7 @@ export default function CopropietarioPage() {
               className={`nav-item ${tab === t.id ? "active" : ""}`}
               onClick={() => setTab(t.id)}
             >
-              <span>{t.icon}</span>
+              <t.Icon size={16} color="currentColor" />
               {t.label}
             </div>
           ))}
@@ -320,20 +321,20 @@ export default function CopropietarioPage() {
             <div className="ph-avatar">
               {ph?.logo_url ? (
                 <img src={ph.logo_url} alt={ph.nombre} style={{ width: "100%", height: "100%", borderRadius: 10, objectFit: "cover" }} />
-              ) : "🏢"}
+              ) : <Building size={24} color={C.accent} />}
             </div>
             <div>
               <div className="ph-nombre">{ph?.nombre}</div>
               <div className="ph-sub">{ph?.ciudad}{ph?.provincia ? `, ${ph.provincia}` : ""}</div>
             </div>
             {copropData?.unidad && (
-              <div className="unidad-badge">🏠 {copropData.unidad}</div>
+              <div className="unidad-badge" style={{ display: "flex", alignItems: "center", gap: 4 }}><House size={14} color={C.gold} /> {copropData.unidad}</div>
             )}
           </div>
 
           {/* Banner read-only */}
           <div className="readonly-banner">
-            <span>👁</span>
+            <Eye size={16} color={C.blue} />
             Vista de transparencia — Solo lectura. Aquí puedes ver las licitaciones y contratos de tu propiedad horizontal.
           </div>
 
@@ -356,16 +357,16 @@ export default function CopropietarioPage() {
 
               {/* Licitaciones activas */}
               <div className="sec">
-                <div className="sec-title">📋 Licitaciones en curso</div>
+                <div className="sec-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><Clipboard size={16} color={C.accent} /> Licitaciones en curso</div>
                 {licsActivas.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">📋</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Clipboard size={32} color={C.muted} /></div>
                     <div className="empty-sub">No hay licitaciones activas en este momento.</div>
                   </div>
                 ) : (
                   licsActivas.map(l => (
                     <div className="lic-row" key={l.id}>
-                      <div className="lic-icon">📋</div>
+                      <div className="lic-icon"><Clipboard size={16} color={C.accent} /></div>
                       <div style={{ flex: 1 }}>
                         <div className="lic-titulo">{l.titulo}</div>
                         <div className="lic-meta">
@@ -375,7 +376,7 @@ export default function CopropietarioPage() {
                         </div>
                       </div>
                       <span className={`badge ${l.urgente ? "b-red" : "b-gold"}`}>
-                        {l.urgente ? "⚡ Urgente" : "● Activa"}
+                        {l.urgente ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Lightning size={12} /> Urgente</span> : "Activa"}
                       </span>
                     </div>
                   ))
@@ -384,16 +385,16 @@ export default function CopropietarioPage() {
 
               {/* Contratos activos */}
               <div className="sec">
-                <div className="sec-title">📄 Contratos vigentes</div>
+                <div className="sec-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><DocumentIcon size={16} color={C.accent} /> Contratos vigentes</div>
                 {contratosActivos.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">📄</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><DocumentIcon size={32} color={C.muted} /></div>
                     <div className="empty-sub">No hay contratos activos.</div>
                   </div>
                 ) : (
                   contratosActivos.map(c => (
                     <div className="lic-row" key={c.id}>
-                      <div className="lic-icon">🤝</div>
+                      <div className="lic-icon"><Handshake size={16} color={C.green} /></div>
                       <div style={{ flex: 1 }}>
                         <div className="lic-titulo">{c.empresas?.nombre ?? "Empresa"}</div>
                         <div className="lic-meta">
@@ -412,27 +413,27 @@ export default function CopropietarioPage() {
           {/* ── LICITACIONES ─────────────────────────────────────────── */}
           {tab === "licitaciones" && (
             <div className="sec">
-              <div className="sec-title">📋 Todas las licitaciones de {ph?.nombre}</div>
+              <div className="sec-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><Clipboard size={16} color={C.accent} /> Todas las licitaciones de {ph?.nombre}</div>
               {licitaciones.length === 0 ? (
                 <div className="empty">
-                  <div className="empty-icon">📋</div>
+                  <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><Clipboard size={32} color={C.muted} /></div>
                   <div className="empty-sub">Aún no hay licitaciones registradas.</div>
                 </div>
               ) : (
                 licitaciones.map(l => {
                   const estadoBadge =
-                    l.estado === "activa" ? { cls: "b-gold", label: "● Activa" } :
-                    l.estado === "adjudicada" ? { cls: "b-green", label: "✓ Adjudicada" } :
-                    l.estado === "en_evaluacion" ? { cls: "b-blue", label: "🔍 En evaluación" } :
-                    l.estado === "cancelada" ? { cls: "b-red", label: "✗ Cancelada" } :
+                    l.estado === "activa" ? { cls: "b-gold", label: "Activa" } :
+                    l.estado === "adjudicada" ? { cls: "b-green", label: "Adjudicada" } :
+                    l.estado === "en_evaluacion" ? { cls: "b-blue", label: "En evaluacion" } :
+                    l.estado === "cancelada" ? { cls: "b-red", label: "Cancelada" } :
                     { cls: "b-gray", label: l.estado };
                   return (
                     <div className="lic-row" key={l.id}>
-                      <div className="lic-icon">📋</div>
+                      <div className="lic-icon"><Clipboard size={16} color={C.accent} /></div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <div className="lic-titulo">{l.titulo}</div>
-                          {l.urgente && <span className="badge b-red">⚡ Urgente</span>}
+                          {l.urgente && <span className="badge b-red" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Lightning size={10} /> Urgente</span>}
                         </div>
                         <div className="lic-meta">
                           {CATEGORIAS[l.categoria] ?? l.categoria}
@@ -442,14 +443,14 @@ export default function CopropietarioPage() {
                         </div>
                         {l.fechas_inspeccion && l.fechas_inspeccion.length > 0 && (
                           <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            <span style={{ fontSize: 11, color: C.muted }}>🗓 Inspección:</span>
+                            <span style={{ fontSize: 11, color: C.muted, display: "inline-flex", alignItems: "center", gap: 3 }}><CalendarSchedule size={12} /> Inspección:</span>
                             {l.fechas_inspeccion.map((f, i) => (
                               <span key={i} style={{ fontSize: 11, background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 5, padding: "2px 8px", color: C.sub }}>
                                 {fmtInspeccion(f)}
                               </span>
                             ))}
                             {l.lugar_inspeccion && (
-                              <span style={{ fontSize: 11, color: C.muted }}>📍 {l.lugar_inspeccion}</span>
+                              <span style={{ fontSize: 11, color: C.muted, display: "inline-flex", alignItems: "center", gap: 3 }}><Pin size={12} /> {l.lugar_inspeccion}</span>
                             )}
                           </div>
                         )}
@@ -466,18 +467,18 @@ export default function CopropietarioPage() {
           {tab === "contratos" && (
             <div>
               <div className="sec">
-                <div className="sec-title">📄 Contratos de {ph?.nombre}</div>
+                <div className="sec-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><DocumentIcon size={16} color={C.accent} /> Contratos de {ph?.nombre}</div>
                 {contratos.length === 0 ? (
                   <div className="empty">
-                    <div className="empty-icon">📄</div>
+                    <div className="empty-icon" style={{ display: "flex", justifyContent: "center" }}><DocumentIcon size={32} color={C.muted} /></div>
                     <div className="empty-sub">No hay contratos registrados aún.</div>
                   </div>
                 ) : (
                   contratos.map(c => {
                     const estadoBadge =
-                      c.estado === "activo" ? { cls: "b-green", label: "● Activo" } :
-                      c.estado === "completado" ? { cls: "b-gray", label: "✓ Completado" } :
-                      c.estado === "vencido" ? { cls: "b-red", label: "⚠ Vencido" } :
+                      c.estado === "activo" ? { cls: "b-green", label: "Activo" } :
+                      c.estado === "completado" ? { cls: "b-gray", label: "Completado" } :
+                      c.estado === "vencido" ? { cls: "b-red", label: "Vencido" } :
                       { cls: "b-gray", label: c.estado };
                     return (
                       <div className="contrato-card" key={c.id}>
@@ -506,7 +507,7 @@ export default function CopropietarioPage() {
                         </div>
                         {c.empresas?.calificacion_promedio != null && (
                           <div style={{ marginTop: 10, fontSize: 12, color: C.muted }}>
-                            Calificación empresa: <span style={{ color: C.gold }}>{"⭐".repeat(Math.round(c.empresas.calificacion_promedio))} {c.empresas.calificacion_promedio.toFixed(1)}</span>
+                            Calificación empresa: <span style={{ color: C.gold, display: "inline-flex", alignItems: "center", gap: 2 }}>{Array.from({ length: 5 }, (_, i) => i < Math.round(c.empresas!.calificacion_promedio!) ? <Star key={i} size={13} color={C.gold} /> : <StarEmpty key={i} size={13} color={C.muted} />)} {c.empresas.calificacion_promedio.toFixed(1)}</span>
                           </div>
                         )}
                       </div>

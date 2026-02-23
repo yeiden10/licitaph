@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         .map(e => ({
           from: FROM,
           to: e.email!,
-          subject: `🏗️ Nueva licitación: ${licitacion.titulo}`,
+          subject: `Nueva licitación: ${licitacion.titulo}`,
           html: emailLicitacionPublicada(licitacion, e.nombre),
         }));
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       await getResend().emails.send({
         from: FROM,
         to: propuesta.empresas.email,
-        subject: `🎉 ¡Ganaste la licitación de ${propuesta.licitaciones?.propiedades_horizontales?.nombre}!`,
+        subject: `Felicitaciones — Ganaste la licitación de ${propuesta.licitaciones?.propiedades_horizontales?.nombre}`,
         html: emailGanador(propuesta),
       });
 
@@ -171,7 +171,9 @@ function emailGanador(propuesta: any) {
       </span>
     </div>
     <div style="background:#0D1117;border:1px solid rgba(74,222,128,0.2);border-radius:16px;padding:32px;">
-      <div style="font-size:32px;text-align:center;margin-bottom:16px;">🎉</div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21l3.5-14L18 10.5z"/><line x1="9" y1="13" x2="6.5" y2="18"/><circle cx="16" cy="5" r="1" fill="#4ADE80" stroke="none"/><circle cx="20" cy="9" r="0.75" fill="#4ADE80" stroke="none"/><circle cx="19" cy="3" r="0.75" fill="#4ADE80" stroke="none"/><path d="M14.5 2l.5 2"/><path d="M21 6l-2 .5"/><path d="M20 12l-1.5-1"/></svg>
+      </div>
       <h1 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;text-align:center;margin:0 0 8px;color:#4ADE80;">
         ¡Felicitaciones, ${empresa}!
       </h1>

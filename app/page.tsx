@@ -2,6 +2,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Shield, Broom, Elevator, Pool, PaintRoller, WaterDrop, Plant, Snowflake,
+  Lightning, Wrench, Camera, Construction, Rain, Bug, BatteryIcon,
+  Building, House, HardHat, Clipboard, DocumentIcon, Chart, Bell,
+  Check, Cross, CrossSimple, EmailIcon, Phone, CityIcon, Clock,
+  Heart, Flag, CATEGORY_ICONS,
+} from "@/lib/icons";
+import type { IconProps } from "@/lib/icons";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -29,22 +37,22 @@ const C = {
 };
 
 // ── Servicios PH ──────────────────────────────────────────────────────────────
-const SERVICIOS_PH = [
-  { icon: "🔒", label: "Seguridad y vigilancia" },
-  { icon: "🧹", label: "Limpieza y conserje" },
-  { icon: "🛗", label: "Ascensores" },
-  { icon: "🌊", label: "Piscinas" },
-  { icon: "🎨", label: "Pintura exterior" },
-  { icon: "💧", label: "Impermeabilización" },
-  { icon: "🌿", label: "Áreas verdes" },
-  { icon: "❄️", label: "HVAC / Aire acond." },
-  { icon: "⚡", label: "Electricidad" },
-  { icon: "🔧", label: "Plomería" },
-  { icon: "📹", label: "CCTV / Control acceso" },
-  { icon: "🏗️", label: "Remodelaciones" },
-  { icon: "🌧️", label: "Sistemas pluviales" },
-  { icon: "🦟", label: "Fumigación" },
-  { icon: "🔋", label: "Generadores" },
+const SERVICIOS_PH: { Icon: React.FC<IconProps>; label: string }[] = [
+  { Icon: Shield,       label: "Seguridad y vigilancia" },
+  { Icon: Broom,        label: "Limpieza y conserje" },
+  { Icon: Elevator,     label: "Ascensores" },
+  { Icon: Pool,         label: "Piscinas" },
+  { Icon: PaintRoller,  label: "Pintura exterior" },
+  { Icon: WaterDrop,    label: "Impermeabilización" },
+  { Icon: Plant,        label: "Áreas verdes" },
+  { Icon: Snowflake,    label: "HVAC / Aire acond." },
+  { Icon: Lightning,    label: "Electricidad" },
+  { Icon: Wrench,       label: "Plomería" },
+  { Icon: Camera,       label: "CCTV / Control acceso" },
+  { Icon: Construction, label: "Remodelaciones" },
+  { Icon: Rain,         label: "Sistemas pluviales" },
+  { Icon: Bug,          label: "Fumigación" },
+  { Icon: BatteryIcon,  label: "Generadores" },
 ];
 
 // ── Testimonios ───────────────────────────────────────────────────────────────
@@ -97,7 +105,7 @@ export default function Home() {
     });
     setCargando(false);
     if (error) setMensaje("Error: " + error.message);
-    else { setMensaje("✅ ¡Registro exitoso! Revisa tu email para confirmar tu cuenta."); setForm({ nombre: "", email: "", password: "", telefono: "" }); }
+    else { setMensaje("[ok] Registro exitoso. Revisa tu email para confirmar tu cuenta."); setForm({ nombre: "", email: "", password: "", telefono: "" }); }
   };
 
   const login = async () => {
@@ -107,16 +115,16 @@ export default function Home() {
     setCargando(false);
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed") || error.message.toLowerCase().includes("email_not_confirmed")) {
-        setMensaje("⚠️ Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja (y spam).");
+        setMensaje("[warn] Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja (y spam).");
       } else if (error.message.toLowerCase().includes("invalid login credentials") || error.message.toLowerCase().includes("invalid_credentials")) {
-        setMensaje("❌ Email o contraseña incorrectos.");
+        setMensaje("[err] Email o contraseña incorrectos.");
       } else {
-        setMensaje("❌ " + error.message);
+        setMensaje("[err] " + error.message);
       }
       return;
     }
     const tipo = data.user?.user_metadata?.tipo_usuario;
-    setMensaje("✅ ¡Bienvenido! Iniciando sesión...");
+    setMensaje("[ok] Bienvenido. Iniciando sesión...");
     setTimeout(() => {
       if (tipo === "empresa") router.replace("/empresa");
       else if (tipo === "copropietario") router.replace("/copropietario");
@@ -316,7 +324,7 @@ export default function Home() {
         .svc-card:hover { border-color:rgba(30,58,138,.25); background:${C.accentSoft}; transform:translateY(-3px); box-shadow:0 6px 18px rgba(30,58,138,.1); }
         .svc-icon-wrap { width:44px; height:44px; border-radius:12px; background:${C.bg2}; border:1px solid ${C.border}; display:flex; align-items:center; justify-content:center; transition:all .2s; }
         .svc-card:hover .svc-icon-wrap { background:rgba(30,58,138,.08); border-color:rgba(30,58,138,.2); }
-        .svc-icon  { font-size:22px; }
+        .svc-icon  { display:flex; align-items:center; justify-content:center; }
         .svc-label { font-size:11.5px; font-weight:600; color:${C.text2}; line-height:1.4; }
 
         /* ── PROFILES ── */
@@ -548,7 +556,7 @@ export default function Home() {
             <div className="ticker-inner">
               {[...SERVICIOS_PH, ...SERVICIOS_PH].map((s, i) => (
                 <div className="ticker-item" key={i}>
-                  <span>{s.icon}</span><span>{s.label}</span>
+                  <s.Icon size={16} /><span>{s.label}</span>
                   <span className="ticker-sep" />
                 </div>
               ))}
@@ -562,7 +570,7 @@ export default function Home() {
             <p className="section-p">Miles de administradores panameños contratan por WhatsApp, con PDFs sin firma y por recomendaciones de conocidos. El resultado: sobrecostos, contratos sin garantía y conflictos en asamblea.</p>
             <div className="prob-grid">
               <div className="prob-col bad">
-                <span className="col-tag bad">✕ Sin LicitaPH</span>
+                <span className="col-tag bad"><CrossSimple size={12} color={C.red} /> Sin LicitaPH</span>
                 {[
                   { t: "Cotizaciones por WhatsApp",          d: "Sin documentación, sin registro, imposible auditar." },
                   { t: "Empresas sin verificar",              d: "¿Tienen seguro? ¿Paz y salvo? ¿Permiso vigente? Nadie lo sabe." },
@@ -571,13 +579,13 @@ export default function Home() {
                   { t: "Copropietarios sin información",      d: "Preguntan en asamblea y el admin no tiene respuestas claras." },
                 ].map(p => (
                   <div className="prob-row" key={p.t}>
-                    <span style={{ fontSize: 15, marginTop: 1, flexShrink: 0 }}>❌</span>
+                    <span style={{ marginTop: 1, flexShrink: 0 }}><Cross size={16} color={C.red} /></span>
                     <div className="prob-text"><strong>{p.t}</strong>{p.d}</div>
                   </div>
                 ))}
               </div>
               <div className="prob-col good">
-                <span className="col-tag good">✓ Con LicitaPH</span>
+                <span className="col-tag good"><Check size={12} color={C.green} /> Con LicitaPH</span>
                 {[
                   { t: "Proceso digital y documentado",            d: "Cada paso queda registrado. Expediente completo disponible 24/7." },
                   { t: "Empresas 100% verificadas",                 d: "Revisamos documentos legales y pólizas antes de activar cada empresa." },
@@ -586,7 +594,7 @@ export default function Home() {
                   { t: "Portal de transparencia para copropietarios", d: "Acceso de lectura a licitaciones, contratos y ahorros. Cero conflictos." },
                 ].map(p => (
                   <div className="prob-row" key={p.t}>
-                    <span style={{ fontSize: 15, marginTop: 1, flexShrink: 0 }}>✅</span>
+                    <span style={{ marginTop: 1, flexShrink: 0 }}><Check size={16} color={C.green} /></span>
                     <div className="prob-text"><strong>{p.t}</strong>{p.d}</div>
                   </div>
                 ))}
@@ -628,11 +636,11 @@ export default function Home() {
                       <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>PH Torre Pacífica</div>
                     </div>
                     {[
-                      { icon: "📊", label: "Dashboard", active: true },
-                      { icon: "📋", label: "Licitaciones", active: false },
-                      { icon: "🏢", label: "Empresas", active: false },
-                      { icon: "📄", label: "Contratos", active: false },
-                      { icon: "🔔", label: "Notificaciones", active: false },
+                      { Ic: Chart, label: "Dashboard", active: true },
+                      { Ic: Clipboard, label: "Licitaciones", active: false },
+                      { Ic: Building, label: "Empresas", active: false },
+                      { Ic: DocumentIcon, label: "Contratos", active: false },
+                      { Ic: Bell, label: "Notificaciones", active: false },
                     ].map(item => (
                       <div key={item.label} style={{
                         padding: "9px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: 13,
@@ -641,7 +649,7 @@ export default function Home() {
                         fontWeight: item.active ? 600 : 400,
                         borderRight: item.active ? `2px solid ${C.accent}` : "2px solid transparent",
                       }}>
-                        <span>{item.icon}</span><span>{item.label}</span>
+                        <item.Ic size={16} /><span>{item.label}</span>
                       </div>
                     ))}
                   </div>
@@ -725,7 +733,7 @@ export default function Home() {
             <div className="svc-grid">
               {SERVICIOS_PH.map(s => (
                 <div className="svc-card" key={s.label}>
-                  <div className="svc-icon-wrap"><span className="svc-icon">{s.icon}</span></div>
+                  <div className="svc-icon-wrap"><s.Icon size={22} color={C.accent} /></div>
                   <span className="svc-label">{s.label}</span>
                 </div>
               ))}
@@ -740,7 +748,7 @@ export default function Home() {
               {/* Administrador */}
               <div className="profile-card" style={{ border: `1px solid rgba(30,58,138,.15)` }}>
                 <div className="profile-accent" style={{ background: C.accent }} />
-                <div className="profile-icon" style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)` }}>🏗️</div>
+                <div className="profile-icon" style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)` }}><HardHat size={22} color={C.accent} /></div>
                 <div className="profile-title">Administrador de PH</div>
                 <div className="profile-sub">Gestiona todas las contrataciones con un proceso ordenado, documentado y legalmente respaldado.</div>
                 <ul className="profile-bullets">
@@ -756,7 +764,7 @@ export default function Home() {
               {/* Empresa */}
               <div className="profile-card" style={{ border: `1px solid rgba(59,130,246,.2)` }}>
                 <div className="profile-accent" style={{ background: C.blue }} />
-                <div className="profile-icon" style={{ background: C.blueSoft, border: `1px solid rgba(59,130,246,.15)` }}>🏢</div>
+                <div className="profile-icon" style={{ background: C.blueSoft, border: `1px solid rgba(59,130,246,.15)` }}><Building size={22} color={C.blue} /></div>
                 <div className="profile-title">Empresa proveedora</div>
                 <div className="profile-sub">Accede a más de 4,500 PHs que contratan regularmente. Compite con tus credenciales, no con tus contactos.</div>
                 <ul className="profile-bullets">
@@ -772,7 +780,7 @@ export default function Home() {
               {/* Copropietario */}
               <div className="profile-card" style={{ border: `1px solid rgba(16,185,129,.2)` }}>
                 <div className="profile-accent" style={{ background: C.green }} />
-                <div className="profile-icon" style={{ background: C.greenSoft, border: `1px solid rgba(16,185,129,.15)` }}>🏠</div>
+                <div className="profile-icon" style={{ background: C.greenSoft, border: `1px solid rgba(16,185,129,.15)` }}><House size={22} color={C.green} /></div>
                 <div className="profile-title">Copropietario</div>
                 <div className="profile-sub">Sabe exactamente en qué se gasta tu cuota. Portal de transparencia con acceso a licitaciones y contratos.</div>
                 <ul className="profile-bullets">
@@ -839,13 +847,13 @@ export default function Home() {
             <div className="contact-grid">
               <div className="contact-points">
                 {[
-                  { icon: "📧", t: "Email",       v: "soporte@licitaph.com" },
-                  { icon: "📱", t: "WhatsApp",    v: "+507 6000-0000" },
-                  { icon: "🏙️", t: "Ubicación",   v: "Ciudad de Panamá, Panamá" },
-                  { icon: "🕐", t: "Horario",     v: "Lunes a viernes · 8am – 6pm" },
+                  { Ic: EmailIcon, t: "Email",       v: "soporte@licitaph.com" },
+                  { Ic: Phone,     t: "WhatsApp",    v: "+507 6000-0000" },
+                  { Ic: CityIcon,  t: "Ubicación",   v: "Ciudad de Panamá, Panamá" },
+                  { Ic: Clock,     t: "Horario",     v: "Lunes a viernes · 8am – 6pm" },
                 ].map(cp => (
                   <div className="cp" key={cp.t}>
-                    <div className="cp-icon">{cp.icon}</div>
+                    <div className="cp-icon"><cp.Ic size={18} color={C.accent} /></div>
                     <div><div className="cp-title">{cp.t}</div><div className="cp-val">{cp.v}</div></div>
                   </div>
                 ))}
@@ -861,7 +869,7 @@ export default function Home() {
                 <p style={{ fontSize: 13, color: C.text2, marginBottom: 22, lineHeight: 1.6 }}>Te contactamos en menos de 24 horas hábiles.</p>
                 {contactEnviado ? (
                   <div style={{ textAlign: "center", padding: "32px 0" }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+                    <div style={{ marginBottom: 16 }}><Check size={48} color={C.green} /></div>
                     <p style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 6 }}>¡Mensaje enviado!</p>
                     <p style={{ fontSize: 14, color: C.text2 }}>Te contactaremos en menos de 24 horas.</p>
                   </div>
@@ -943,7 +951,7 @@ export default function Home() {
             </div>
             <div className="footer-bottom">
               <span>© 2025 LicitaPH · Ciudad de Panamá · Todos los derechos reservados</span>
-              <span>Construido con ❤️ para los administradores de Panamá 🇵🇦</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>Construido con <Heart size={14} color={C.red} /> para los administradores de Panamá <Flag size={14} color={C.accent} /></span>
             </div>
           </footer>
         </>
@@ -961,18 +969,18 @@ export default function Home() {
               <p className="form-sub">Empieza en minutos. Sin tarjeta de crédito.</p>
               <div className="type-toggle">
                 {[
-                  { val: "ph_admin",      label: "🏗️ Soy PH" },
-                  { val: "empresa",       label: "🏢 Soy Empresa" },
-                  { val: "copropietario", label: "🏠 Copropietario" },
+                  { val: "ph_admin",      label: "Soy PH",         Ic: HardHat },
+                  { val: "empresa",       label: "Soy Empresa",    Ic: Building },
+                  { val: "copropietario", label: "Copropietario",  Ic: House },
                 ].map(t => (
-                  <button key={t.val} className={`type-btn ${tipoUsuario === t.val ? "on" : "off"}`} onClick={() => setTipoUsuario(t.val)}>
-                    {t.label}
+                  <button key={t.val} className={`type-btn ${tipoUsuario === t.val ? "on" : "off"}`} onClick={() => setTipoUsuario(t.val)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                    <t.Ic size={14} /> {t.label}
                   </button>
                 ))}
               </div>
               {tipoUsuario === "copropietario" && (
                 <div className="info-badge">
-                  🏠 Como copropietario tendrás acceso de <strong>solo lectura</strong>. El administrador de tu PH debe registrarte con este email para vincularte a tu edificio.
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, verticalAlign: "middle" }}><House size={14} color={C.green} /></span> Como copropietario tendrás acceso de <strong>solo lectura</strong>. El administrador de tu PH debe registrarte con este email para vincularte a tu edificio.
                 </div>
               )}
               <div className="f-field">
@@ -992,7 +1000,7 @@ export default function Home() {
                 <label className="f-label">Teléfono (opcional)</label>
                 <input className="f-input" name="telefono" type="tel" value={form.telefono} onChange={handleChange} placeholder="+507 6000-0000" />
               </div>
-              {mensaje && <div className={mensaje.includes("✅") ? "a-ok" : "a-err"}>{mensaje}</div>}
+              {mensaje && <div className={mensaje.startsWith("[ok]") ? "a-ok" : "a-err"}>{mensaje}</div>}
               <button className="f-submit" onClick={registrar} disabled={cargando}>
                 {cargando ? "Creando cuenta..." : "Crear cuenta gratis →"}
               </button>
@@ -1021,7 +1029,7 @@ export default function Home() {
                 <input className="f-input" name="password" type="password" value={form.password} onChange={handleChange} placeholder="••••••••"
                   onKeyDown={e => { if (e.key === "Enter") login(); }} />
               </div>
-              {mensaje && <div className={mensaje.includes("✅") ? "a-ok" : "a-err"}>{mensaje}</div>}
+              {mensaje && <div className={mensaje.startsWith("[ok]") ? "a-ok" : "a-err"}>{mensaje}</div>}
               <button className="f-submit" onClick={login} disabled={cargando}>
                 {cargando ? "Iniciando sesión..." : "Entrar →"}
               </button>

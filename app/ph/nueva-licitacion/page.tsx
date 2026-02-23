@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Robot, CheckSimple, CrossSimple, Hourglass, Chart, ShieldCheck, Calendar, Warning } from "@/lib/icons";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -108,7 +109,7 @@ function Toast({ msg, tipo, onClose }: { msg: string; tipo: "ok" | "err"; onClos
       alignItems: "flex-start", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,.7)",
       animation: "slideIn .25s ease",
     }}>
-      <span style={{ color: bg, fontSize: 18 }}>{tipo === "ok" ? "✓" : "✕"}</span>
+      {tipo === "ok" ? <CheckSimple size={18} color={bg} /> : <CrossSimple size={18} color={bg} />}
       <p style={{ color: C.text, fontSize: 14, margin: 0, flex: 1 }}>{msg}</p>
       <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18 }}>×</button>
     </div>
@@ -136,7 +137,7 @@ function StepBar({ step }: { step: Step }) {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: bgColor, border: `2px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {done ? (
-                  <span style={{ color: C.green, fontWeight: 700, fontSize: 16 }}>✓</span>
+                  <CheckSimple size={16} color={C.green} />
                 ) : (
                   <span style={{ color, fontWeight: 700, fontSize: 15 }}>{s.n}</span>
                 )}
@@ -583,7 +584,7 @@ export default function NuevaLicitacion() {
         <style>{`* { box-sizing: border-box; } body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }`}</style>
         <div style={{ background: C.bgCard, border: `1px solid ${C.green}40`, borderRadius: 20, padding: 48, maxWidth: 560, width: "100%", textAlign: "center" }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: C.green + "20", border: `2px solid ${C.green}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-            <span style={{ color: C.green, fontSize: 36 }}>✓</span>
+            <CheckSimple size={36} color={C.green} />
           </div>
           <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: "0 0 8px" }}>¡Licitación creada!</h1>
           <p style={{ color: C.sub, fontSize: 15, margin: "0 0 32px", lineHeight: 1.6 }}>
@@ -596,7 +597,7 @@ export default function NuevaLicitacion() {
               onClick={copyUrl}
               style={{ background: copied ? C.green : C.gold, border: "none", color: copied ? "#fff" : "#000", borderRadius: 7, padding: "7px 14px", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
             >
-              {copied ? "Copiado ✓" : "Copiar enlace"}
+              {copied ? "Copiado" : "Copiar enlace"}
             </button>
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
@@ -668,8 +669,8 @@ export default function NuevaLicitacion() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
               <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: 0 }}>Cuéntame qué necesitas</h1>
-              <span style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
-                🤖 Asistente IA
+              <span style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Robot size={12} /> Asistente IA
               </span>
             </div>
             <p style={{ color: C.sub, fontSize: 14, margin: "0 0 24px" }}>
@@ -698,7 +699,7 @@ export default function NuevaLicitacion() {
                         display: "flex", alignItems: "center", justifyContent: "center",
                         flexShrink: 0, marginRight: 8, marginTop: 2,
                       }}>
-                        <span style={{ fontSize: 13 }}>🤖</span>
+                        <Robot size={13} color={C.blue} />
                       </div>
                     )}
                     <div style={{
@@ -719,7 +720,7 @@ export default function NuevaLicitacion() {
                 {chatLoading && (
                   <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg, ${C.blue}40, ${C.blue}20)`, border: `1px solid ${C.blue}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8, marginTop: 2 }}>
-                      <span style={{ fontSize: 13 }}>🤖</span>
+                      <Robot size={13} color={C.blue} />
                     </div>
                     <div style={{ background: C.bgPanel, borderRadius: "16px 16px 16px 4px", padding: "12px 16px", display: "flex", gap: 4, alignItems: "center" }}>
                       {[0, 1, 2].map(i => (
@@ -771,8 +772,8 @@ export default function NuevaLicitacion() {
                 borderRadius: 14, padding: "16px 20px", marginBottom: 16,
                 display: "flex", alignItems: "flex-start", gap: 14,
               }}>
-                <div style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>
-                  {loadingRango ? "⏳" : rangoMercado?.tiene_historial ? "📊" : "💡"}
+                <div style={{ flexShrink: 0, marginTop: 1, display: "flex" }}>
+                  {loadingRango ? <Hourglass size={20} color={C.muted} /> : rangoMercado?.tiene_historial ? <Chart size={20} color={C.gold} /> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18c-3-1-5-4-5-7a8 8 0 0116 0c0 3-2 6-5 7"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>}
                 </div>
                 {loadingRango ? (
                   <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>Consultando precios de mercado...</p>
@@ -806,7 +807,7 @@ export default function NuevaLicitacion() {
             {clausulasGeneradas.length > 0 && (
               <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}30`, borderRadius: 12, padding: "14px 18px", marginBottom: 16 }}>
                 <p style={{ color: C.blue, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}>
-                  🛡️ Cláusulas de alcance incluidas automáticamente
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><ShieldCheck size={13} color={C.blue} /> Cláusulas de alcance incluidas automáticamente</span>
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {clausulasGeneradas.map((c, i) => (
@@ -823,7 +824,7 @@ export default function NuevaLicitacion() {
             {showFormManual && propuestaIA && (
               <div style={{ background: C.bgCard, border: `1px solid ${C.green}30`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                  <span style={{ color: C.green, fontSize: 20 }}>✓</span>
+                  <CheckSimple size={20} color={C.green} />
                   <div>
                     <p style={{ color: C.green, fontSize: 14, fontWeight: 700, margin: 0 }}>Datos generados por IA</p>
                     <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>Revisa y ajusta los campos según necesites</p>
@@ -1062,8 +1063,8 @@ export default function NuevaLicitacion() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
               <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, margin: 0 }}>Pliego de requisitos</h1>
-              <span style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
-                🤖 Sugeridos por IA
+              <span style={{ background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Robot size={12} /> Sugeridos por IA
               </span>
             </div>
             <p style={{ color: C.sub, fontSize: 14, margin: "0 0 24px" }}>
@@ -1104,7 +1105,7 @@ export default function NuevaLicitacion() {
                       onClick={() => setAiSuggestedReqs(prev => prev.map(r => ({ ...r, aceptado: true })))}
                       style={{ background: C.green + "15", border: `1px solid ${C.green}40`, color: C.green, borderRadius: 7, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
                     >
-                      ✓ Aceptar todos
+                      Aceptar todos
                     </button>
                     <button
                       onClick={() => loadAISuggestedReqs()}
@@ -1179,7 +1180,7 @@ export default function NuevaLicitacion() {
                                   cursor: "pointer", fontSize: 12, fontWeight: 700,
                                 }}
                               >
-                                ✓ Aceptar
+                                Aceptar
                               </button>
                             )}
                             {isAccepted && (
@@ -1399,7 +1400,7 @@ export default function NuevaLicitacion() {
                     const horaLabel = timePart || "09:00";
                     return (
                       <div key={i} style={{ background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 20, padding: "5px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ color: C.blue, fontSize: 13 }}>📅 {fechaLabel} · {horaLabel}</span>
+                        <span style={{ color: C.blue, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}><Calendar size={12} /> {fechaLabel} · {horaLabel}</span>
                         <button onClick={() => removeFechaInspeccion(i)} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
                       </div>
                     );
@@ -1493,7 +1494,7 @@ export default function NuevaLicitacion() {
                       const horaLabel = timePart || "09:00";
                       return (
                         <span key={i} style={{ background: C.blue + "15", color: C.blue, border: `1px solid ${C.blue}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12 }}>
-                          📅 {fechaLabel} · {horaLabel}
+                          <Calendar size={11} color={C.blue} /> {fechaLabel} · {horaLabel}
                         </span>
                       );
                     })}
@@ -1540,7 +1541,7 @@ export default function NuevaLicitacion() {
             {/* Edición rápida de fecha de cierre en paso 4 */}
             <div style={{ background: C.bgCard, border: `1px solid ${form.fecha_cierre ? C.border : C.red + "60"}`, borderRadius: 12, padding: "18px 24px", marginBottom: 20 }}>
               <p style={{ color: form.fecha_cierre ? C.sub : C.red, fontSize: 13, fontWeight: 600, margin: "0 0 10px" }}>
-                {form.fecha_cierre ? "Fecha de cierre de recepción" : "⚠️ Fecha de cierre requerida para publicar"}
+                {form.fecha_cierre ? "Fecha de cierre de recepción" : <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Warning size={13} /> Fecha de cierre requerida para publicar</span>}
               </p>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <input
@@ -1552,7 +1553,7 @@ export default function NuevaLicitacion() {
                 />
                 {form.fecha_cierre && (
                   <span style={{ color: C.green, fontSize: 13, whiteSpace: "nowrap" }}>
-                    ✓ {new Date(form.fecha_cierre + "T12:00:00").toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><CheckSimple size={13} color={C.green} /> {new Date(form.fecha_cierre + "T12:00:00").toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
                   </span>
                 )}
               </div>

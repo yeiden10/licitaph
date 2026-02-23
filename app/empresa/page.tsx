@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TIPOS_DOCUMENTO } from "@/lib/supabase/types";
 import type { Empresa, Documento, Propuesta, Contrato } from "@/lib/supabase/types";
+import { CheckSimple, CrossSimple, Clipboard, Upload, DocumentIcon, Folder, Building, Bell, Pin, Money, CalendarSchedule, Hourglass, Check, Star, Menu as MenuIcon, Warning } from "@/lib/icons";
 
 interface Notificacion {
   id: string;
@@ -123,7 +124,7 @@ function Toast({ msg, tipo, onClose }: { msg: string; tipo: "ok" | "err" | "info
       animation: "slideIn .25s ease",
     }}>
       <span style={{ color: bg, fontSize: 18, marginTop: 1 }}>
-        {tipo === "ok" ? "✓" : tipo === "err" ? "✕" : "ℹ"}
+        {tipo === "ok" ? <CheckSimple size={18} color={bg} /> : tipo === "err" ? <CrossSimple size={18} color={bg} /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={bg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>}
       </span>
       <p style={{ color: C.text, fontSize: 14, margin: 0, flex: 1 }}>{msg}</p>
       <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
@@ -384,7 +385,7 @@ function ModalKYC({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
                 }}
               >
                 {label}
-                {seccionesCompletas[i] && <span style={{ color: C.green, fontSize: 12 }}>✓</span>}
+                {seccionesCompletas[i] && <CheckSimple size={12} color={C.green} />}
               </button>
             ))}
           </div>
@@ -914,7 +915,7 @@ function ModalPostular({
     try {
       // Append scope alerts to the structured evaluation so PH sees them
       const propuestaTecnicaFinal = alertasAlcance.length > 0
-        ? evaluacionTexto + "\n\n⚠️ ALERTAS DE ALCANCE:\n" + alertasAlcance.map(a => `• ${a}`).join("\n")
+        ? evaluacionTexto + "\n\nALERTAS DE ALCANCE:\n" + alertasAlcance.map(a => `• ${a}`).join("\n")
         : evaluacionTexto;
 
       const r = await fetch("/api/propuestas", {
@@ -1040,7 +1041,7 @@ function ModalPostular({
             <div style={{ background: C.bgPanel, border: `1px solid ${C.blue}30`, borderRadius: 12, overflow: "hidden" }}>
               {/* Header cuestionario */}
               <div style={{ background: C.blue + "10", borderBottom: `1px solid ${C.blue}20`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 14 }}>📋</span>
+                <Clipboard size={14} color={C.gold} />
                 <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>EVALUACIÓN TÉCNICA — El administrador verá tus respuestas</span>
               </div>
 
@@ -1049,7 +1050,7 @@ function ModalPostular({
                 {qMessages.map((m, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
                     {m.role === "assistant" && (
-                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.gold + "20", border: `1px solid ${C.gold}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8, marginTop: 2, fontSize: 12 }}>📋</div>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.gold + "20", border: `1px solid ${C.gold}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8, marginTop: 2 }}><Clipboard size={12} color={C.gold} /></div>
                     )}
                     <div style={{
                       maxWidth: "80%",
@@ -1063,7 +1064,7 @@ function ModalPostular({
                 ))}
                 {qLoading && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.gold + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>📋</div>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.gold + "20", display: "flex", alignItems: "center", justifyContent: "center" }}><Clipboard size={12} color={C.gold} /></div>
                     <div style={{ background: C.bgCard, border: `1px solid ${C.gold}20`, borderRadius: "12px 12px 12px 4px", padding: "10px 14px", display: "flex", gap: 4 }}>
                       {[0,1,2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: C.muted, animation: `pulse 1.4s ease ${i*0.2}s infinite` }} />)}
                     </div>
@@ -1091,7 +1092,7 @@ function ModalPostular({
                 </div>
               ) : (
                 <div style={{ borderTop: `1px solid ${C.green}30`, padding: "12px 16px", background: C.green + "08", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ color: C.green, fontSize: 16 }}>✓</span>
+                  <CheckSimple size={16} color={C.green} />
                   <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>Evaluación completada — tus respuestas fueron registradas</span>
                 </div>
               )}
@@ -1117,7 +1118,7 @@ function ModalPostular({
             {/* Verificación del pliego */}
             <div style={{ background: C.gold + "06", border: `1px solid ${C.gold}20`, borderRadius: 10, padding: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 16 }}>📋</span>
+                <Clipboard size={16} color={C.gold} />
                 <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, margin: 0 }}>
                   Declaración de verificación del pliego
                 </p>
@@ -1426,12 +1427,12 @@ export default function EmpresaDashboard() {
   if (loading) return <Spinner />;
 
   // ── Sidebar ─────────────────────────────────────────────────────────────────
-  const TABS: Array<{ id: Tab; label: string; icon: string }> = [
-    { id: "dashboard",    label: "Dashboard",    icon: "◈" },
-    { id: "licitaciones", label: "Licitaciones",  icon: "📋" },
-    { id: "propuestas",   label: "Propuestas",    icon: "📤" },
-    { id: "contratos",    label: "Contratos",     icon: "📄" },
-    { id: "documentos",   label: "Documentos",    icon: "🗂" },
+  const TABS: Array<{ id: Tab; label: string; Icon: React.FC<{size?: number; color?: string}> }> = [
+    { id: "dashboard",    label: "Dashboard",    Icon: Building },
+    { id: "licitaciones", label: "Licitaciones",  Icon: Clipboard },
+    { id: "propuestas",   label: "Propuestas",    Icon: Upload },
+    { id: "contratos",    label: "Contratos",     Icon: DocumentIcon },
+    { id: "documentos",   label: "Documentos",    Icon: Folder },
   ];
 
   return (
@@ -1531,7 +1532,7 @@ export default function EmpresaDashboard() {
         }}
         className="emp-hamburger"
       >
-        {sidebarOpen ? "✕" : "☰"}
+        {sidebarOpen ? <CrossSimple size={18} /> : <MenuIcon size={18} />}
       </button>
 
       {/* Overlay mobile */}
@@ -1578,7 +1579,7 @@ export default function EmpresaDashboard() {
                 border: `1px solid ${empresa.estado_verificacion === "verificada" ? C.green : C.gold}40`,
                 borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600,
               }}>
-                {empresa.estado_verificacion === "verificada" ? "✓ Verificada" : "Pendiente verificación"}
+                {empresa.estado_verificacion === "verificada" ? "Verificada" : "Pendiente verificación"}
               </span>
             )}
           </div>
@@ -1620,7 +1621,7 @@ export default function EmpresaDashboard() {
                   borderLeft: tab === t.id ? `3px solid ${C.blue}` : "3px solid transparent",
                 }}
               >
-                <span style={{ fontSize: 16 }}>{t.icon}</span>
+                <t.Icon size={16} color="currentColor" />
                 {t.label}
                 {t.id === "documentos" && !docCompleto && (
                   <span style={{ marginLeft: "auto", background: C.gold, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1643,7 +1644,7 @@ export default function EmpresaDashboard() {
                 borderLeft: "3px solid transparent",
               }}
             >
-              <span style={{ fontSize: 16 }}>🏢</span>
+              <Building size={16} color={C.text} />
               Perfil KYC
               {!kycCompletado && (
                 <span style={{ marginLeft: "auto", background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1666,7 +1667,7 @@ export default function EmpresaDashboard() {
                 textAlign: "left", position: "relative",
               }}
             >
-              <span style={{ fontSize: 16 }}>🔔</span>
+              <Bell size={16} color={C.gold} />
               Notificaciones
               {notifNoLeidas > 0 && (
                 <span style={{
@@ -1692,7 +1693,7 @@ export default function EmpresaDashboard() {
                   padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>🔔 Notificaciones</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text, display: "inline-flex", alignItems: "center", gap: 5 }}><Bell size={13} color={C.gold} /> Notificaciones</span>
                   {notifNoLeidas > 0 && (
                     <button
                       onClick={marcarTodasLeidas}
@@ -1779,7 +1780,7 @@ export default function EmpresaDashboard() {
                 </div>
                 {propuestas.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "40px 0" }}>
-                    <p style={{ fontSize: 36, marginBottom: 8 }}>📤</p>
+                    <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Upload size={36} color={C.muted} /></div>
                     <p style={{ color: C.sub, fontSize: 14 }}>Aún no has enviado propuestas.</p>
                     <button onClick={() => setTab("licitaciones")} style={{ marginTop: 12, background: C.blue, border: "none", color: "#fff", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
                       Ver licitaciones disponibles →
@@ -1831,7 +1832,7 @@ export default function EmpresaDashboard() {
 
               {licitaciones.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "80px 0", background: C.bgCard, borderRadius: 12, border: `1px solid ${C.border}` }}>
-                  <p style={{ fontSize: 48, marginBottom: 12 }}>📋</p>
+                  <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><Clipboard size={48} color={C.muted} /></div>
                   <p style={{ color: C.text, fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No hay licitaciones disponibles</p>
                   <p style={{ color: C.sub, fontSize: 14 }}>Vuelve pronto o cambia el filtro de categoría</p>
                 </div>
@@ -1853,7 +1854,7 @@ export default function EmpresaDashboard() {
                           <h3 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: "0 0 6px" }}>{lic.titulo}</h3>
                           {lic.propiedades_horizontales && (
                             <p style={{ color: C.sub, fontSize: 13, margin: "0 0 10px" }}>
-                              📍 {lic.propiedades_horizontales.nombre} · {lic.propiedades_horizontales.ciudad}
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Pin size={11} /> {lic.propiedades_horizontales.nombre} · {lic.propiedades_horizontales.ciudad}</span>
                             </p>
                           )}
                           {lic.descripcion && (
@@ -1864,12 +1865,12 @@ export default function EmpresaDashboard() {
                           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                             {(lic.presupuesto_minimo || lic.presupuesto_maximo) && (
                               <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>
-                                💰 {usd(lic.presupuesto_minimo)} – {usd(lic.presupuesto_maximo)} / año
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Money size={11} /> {usd(lic.presupuesto_minimo)} – {usd(lic.presupuesto_maximo)} / año</span>
                               </span>
                             )}
                             {lic.fecha_cierre && (
                               <span style={{ color: C.muted, fontSize: 13 }}>
-                                🗓 Cierre: {new Date(lic.fecha_cierre).toLocaleDateString("es-PA")}
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><CalendarSchedule size={11} /> Cierre: {new Date(lic.fecha_cierre).toLocaleDateString("es-PA")}</span>
                               </span>
                             )}
                           </div>
@@ -1877,7 +1878,7 @@ export default function EmpresaDashboard() {
                         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end", minWidth: 160 }}>
                           {yaPostule ? (
                             <span style={{ background: C.green + "20", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600 }}>
-                              ✓ Propuesta enviada
+                              Propuesta enviada
                             </span>
                           ) : (
                             <button
@@ -1909,7 +1910,7 @@ export default function EmpresaDashboard() {
 
               {propuestas.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "80px 0", background: C.bgCard, borderRadius: 12, border: `1px solid ${C.border}` }}>
-                  <p style={{ fontSize: 48, marginBottom: 12 }}>📤</p>
+                  <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><Upload size={48} color={C.muted} /></div>
                   <p style={{ color: C.text, fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No has enviado propuestas aún</p>
                   <p style={{ color: C.sub, fontSize: 14, marginBottom: 20 }}>Encuentra licitaciones abiertas y postula a las que se ajusten a tu servicio</p>
                   <button onClick={() => setTab("licitaciones")} style={{ background: C.blue, border: "none", color: "#fff", borderRadius: 8, padding: "12px 24px", cursor: "pointer", fontSize: 15, fontWeight: 600 }}>
@@ -1965,7 +1966,7 @@ export default function EmpresaDashboard() {
 
               {contratos.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "80px 0", background: C.bgCard, borderRadius: 12, border: `1px solid ${C.border}` }}>
-                  <p style={{ fontSize: 48, marginBottom: 12 }}>📄</p>
+                  <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><DocumentIcon size={48} color={C.muted} /></div>
                   <p style={{ color: C.text, fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Sin contratos activos</p>
                   <p style={{ color: C.sub, fontSize: 14 }}>Cuando ganes una licitación, el contrato aparecerá aquí</p>
                 </div>
@@ -1992,7 +1993,7 @@ export default function EmpresaDashboard() {
                               borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 600,
                               display: "flex", alignItems: "center", gap: 5,
                             }}>
-                              ⏳ Pendiente tu aceptación
+                              Pendiente tu aceptación
                             </span>
                           )}
                           {c.estado_firma === "empresa_acepto" && (
@@ -2002,7 +2003,7 @@ export default function EmpresaDashboard() {
                               borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 600,
                               display: "flex", alignItems: "center", gap: 5,
                             }}>
-                              ✅ Aceptado por ti — en revisión del PH
+                              Aceptado por ti — en revisión del PH
                             </span>
                           )}
                           {badgeEstado(c.estado)}
@@ -2039,14 +2040,14 @@ export default function EmpresaDashboard() {
                           {(c.estado === "completado" || c.estado === "activo") && (
                             reviewsEnviadas.has(c.id) ? (
                               <span style={{ background: "#052E16", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 6, padding: "6px 14px", fontSize: 13, fontWeight: 600 }}>
-                                ⭐ Reseña enviada
+                                Resena enviada
                               </span>
                             ) : (
                               <button
                                 onClick={() => { setShowReview(c.id); setReviewPuntaje(5); setReviewComentario(""); }}
                                 style={{ background: C.goldDim, border: `1px solid ${C.gold}`, color: C.gold, borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}
                               >
-                                ⭐ Dejar reseña
+                                Dejar resena
                               </button>
                             )
                           )}
@@ -2061,7 +2062,7 @@ export default function EmpresaDashboard() {
                             }}
                             title="Descargar contrato en Word"
                           >
-                            📄 Descargar contrato
+                            Descargar contrato
                           </a>
                         </div>
                       </div>
@@ -2098,7 +2099,7 @@ export default function EmpresaDashboard() {
                   </div>
                   {docCompleto && (
                     <span style={{ background: C.green + "20", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
-                      ✓ Perfil completo
+                      Perfil completo
                     </span>
                   )}
                 </div>
@@ -2132,11 +2133,11 @@ export default function EmpresaDashboard() {
                         {!doc ? (
                           <span style={{ color: C.muted, fontSize: 18 }}>○</span>
                         ) : estadoDoc === "aprobado" ? (
-                          <span style={{ color: C.green, fontSize: 20, fontWeight: 700 }}>✓</span>
+                          <CheckSimple size={20} color={C.green} />
                         ) : estadoDoc === "rechazado" ? (
-                          <span style={{ color: C.red, fontSize: 20, fontWeight: 700 }}>✗</span>
+                          <CrossSimple size={20} color={C.red} />
                         ) : (
-                          <span style={{ color: C.gold, fontSize: 16 }}>⏳</span>
+                          <Hourglass size={16} color={C.gold} />
                         )}
                       </div>
 
@@ -2155,7 +2156,7 @@ export default function EmpresaDashboard() {
                               color: estadoDoc === "aprobado" ? C.green : estadoDoc === "rechazado" ? C.red : C.gold,
                               borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700,
                             }}>
-                              {estadoDoc === "aprobado" ? "✓ Aprobado" : estadoDoc === "rechazado" ? "✗ Rechazado" : "⏳ En revisión"}
+                              {estadoDoc === "aprobado" ? "Aprobado" : estadoDoc === "rechazado" ? "Rechazado" : "En revisión"}
                             </span>
                           )}
                         </div>
@@ -2234,9 +2235,9 @@ export default function EmpresaDashboard() {
                   <button
                     key={n}
                     onClick={() => setReviewPuntaje(n)}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 32, opacity: n <= reviewPuntaje ? 1 : 0.25, transition: "opacity .15s", padding: 0 }}
+                    style={{ background: "none", border: "none", cursor: "pointer", opacity: n <= reviewPuntaje ? 1 : 0.25, transition: "opacity .15s", padding: 0, display: "flex" }}
                   >
-                    ⭐
+                    <Star size={32} color={C.gold} />
                   </button>
                 ))}
                 <span style={{ color: C.text, fontSize: 14, fontWeight: 700, marginLeft: 4 }}>{reviewPuntaje}/5</span>
@@ -2268,7 +2269,7 @@ export default function EmpresaDashboard() {
                     });
                     if (!r.ok) { const j = await r.json(); throw new Error(j.error); }
                     setReviewsEnviadas(prev => new Set(prev).add(showReview!));
-                    toast("⭐ ¡Reseña enviada correctamente!", "ok");
+                    toast("Resena enviada correctamente!", "ok");
                     setShowReview(null);
                   } catch (e: any) {
                     toast("Error: " + e.message, "err");
@@ -2278,7 +2279,7 @@ export default function EmpresaDashboard() {
                 }}
                 style={{ background: C.gold, border: "none", color: "#fff", borderRadius: 8, padding: "10px 24px", cursor: enviandoReview ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700, flex: 1, opacity: enviandoReview ? 0.7 : 1 }}
               >
-                {enviandoReview ? "Enviando..." : "⭐ Enviar reseña"}
+                {enviandoReview ? "Enviando..." : "Enviar resena"}
               </button>
               <button onClick={() => setShowReview(null)} style={{ background: C.bgPanel, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 13 }}>
                 Cancelar

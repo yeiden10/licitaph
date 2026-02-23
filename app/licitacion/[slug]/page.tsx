@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { RequisitoLicitacion } from "@/lib/supabase/types";
 import QASection from "./QASection";
 import VisitaTracker from "./VisitaTracker";
+import { Upload, Globe, SearchIcon, CheckSimple, CrossSimple, Note, Warning, Money, Calendar, Clipboard, Target, ImageIcon, CalendarSchedule, Pin, ShieldCheck, Lightning, Handshake, Paperclip, Edit } from "@/lib/icons";
 
 // ── Design tokens (server-safe, no useState) ──────────────────────────────────
 const C = {
@@ -289,25 +290,25 @@ export default async function LicitacionPublicaPage({
             title="Compartir en WhatsApp"
             style={{ display: "flex", alignItems: "center", gap: 6, background: "#25D366", border: "none", color: "#fff", borderRadius: 8, padding: "7px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}
           >
-            <span style={{ fontSize: 15 }}>📤</span>
+            <Upload size={15} color="#fff" />
             <span className="share-label" style={{ display: "none" }}>Compartir</span>
           </a>
-          <span style={{ background: C.greenSoft, color: C.green, border: `1px solid rgba(16,185,129,.25)`, borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700 }}>🌐 Portal público</span>
+          <span style={{ background: C.greenSoft, color: C.green, border: `1px solid rgba(16,185,129,.25)`, borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}><Globe size={13} /> Portal público</span>
         </div>
       </header>
 
       {/* ── Inactive banner ── */}
       {!estaActiva && (() => {
-        const bannerInfo: Record<string, { bg: string; border: string; icon: string; color: string; msg: string }> = {
-          en_evaluacion: { bg: C.blue + "15", border: C.blue + "30", icon: "🔍", color: C.blue, msg: "Esta licitación está en período de evaluación — no se aceptan más propuestas." },
-          adjudicada:    { bg: C.green + "15", border: C.green + "30", icon: "✓", color: C.green, msg: "Esta licitación ya fue adjudicada. El servicio fue contratado." },
-          cancelada:     { bg: C.red + "15", border: C.red + "30", icon: "✗", color: C.red, msg: "Esta licitación fue cancelada por el administrador." },
-          borrador:      { bg: C.muted + "15", border: C.muted + "30", icon: "📝", color: C.muted, msg: "Esta licitación aún no ha sido publicada." },
+        const bannerInfo: Record<string, { bg: string; border: string; Icon: React.FC<{size?: number; color?: string}>; color: string; msg: string }> = {
+          en_evaluacion: { bg: C.blue + "15", border: C.blue + "30", Icon: SearchIcon, color: C.blue, msg: "Esta licitación está en período de evaluación — no se aceptan más propuestas." },
+          adjudicada:    { bg: C.green + "15", border: C.green + "30", Icon: CheckSimple, color: C.green, msg: "Esta licitación ya fue adjudicada. El servicio fue contratado." },
+          cancelada:     { bg: C.red + "15", border: C.red + "30", Icon: CrossSimple, color: C.red, msg: "Esta licitación fue cancelada por el administrador." },
+          borrador:      { bg: C.muted + "15", border: C.muted + "30", Icon: Note, color: C.muted, msg: "Esta licitación aún no ha sido publicada." },
         };
-        const b = bannerInfo[lic.estado] ?? { bg: C.red + "15", border: C.red + "30", icon: "⚠", color: C.red, msg: `Esta licitación no está activa (${lic.estado}).` };
+        const b = bannerInfo[lic.estado] ?? { bg: C.red + "15", border: C.red + "30", Icon: Warning, color: C.red, msg: `Esta licitación no está activa (${lic.estado}).` };
         return (
           <div style={{ background: b.bg, borderBottom: `1px solid ${b.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ color: b.color, fontSize: 16 }}>{b.icon}</span>
+            <b.Icon size={16} color={b.color} />
             <p style={{ color: b.color, fontSize: 14, fontWeight: 600, margin: 0 }}>{b.msg}</p>
           </div>
         );
@@ -326,7 +327,7 @@ export default async function LicitacionPublicaPage({
               {lic.categoria}
             </span>
             {ph && (
-              <span style={{ color: C.muted, fontSize: 13 }}>📍 {ph.nombre}{ph.ciudad ? ` · ${ph.ciudad}` : ""}</span>
+              <span style={{ color: C.muted, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}><Pin size={13} /> {ph.nombre}{ph.ciudad ? ` · ${ph.ciudad}` : ""}</span>
             )}
           </div>
 
@@ -344,7 +345,7 @@ export default async function LicitacionPublicaPage({
           <div className="portal-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 12 }}>
             {(lic.presupuesto_minimo || lic.presupuesto_maximo) && (
               <div style={{ background: C.greenSoft, border: `1px solid rgba(16,185,129,.2)`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>💰</span>
+                <span style={{ flexShrink: 0, marginTop: 2 }}><Money size={20} color="#047857" /></span>
                 <div>
                   <p style={{ color: "#047857", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Presupuesto</p>
                   <p style={{ color: C.green, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -356,7 +357,7 @@ export default async function LicitacionPublicaPage({
             )}
             {lic.fecha_cierre && (
               <div style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>📅</span>
+                <span style={{ flexShrink: 0, marginTop: 2 }}><Calendar size={20} color={C.accent} /></span>
                 <div style={{ flex: 1 }}>
                   <p style={{ color: C.accent, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Cierre de recepción</p>
                   <CountdownIsland fechaCierre={lic.fecha_cierre} />
@@ -365,7 +366,7 @@ export default async function LicitacionPublicaPage({
             )}
             {lic.duracion_contrato_meses && (
               <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>📋</span>
+                <span style={{ flexShrink: 0, marginTop: 2 }}><Clipboard size={20} color={C.muted} /></span>
                 <div>
                   <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Duración</p>
                   <p style={{ color: C.text, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{lic.duracion_contrato_meses} meses</p>
@@ -375,7 +376,7 @@ export default async function LicitacionPublicaPage({
             )}
             {lic.precio_referencia_visible && lic.precio_referencia && (
               <div style={{ background: C.accentSoft, border: `1px solid rgba(30,58,138,.15)`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>🎯</span>
+                <span style={{ flexShrink: 0, marginTop: 2 }}><Target size={20} color={C.accent} /></span>
                 <div>
                   <p style={{ color: C.accent, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Precio referencia</p>
                   <p style={{ color: C.accent, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{usd(lic.precio_referencia)}</p>
@@ -384,7 +385,7 @@ export default async function LicitacionPublicaPage({
               </div>
             )}
             <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 12, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-              <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>📝</span>
+              <span style={{ flexShrink: 0, marginTop: 2 }}><Note size={20} color={C.muted} /></span>
               <div>
                 <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px", fontWeight: 600 }}>Requisitos</p>
                 <p style={{ color: C.text, fontSize: 17, fontWeight: 800, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{requisitos.length}</p>
@@ -398,7 +399,7 @@ export default async function LicitacionPublicaPage({
         {hayFotos && (
           <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <span>🖼</span> Fotos del lugar
+              <ImageIcon size={18} color={C.text} /> Fotos del lugar
             </h2>
             <div style={{
               display: "grid",
@@ -439,14 +440,14 @@ export default async function LicitacionPublicaPage({
         {hayFechas && (
           <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <span>📅</span> Días de inspección
+              <Calendar size={18} color={C.text} /> Días de inspección
             </h2>
             <p style={{ color: C.sub, fontSize: 13, margin: "0 0 16px" }}>Días de inspección del lugar</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: lic.lugar_inspeccion ? 14 : 16 }}>
               {fechasInspeccion.map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 8 }}>
-                  <span style={{ color: C.blue, fontSize: 16 }}>📆</span>
+                  <CalendarSchedule size={16} color={C.blue} />
                   <span style={{ color: C.text, fontSize: 14, fontWeight: 500, textTransform: "capitalize" }}>
                     {formatFechaInspeccion(f)}
                   </span>
@@ -456,13 +457,13 @@ export default async function LicitacionPublicaPage({
 
             {lic.lugar_inspeccion && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, color: C.sub, fontSize: 14 }}>
-                <span>📍</span>
+                <Pin size={14} color={C.sub} />
                 <span>{lic.lugar_inspeccion}</span>
               </div>
             )}
 
             <div style={{ background: C.blue + "12", border: `1px solid ${C.blue}30`, borderRadius: 8, padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <span style={{ color: C.blue, fontSize: 16, flexShrink: 0, marginTop: 1 }}>ℹ</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               <p style={{ color: C.sub, fontSize: 13, margin: 0, lineHeight: 1.6 }}>
                 Según el pliego, las empresas están obligadas a realizar una inspección física del lugar antes de enviar su propuesta.
               </p>
@@ -516,7 +517,7 @@ export default async function LicitacionPublicaPage({
             {/* Publicado info */}
             {lic.fecha_publicacion && (
               <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", display: "flex", gap: 12, alignItems: "center" }}>
-                <span style={{ color: C.muted, fontSize: 13 }}>📅</span>
+                <Calendar size={13} color={C.muted} />
                 <p style={{ color: C.sub, fontSize: 13, margin: 0 }}>
                   Publicado el {new Date(lic.fecha_publicacion).toLocaleDateString("es-PA", { year: "numeric", month: "long", day: "numeric" })}
                   {ph && <> por <strong style={{ color: C.text2 }}>{ph.nombre}</strong></>}
@@ -533,12 +534,12 @@ export default async function LicitacionPublicaPage({
             <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
               <p style={{ color: C.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 14px" }}>¿Por qué LicitaPH?</p>
               {[
-                { icon: "🛡", text: "Proceso transparente y documentado" },
-                { icon: "⚡", text: "Respuesta en menos de 48 horas" },
-                { icon: "🤝", text: "Contrato formal con respaldo legal" },
+                { Icon: ShieldCheck, text: "Proceso transparente y documentado" },
+                { Icon: Lightning, text: "Respuesta en menos de 48 horas" },
+                { Icon: Handshake, text: "Contrato formal con respaldo legal" },
               ].map(item => (
                 <div key={item.text} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start" }}>
-                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  <item.Icon size={16} color={C.accent} />
                   <p style={{ color: C.text2, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{item.text}</p>
                 </div>
               ))}
@@ -577,13 +578,13 @@ function RequisitoRow({ r, numero }: { r: RequisitoLicitacion; numero: number })
               <span style={{
                 background: C.blue + "20", color: C.blue, border: `1px solid ${C.blue}30`,
                 borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700, letterSpacing: .5
-              }}>📎 Documento</span>
+              }}>DOC</span>
             )}
             {tipoRespuesta === "texto" && (
               <span style={{
                 background: C.bg2, color: C.sub, border: `1px solid ${C.border}`,
                 borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700, letterSpacing: .5
-              }}>✏️ Texto</span>
+              }}>TXT</span>
             )}
             {/* Subsanable badge */}
             {r.subsanable ? (
@@ -862,7 +863,7 @@ function CTAIsland({ licitacionId, estaActiva }: { licitacionId: string; estaAct
                 overlay.remove();
                 var successDiv = document.createElement("div");
                 successDiv.style.cssText = "position:fixed;top:24px;right:24px;z-index:9999;background:#fff;border:1px solid ${C.green};border-left:4px solid ${C.green};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);";
-                successDiv.innerHTML = '<span style="color:${C.green};font-size:18px;">✓</span><p style="color:#0F172A;font-size:14px;margin:0;">¡Propuesta enviada! El administrador te contactará pronto.</p>';
+                successDiv.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${C.green}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><p style="color:#0F172A;font-size:14px;margin:0;">¡Propuesta enviada! El administrador te contactará pronto.</p>';
                 document.body.appendChild(successDiv);
                 setTimeout(function() { successDiv.remove(); }, 5000);
               } catch(ex) {
