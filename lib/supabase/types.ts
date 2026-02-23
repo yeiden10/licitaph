@@ -1,5 +1,5 @@
 // Tipos TypeScript que mapean las tablas de Supabase exactas
-export type TipoUsuario = "ph_admin" | "empresa" | "superadmin";
+export type TipoUsuario = "ph_admin" | "empresa" | "superadmin" | "copropietario";
 
 export interface Perfil {
   id: string;

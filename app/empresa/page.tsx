@@ -811,6 +811,7 @@ function ModalPostular({
   // Fase 1: precio | Fase 2: cuestionario IA | Fase 3: compromisos
   const [fase, setFase] = useState<1 | 2 | 3>(1);
   const [precio, setPrecio] = useState("");
+  const [descripcion, setDescripcion] = useState("");
   const [modalidadPago, setModalidadPago] = useState("mensual");
   const [detallePago, setDetallePago] = useState("");
   const [checks, setChecks] = useState({
@@ -923,6 +924,7 @@ function ModalPostular({
         body: JSON.stringify({
           licitacion_id: lic.id,
           precio_anual: Number(precio),
+          descripcion: descripcion || null,
           propuesta_tecnica: propuestaTecnicaFinal,
           modalidad_pago: modalidadPago,
           detalle_pago: modalidadPago === "personalizado" ? detallePago : undefined,
@@ -1008,6 +1010,14 @@ function ModalPostular({
                 style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
               />
             )}
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ color: C.sub, fontSize: 13, fontWeight: 500 }}>Descripcion de la propuesta</span>
+              <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} rows={3}
+                placeholder="Describe brevemente tu oferta de valor, diferenciadores y experiencia relevante..."
+                style={{ background: C.bgPanel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", color: C.text, fontSize: 14, outline: "none", resize: "vertical" }}
+              />
+            </label>
 
             <div style={{ background: C.goldDim, border: `1px solid ${C.gold}30`, borderRadius: 10, padding: "12px 16px" }}>
               <p style={{ color: C.gold, fontSize: 12, fontWeight: 600, margin: "0 0 4px" }}>Siguiente: evaluación técnica</p>
