@@ -139,7 +139,10 @@ export async function POST(request: NextRequest) {
       .from("requisitos_licitacion")
       .insert(reqData);
 
-    if (reqError) console.error("Error creando requisitos:", reqError.message);
+    if (reqError) {
+      console.error("Error creando requisitos:", reqError.message);
+      return NextResponse.json({ error: "Licitación creada pero los requisitos no se guardaron: " + reqError.message }, { status: 500 });
+    }
   }
 
   // Notificar empresas si se publica (en background)
